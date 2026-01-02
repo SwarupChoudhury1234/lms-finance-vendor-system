@@ -1,7 +1,7 @@
 package com.graphy.lms.controller;
 
-import com.graphy.lms.entity.Invoice;
-import com.graphy.lms.service.billing.BillingService;
+import com.graphy.lms.entity.*;
+import com.graphy.lms.service.BillingService;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.web.bind.annotation.*;
 import java.util.List;
@@ -10,27 +10,26 @@ import java.util.List;
 @RequestMapping("/api/billing")
 public class BillingController {
 
-    @Autowired
-    private BillingService billingService;
+    @Autowired private BillingService service;
 
-    @PostMapping("/invoices")
-    public Invoice generateInvoice(@RequestBody Invoice invoice) {
-        return billingService.createInvoice(invoice);
-    }
+    // 1. PURCHASE ORDERS
+    @PostMapping("/orders") public PurchaseOrders addO(@RequestBody PurchaseOrders o) { return service.saveOrder(o); }
+    @GetMapping("/orders/{id}") public PurchaseOrders getO(@PathVariable Long id) { return service.getOrderById(id); }
+    @GetMapping("/orders") public List<PurchaseOrders> getAllO() { return service.getAllOrders(); }
+    @PutMapping("/orders/{id}") public PurchaseOrders updateO(@PathVariable Long id, @RequestBody PurchaseOrders o) { return service.updateOrder(id, o); }
+    @DeleteMapping("/orders/{id}") public String delO(@PathVariable Long id) { service.deleteOrder(id); return "Order Deleted"; }
 
-    @GetMapping("/invoices")
-    public List<Invoice> getAll() {
-        return billingService.getAllInvoices();
-    }
+    // 2. INVOICES
+    @PostMapping("/invoices") public Invoices addI(@RequestBody Invoices i) { return service.saveInvoice(i); }
+    @GetMapping("/invoices/{id}") public Invoices getI(@PathVariable Long id) { return service.getInvoiceById(id); }
+    @GetMapping("/invoices") public List<Invoices> getAllI() { return service.getAllInvoices(); }
+    @PutMapping("/invoices/{id}") public Invoices updateI(@PathVariable Long id, @RequestBody Invoices i) { return service.updateInvoice(id, i); }
+    @DeleteMapping("/invoices/{id}") public String delI(@PathVariable Long id) { service.deleteInvoice(id); return "Invoice Deleted"; }
 
-    @PutMapping("/invoices/{id}")
-    public Invoice update(@PathVariable Long id, @RequestBody Invoice details) {
-        return billingService.updateInvoice(id, details);
-    }
-
-    @DeleteMapping("/invoices/{id}")
-    public String delete(@PathVariable Long id) {
-        billingService.deleteInvoice(id);
-        return "Invoice " + id + " deleted.";
-    }
+    // 3. BILLING TRANSACTIONS
+    @PostMapping("/transactions") public BillingTransactions addT(@RequestBody BillingTransactions t) { return service.saveTransaction(t); }
+    @GetMapping("/transactions/{id}") public BillingTransactions getT(@PathVariable Long id) { return service.getTransactionById(id); }
+    @GetMapping("/transactions") public List<BillingTransactions> getAllT() { return service.getAllTransactions(); }
+    @PutMapping("/transactions/{id}") public BillingTransactions updateT(@PathVariable Long id, @RequestBody BillingTransactions t) { return service.updateTransaction(id, t); }
+    @DeleteMapping("/transactions/{id}") public String delT(@PathVariable Long id) { service.deleteTransaction(id); return "Transaction Deleted"; }
 }
