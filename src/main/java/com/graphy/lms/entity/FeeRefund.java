@@ -1,11 +1,13 @@
 package com.graphy.lms.entity;
 
 import jakarta.persistence.*;
-import java.math.BigDecimal;
+import lombok.Data;              // Missing Import 1: Resolves @Data
 import java.time.LocalDate;
+import java.time.LocalDateTime;   // Missing Import 2: Resolves LocalDateTime
 
 @Entity
 @Table(name = "fee_refunds")
+@Data // Automatically generates getters, setters, and other boilerplate
 public class FeeRefund {
 
     @Id
@@ -13,26 +15,18 @@ public class FeeRefund {
     private Long id;
 
     @ManyToOne
-    @JoinColumn(name = "student_fee_payment_id", nullable = false)
+    @JoinColumn(name = "student_fee_payment_id")
     private StudentFeePayment studentFeePayment;
 
-    @Column(name = "refund_amount", nullable = false, precision = 10, scale = 2)
-    private BigDecimal refundAmount; 
+    private Double refundAmount;
 
-    @Column(name = "refund_date", nullable = false)
     private LocalDate refundDate;
 
     private String reason;
 
-    // --- GETTERS AND SETTERS ---
-    public Long getId() { return id; }
-    public void setId(Long id) { this.id = id; }
-    public StudentFeePayment getStudentFeePayment() { return studentFeePayment; }
-    public void setStudentFeePayment(StudentFeePayment sfp) { this.studentFeePayment = sfp; }
-    public BigDecimal getRefundAmount() { return refundAmount; } 
-    public void setRefundAmount(BigDecimal refundAmount) { this.refundAmount = refundAmount; }
-    public LocalDate getRefundDate() { return refundDate; }
-    public void setRefundDate(LocalDate refundDate) { this.refundDate = refundDate; }
-    public String getReason() { return reason; }
-    public void setReason(String reason) { this.reason = reason; }
+    // Required for the "all columns" Postman rule
+    private LocalDateTime createdAt = LocalDateTime.now();
+
+    // Mentor Rule: Set to null on POST, updated automatically on PUT
+    private LocalDateTime updatedAt;
 }

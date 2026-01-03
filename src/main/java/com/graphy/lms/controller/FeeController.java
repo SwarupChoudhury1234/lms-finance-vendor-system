@@ -7,91 +7,61 @@ import org.springframework.web.bind.annotation.*;
 import java.util.List;
 
 @RestController
-@RequestMapping("/api/fees")
+@RequestMapping("/api/finance")
 public class FeeController {
 
-    @Autowired 
-    private FeeService feeService;
+    @Autowired private FeeService service;
 
-    // --- 1. FEE TYPE ---
-    @PostMapping("/types") 
-    public FeeType addType(@RequestBody FeeType ft) { return feeService.saveFeeType(ft); }
-    @GetMapping("/types/{id}") 
-    public FeeType getType(@PathVariable Long id) { return feeService.getFeeTypeById(id); }
-    @GetMapping("/types") 
-    public List<FeeType> getAllTypes() { return feeService.getAllFeeTypes(); }
-    @PutMapping("/types/{id}") 
-    public FeeType updateType(@PathVariable Long id, @RequestBody FeeType ft) { return feeService.updateFeeType(id, ft); }
-    @DeleteMapping("/types/{id}") 
-    public String deleteType(@PathVariable Long id) { feeService.deleteFeeType(id); return "Deleted Type " + id; }
+    // Helper to extract actor from token (Mocked for now)
+    private Long getActorId() { return 1001L; }
 
-    // --- 2. FEE STRUCTURE ---
-    @PostMapping("/structures") 
-    public FeeStructure addStructure(@RequestBody FeeStructure fs) { return feeService.saveFeeStructure(fs); }
-    @GetMapping("/structures/{id}") 
-    public FeeStructure getStructure(@PathVariable Long id) { return feeService.getFeeStructureById(id); }
-    @GetMapping("/structures") 
-    public List<FeeStructure> getAllStructures() { return feeService.getAllFeeStructures(); }
-    @PutMapping("/structures/{id}") 
-    public FeeStructure updateStructure(@PathVariable Long id, @RequestBody FeeStructure fs) { return feeService.updateFeeStructure(id, fs); }
-    @DeleteMapping("/structures/{id}") 
-    public String deleteStructure(@PathVariable Long id) { feeService.deleteFeeStructure(id); return "Deleted Structure " + id; }
+    // FEE TYPES
+    @PostMapping("/types") public FeeType postType(@RequestBody FeeType t) { return service.createFeeType(t, getActorId()); }
+    @GetMapping("/types") public List<FeeType> getAllTypes() { return service.getAllFeeTypes(); }
+    @GetMapping("/types/{id}") public FeeType getType(@PathVariable Long id) { return service.getFeeTypeById(id); }
+    @PutMapping("/types/{id}") public FeeType putType(@PathVariable Long id, @RequestBody FeeType t) { return service.updateFeeType(id, t, getActorId()); }
+    @DeleteMapping("/types/{id}") public void delType(@PathVariable Long id) { service.deleteFeeType(id, getActorId()); }
 
-    // --- 3. ALLOCATIONS ---
-    @PostMapping("/allocations") 
-    public StudentFeeAllocation addAlloc(@RequestBody StudentFeeAllocation sfa) { return feeService.saveAllocation(sfa); }
-    @GetMapping("/allocations/{id}") 
-    public StudentFeeAllocation getAlloc(@PathVariable Long id) { return feeService.getAllocationById(id); }
-    @GetMapping("/allocations") 
-    public List<StudentFeeAllocation> getAllAlloc() { return feeService.getAllAllocations(); }
-    @PutMapping("/allocations/{id}") 
-    public StudentFeeAllocation updateAlloc(@PathVariable Long id, @RequestBody StudentFeeAllocation sfa) { return feeService.updateAllocation(id, sfa); }
-    @DeleteMapping("/allocations/{id}") 
-    public String deleteAlloc(@PathVariable Long id) { feeService.deleteAllocation(id); return "Deleted Allocation " + id; }
+    // FEE STRUCTURES
+    @PostMapping("/structures") public FeeStructure postStruct(@RequestBody FeeStructure s) { return service.createFeeStructure(s, getActorId()); }
+    @GetMapping("/structures") public List<FeeStructure> getAllStructs() { return service.getAllFeeStructures(); }
+    @GetMapping("/structures/{id}") public FeeStructure getStruct(@PathVariable Long id) { return service.getFeeStructureById(id); }
+    @PutMapping("/structures/{id}") public FeeStructure putStruct(@PathVariable Long id, @RequestBody FeeStructure s) { return service.updateFeeStructure(id, s, getActorId()); }
+    @DeleteMapping("/structures/{id}") public void delStruct(@PathVariable Long id) { service.deleteFeeStructure(id, getActorId()); }
 
-    // --- 4. PAYMENTS ---
-    @PostMapping("/payments") 
-    public StudentFeePayment addPay(@RequestBody StudentFeePayment sfp) { return feeService.savePayment(sfp); }
-    @GetMapping("/payments/{id}") 
-    public StudentFeePayment getPay(@PathVariable Long id) { return feeService.getPaymentById(id); }
-    @GetMapping("/payments") 
-    public List<StudentFeePayment> getAllPay() { return feeService.getAllPayments(); }
-    @PutMapping("/payments/{id}") 
-    public StudentFeePayment updatePay(@PathVariable Long id, @RequestBody StudentFeePayment sfp) { return feeService.updatePayment(id, sfp); }
-    @DeleteMapping("/payments/{id}") 
-    public String deletePay(@PathVariable Long id) { feeService.deletePayment(id); return "Deleted Payment " + id; }
+    // ALLOCATIONS
+    @PostMapping("/allocations") public StudentFeeAllocation postAlloc(@RequestBody StudentFeeAllocation a) { return service.allocateFee(a, getActorId()); }
+    @GetMapping("/allocations") public List<StudentFeeAllocation> getAllAlloc() { return service.getAllAllocations(); }
+    @GetMapping("/allocations/{id}") public StudentFeeAllocation getAlloc(@PathVariable Long id) { return service.getAllocationById(id); }
+    @PutMapping("/allocations/{id}") public StudentFeeAllocation putAlloc(@PathVariable Long id, @RequestBody StudentFeeAllocation a) { return service.updateAllocation(id, a, getActorId()); }
+    @DeleteMapping("/allocations/{id}") public void delAlloc(@PathVariable Long id) { service.deleteAllocation(id, getActorId()); }
 
-    // --- 5. DISCOUNTS ---
-    @PostMapping("/discounts") 
-    public FeeDiscount addDisc(@RequestBody FeeDiscount fd) { return feeService.saveDiscount(fd); }
-    @GetMapping("/discounts/{id}") 
-    public FeeDiscount getDisc(@PathVariable Long id) { return feeService.getDiscountById(id); }
-    @GetMapping("/discounts") 
-    public List<FeeDiscount> getAllDisc() { return feeService.getAllDiscounts(); }
-    @PutMapping("/discounts/{id}") 
-    public FeeDiscount updateDisc(@PathVariable Long id, @RequestBody FeeDiscount fd) { return feeService.updateDiscount(id, fd); }
-    @DeleteMapping("/discounts/{id}") 
-    public String deleteDisc(@PathVariable Long id) { feeService.deleteDiscount(id); return "Deleted Discount " + id; }
+    // PAYMENTS
+    @PostMapping("/payments") public StudentFeePayment postPay(@RequestBody StudentFeePayment p) { return service.processPayment(p, getActorId()); }
+    @GetMapping("/payments") public List<StudentFeePayment> getAllPay() { return service.getAllPayments(); }
+    @GetMapping("/payments/{id}") public StudentFeePayment getPay(@PathVariable Long id) { return service.getPaymentById(id); }
+    @PutMapping("/payments/{id}") public StudentFeePayment putPay(@PathVariable Long id, @RequestBody StudentFeePayment p) { return service.updatePayment(id, p, getActorId()); }
+    @DeleteMapping("/payments/{id}") public void delPay(@PathVariable Long id) { service.deletePayment(id, getActorId()); }
 
-    // --- 6. REFUNDS ---
-    @PostMapping("/refunds") 
-    public FeeRefund addRef(@RequestBody FeeRefund fr) { return feeService.saveRefund(fr); }
-    @GetMapping("/refunds/{id}") 
-    public FeeRefund getRef(@PathVariable Long id) { return feeService.getRefundById(id); }
-    @GetMapping("/refunds") 
-    public List<FeeRefund> getAllRef() { return feeService.getAllRefunds(); }
-    @PutMapping("/refunds/{id}") 
-    public FeeRefund updateRef(@PathVariable Long id, @RequestBody FeeRefund fr) { return feeService.updateRefund(id, fr); }
-    @DeleteMapping("/refunds/{id}") 
-    public String deleteRef(@PathVariable Long id) { feeService.deleteRefund(id); return "Deleted Refund " + id; }
+    // DISCOUNTS
+    @PostMapping("/discounts") public FeeDiscount postDisc(@RequestBody FeeDiscount d) { return service.applyDiscount(d, getActorId()); }
+    @GetMapping("/discounts") public List<FeeDiscount> getAllDisc() { return service.getAllDiscounts(); }
+    @GetMapping("/discounts/{id}") public FeeDiscount getDisc(@PathVariable Long id) { return service.getDiscountById(id); }
+    @PutMapping("/discounts/{id}") public FeeDiscount putDisc(@PathVariable Long id, @RequestBody FeeDiscount d) { return service.updateDiscount(id, d, getActorId()); }
+    @DeleteMapping("/discounts/{id}") public void delDisc(@PathVariable Long id) { service.deleteDiscount(id, getActorId()); }
 
-    // --- 7. AUDIT LOGS ---
-    @GetMapping("/audit-logs") 
-    public List<AuditLog> getLogs() { return feeService.getAllAuditLogs(); }
+    // REFUNDS
+    @PostMapping("/refunds") public FeeRefund postRef(@RequestBody FeeRefund r) { return service.processRefund(r, getActorId()); }
+    @GetMapping("/refunds") public List<FeeRefund> getAllRef() { return service.getAllRefunds(); }
+    @GetMapping("/refunds/{id}") public FeeRefund getRef(@PathVariable Long id) { return service.getRefundById(id); }
+    @PutMapping("/refunds/{id}") public FeeRefund putRef(@PathVariable Long id, @RequestBody FeeRefund r) { return service.updateRefund(id, r, getActorId()); }
+    @DeleteMapping("/refunds/{id}") public void delRef(@PathVariable Long id) { service.deleteRefund(id, getActorId()); }
 
-    // ADD THIS NEW METHOD TO FIX THE 404 ERROR
-    @GetMapping("/audit-logs/{id}")
-    public AuditLog getLogById(@PathVariable Long id) { 
-        return feeService.getAuditLogById(id); 
-    }
+    // AUDIT (Get only)
+    @GetMapping("/audit") public List<AuditLog> getAllAudit() { return service.getAllAuditLogs(); }
+    @GetMapping("/audit/{id}") public AuditLog getAudit(@PathVariable Long id) { return service.getAuditLogById(id); }
+
+    // RECEIPTS (Get only)
+    @GetMapping("/receipts") public List<FeeReceipt> getAllRec() { return service.getAllReceipts(); }
+    @GetMapping("/receipts/{id}") public FeeReceipt getRec(@PathVariable Long id) { return service.getReceiptById(id); }
 }

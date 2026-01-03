@@ -5,50 +5,69 @@ import java.util.List;
 
 public interface FeeService {
 
-    // --- 1. FEE TYPE ---
-    FeeType saveFeeType(FeeType ft);
-    FeeType getFeeTypeById(Long id);
+    // ========================================================================
+    // 1. FEE TYPES (5 Methods)
+    // ========================================================================
+    FeeType createFeeType(FeeType feeType, Long actorId);
     List<FeeType> getAllFeeTypes();
-    FeeType updateFeeType(Long id, FeeType details);
-    void deleteFeeType(Long id);
+    FeeType getFeeTypeById(Long id);
+    FeeType updateFeeType(Long id, FeeType feeType, Long actorId);
+    void deleteFeeType(Long id, Long actorId);
 
-    // --- 2. FEE STRUCTURE ---
-    FeeStructure saveFeeStructure(FeeStructure fs);
-    FeeStructure getFeeStructureById(Long id);
+    // ========================================================================
+    // 2. FEE STRUCTURES (5 Methods)
+    // ========================================================================
+    FeeStructure createFeeStructure(FeeStructure feeStructure, Long actorId);
     List<FeeStructure> getAllFeeStructures();
-    FeeStructure updateFeeStructure(Long id, FeeStructure details);
-    void deleteFeeStructure(Long id);
+    FeeStructure getFeeStructureById(Long id);
+    FeeStructure updateFeeStructure(Long id, FeeStructure feeStructure, Long actorId);
+    void deleteFeeStructure(Long id, Long actorId);
 
-    // --- 3. ALLOCATIONS ---
-    StudentFeeAllocation saveAllocation(StudentFeeAllocation sfa);
-    StudentFeeAllocation getAllocationById(Long id);
+    // ========================================================================
+    // 3. STUDENT FEE ALLOCATIONS (5 Methods)
+    // ========================================================================
+    StudentFeeAllocation allocateFee(StudentFeeAllocation allocation, Long actorId);
     List<StudentFeeAllocation> getAllAllocations();
-    StudentFeeAllocation updateAllocation(Long id, StudentFeeAllocation details);
-    void deleteAllocation(Long id);
+    StudentFeeAllocation getAllocationById(Long id);
+    StudentFeeAllocation updateAllocation(Long id, StudentFeeAllocation allocation, Long actorId);
+    void deleteAllocation(Long id, Long actorId);
 
-    // --- 4. PAYMENTS ---
-    StudentFeePayment savePayment(StudentFeePayment sfp);
-    StudentFeePayment getPaymentById(Long id);
+    // ========================================================================
+    // 4. STUDENT FEE PAYMENTS (5 Methods) - Triggers Auto-Receipt
+    // ========================================================================
+    StudentFeePayment processPayment(StudentFeePayment payment, Long actorId);
     List<StudentFeePayment> getAllPayments();
-    StudentFeePayment updatePayment(Long id, StudentFeePayment details);
-    void deletePayment(Long id);
+    StudentFeePayment getPaymentById(Long id);
+    StudentFeePayment updatePayment(Long id, StudentFeePayment payment, Long actorId);
+    void deletePayment(Long id, Long actorId);
 
-    // --- 5. DISCOUNTS ---
-    FeeDiscount saveDiscount(FeeDiscount fd);
-    FeeDiscount getDiscountById(Long id);
+    // ========================================================================
+    // 5. FEE DISCOUNTS (5 Methods)
+    // ========================================================================
+    FeeDiscount applyDiscount(FeeDiscount discount, Long actorId);
     List<FeeDiscount> getAllDiscounts();
-    FeeDiscount updateDiscount(Long id, FeeDiscount details);
-    void deleteDiscount(Long id);
+    FeeDiscount getDiscountById(Long id);
+    FeeDiscount updateDiscount(Long id, FeeDiscount discount, Long actorId);
+    void deleteDiscount(Long id, Long actorId);
 
-    // --- 6. REFUNDS ---
-    FeeRefund saveRefund(FeeRefund fr);
-    FeeRefund getRefundById(Long id);
+    // ========================================================================
+    // 6. FEE REFUNDS (5 Methods)
+    // ========================================================================
+    FeeRefund processRefund(FeeRefund refund, Long actorId);
     List<FeeRefund> getAllRefunds();
-    FeeRefund updateRefund(Long id, FeeRefund details);
-    void deleteRefund(Long id);
+    FeeRefund getRefundById(Long id);
+    FeeRefund updateRefund(Long id, FeeRefund refund, Long actorId);
+    void deleteRefund(Long id, Long actorId);
 
-    // --- 7. AUDIT LOGS ---
-    AuditLog saveAuditLog(AuditLog al);
-    AuditLog getAuditLogById(Long id);
+    // ========================================================================
+    // 7. AUDIT LOGS (2 Methods - System Automated)
+    // ========================================================================
     List<AuditLog> getAllAuditLogs();
+    AuditLog getAuditLogById(Long id);
+
+    // ========================================================================
+    // 8. FEE RECEIPTS (2 Methods - System Automated)
+    // ========================================================================
+    List<FeeReceipt> getAllReceipts();
+    FeeReceipt getReceiptById(Long id);
 }

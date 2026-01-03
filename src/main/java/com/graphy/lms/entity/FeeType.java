@@ -1,29 +1,27 @@
 package com.graphy.lms.entity;
 
 import jakarta.persistence.*;
+import lombok.Data;              // Missing Import 1: Resolves @Data
+import java.time.LocalDateTime;   // Missing Import 2: Resolves LocalDateTime
 
 @Entity
 @Table(name = "fee_types")
+@Data // Automatically generates Getters, Setters, Equals, HashCode, and ToString
 public class FeeType {
+
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Long id;
 
-    @Column(nullable = false, length = 100)
     private String name;
 
     private String description;
 
-    @Column(name = "is_active")
     private Boolean isActive = true;
 
-    // Getters and Setters
-    public Long getId() { return id; }
-    public void setId(Long id) { this.id = id; }
-    public String getName() { return name; }
-    public void setName(String name) { this.name = name; }
-    public String getDescription() { return description; }
-    public void setDescription(String description) { this.description = description; }
-    public Boolean getIsActive() { return isActive; }
-    public void setIsActive(Boolean isActive) { this.isActive = isActive; }
+    // Set automatically on record creation
+    private LocalDateTime createdAt = LocalDateTime.now();
+
+    // Mentor Rule: Null on POST, updated automatically during PUT methods
+    private LocalDateTime updatedAt;
 }
