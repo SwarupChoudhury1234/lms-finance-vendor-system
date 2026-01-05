@@ -2,6 +2,7 @@ package com.graphy.lms.controller;
 
 import com.graphy.lms.entity.*;
 import com.graphy.lms.service.FeeService;
+import jakarta.validation.Valid;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.web.bind.annotation.*;
 import java.util.List;
@@ -12,56 +13,192 @@ public class FeeController {
 
     @Autowired private FeeService service;
 
-    // Helper to extract actor from token (Mocked for now)
-    private Long getActorId() { return 1001L; }
+    // ========================================================================
+    // 1. FEE TYPES (Separated GET ALL and GET ACTIVE)
+    // ========================================================================
+    
+    // Matrix: Admin/Faculty Only
+    @GetMapping("/types") 
+    public List<FeeType> getAllTypes(@RequestHeader("X-Actor-Id") Long actorId, 
+                                     @RequestHeader("X-Role") String role) { 
+        return service.getAllFeeTypes(actorId, role); 
+    }
 
-    // FEE TYPES
-    @PostMapping("/types") public FeeType postType(@RequestBody FeeType t) { return service.createFeeType(t, getActorId()); }
-    @GetMapping("/types") public List<FeeType> getAllTypes() { return service.getAllFeeTypes(); }
-    @GetMapping("/types/{id}") public FeeType getType(@PathVariable Long id) { return service.getFeeTypeById(id); }
-    @PutMapping("/types/{id}") public FeeType putType(@PathVariable Long id, @RequestBody FeeType t) { return service.updateFeeType(id, t, getActorId()); }
-    @DeleteMapping("/types/{id}") public void delType(@PathVariable Long id) { service.deleteFeeType(id, getActorId()); }
+    // Matrix: Everyone (Active Only)
+    @GetMapping("/types/active")
+    public List<FeeType> getActiveTypes() {
+        return service.getActiveFeeTypes();
+    }
 
-    // FEE STRUCTURES
-    @PostMapping("/structures") public FeeStructure postStruct(@RequestBody FeeStructure s) { return service.createFeeStructure(s, getActorId()); }
-    @GetMapping("/structures") public List<FeeStructure> getAllStructs() { return service.getAllFeeStructures(); }
-    @GetMapping("/structures/{id}") public FeeStructure getStruct(@PathVariable Long id) { return service.getFeeStructureById(id); }
-    @PutMapping("/structures/{id}") public FeeStructure putStruct(@PathVariable Long id, @RequestBody FeeStructure s) { return service.updateFeeStructure(id, s, getActorId()); }
-    @DeleteMapping("/structures/{id}") public void delStruct(@PathVariable Long id) { service.deleteFeeStructure(id, getActorId()); }
+    @PostMapping("/types") 
+    public FeeType postType(@Valid @RequestBody FeeType t, @RequestHeader("X-Actor-Id") Long actorId, @RequestHeader("X-Role") String role) { 
+        return service.createFeeType(t, actorId, role); 
+    }
 
-    // ALLOCATIONS
-    @PostMapping("/allocations") public StudentFeeAllocation postAlloc(@RequestBody StudentFeeAllocation a) { return service.allocateFee(a, getActorId()); }
-    @GetMapping("/allocations") public List<StudentFeeAllocation> getAllAlloc() { return service.getAllAllocations(); }
-    @GetMapping("/allocations/{id}") public StudentFeeAllocation getAlloc(@PathVariable Long id) { return service.getAllocationById(id); }
-    @PutMapping("/allocations/{id}") public StudentFeeAllocation putAlloc(@PathVariable Long id, @RequestBody StudentFeeAllocation a) { return service.updateAllocation(id, a, getActorId()); }
-    @DeleteMapping("/allocations/{id}") public void delAlloc(@PathVariable Long id) { service.deleteAllocation(id, getActorId()); }
+    @GetMapping("/types/{id}")
+    public FeeType getTypeById(@PathVariable Long id, @RequestHeader("X-Actor-Id") Long actorId, @RequestHeader("X-Role") String role) {
+        return service.getFeeTypeById(id, actorId, role);
+    }
 
-    // PAYMENTS
-    @PostMapping("/payments") public StudentFeePayment postPay(@RequestBody StudentFeePayment p) { return service.processPayment(p, getActorId()); }
-    @GetMapping("/payments") public List<StudentFeePayment> getAllPay() { return service.getAllPayments(); }
-    @GetMapping("/payments/{id}") public StudentFeePayment getPay(@PathVariable Long id) { return service.getPaymentById(id); }
-    @PutMapping("/payments/{id}") public StudentFeePayment putPay(@PathVariable Long id, @RequestBody StudentFeePayment p) { return service.updatePayment(id, p, getActorId()); }
-    @DeleteMapping("/payments/{id}") public void delPay(@PathVariable Long id) { service.deletePayment(id, getActorId()); }
+    @PutMapping("/types/{id}") 
+    public FeeType putType(@PathVariable Long id, @Valid @RequestBody FeeType t, @RequestHeader("X-Actor-Id") Long actorId, @RequestHeader("X-Role") String role) { 
+        return service.updateFeeType(id, t, actorId, role); 
+    }
 
-    // DISCOUNTS
-    @PostMapping("/discounts") public FeeDiscount postDisc(@RequestBody FeeDiscount d) { return service.applyDiscount(d, getActorId()); }
-    @GetMapping("/discounts") public List<FeeDiscount> getAllDisc() { return service.getAllDiscounts(); }
-    @GetMapping("/discounts/{id}") public FeeDiscount getDisc(@PathVariable Long id) { return service.getDiscountById(id); }
-    @PutMapping("/discounts/{id}") public FeeDiscount putDisc(@PathVariable Long id, @RequestBody FeeDiscount d) { return service.updateDiscount(id, d, getActorId()); }
-    @DeleteMapping("/discounts/{id}") public void delDisc(@PathVariable Long id) { service.deleteDiscount(id, getActorId()); }
+    @DeleteMapping("/types/{id}") 
+    public void delType(@PathVariable Long id, @RequestHeader("X-Actor-Id") Long actorId, @RequestHeader("X-Role") String role) { 
+        service.deleteFeeType(id, actorId, role); 
+    }
 
-    // REFUNDS
-    @PostMapping("/refunds") public FeeRefund postRef(@RequestBody FeeRefund r) { return service.processRefund(r, getActorId()); }
-    @GetMapping("/refunds") public List<FeeRefund> getAllRef() { return service.getAllRefunds(); }
-    @GetMapping("/refunds/{id}") public FeeRefund getRef(@PathVariable Long id) { return service.getRefundById(id); }
-    @PutMapping("/refunds/{id}") public FeeRefund putRef(@PathVariable Long id, @RequestBody FeeRefund r) { return service.updateRefund(id, r, getActorId()); }
-    @DeleteMapping("/refunds/{id}") public void delRef(@PathVariable Long id) { service.deleteRefund(id, getActorId()); }
+    // ========================================================================
+    // 2. FEE STRUCTURES (Added Academic Year & GET OWN)
+    // ========================================================================
+    @PostMapping("/structures") 
+    public FeeStructure postStruct(@Valid @RequestBody FeeStructure s, @RequestHeader("X-Actor-Id") Long actorId, @RequestHeader("X-Role") String role) { 
+        return service.createFeeStructure(s, actorId, role); 
+    }
 
-    // AUDIT (Get only)
-    @GetMapping("/audit") public List<AuditLog> getAllAudit() { return service.getAllAuditLogs(); }
-    @GetMapping("/audit/{id}") public AuditLog getAudit(@PathVariable Long id) { return service.getAuditLogById(id); }
+    @GetMapping("/structures") 
+    public List<FeeStructure> getStructs(@RequestHeader("X-Actor-Id") Long actorId, 
+                                         @RequestHeader("X-Role") String role,
+                                         @RequestParam(required = false) Long courseId,
+                                         @RequestParam(required = false) String academicYear) { 
+        // Logic inside service now handles Faculty bypass and Student "Own" filtering
+        return service.getFeeStructures(actorId, role, courseId, academicYear); 
+    }
 
-    // RECEIPTS (Get only)
-    @GetMapping("/receipts") public List<FeeReceipt> getAllRec() { return service.getAllReceipts(); }
-    @GetMapping("/receipts/{id}") public FeeReceipt getRec(@PathVariable Long id) { return service.getReceiptById(id); }
+    @GetMapping("/structures/{id}")
+    public FeeStructure getStructById(@PathVariable Long id, @RequestHeader("X-Actor-Id") Long actorId, @RequestHeader("X-Role") String role) {
+        return service.getFeeStructureById(id, actorId, role);
+    }
+
+    @PutMapping("/structures/{id}") 
+    public FeeStructure putStruct(@PathVariable Long id, @Valid @RequestBody FeeStructure s, @RequestHeader("X-Actor-Id") Long actorId, @RequestHeader("X-Role") String role) { 
+        return service.updateFeeStructure(id, s, actorId, role); 
+    }
+
+    @DeleteMapping("/structures/{id}")
+    public void delStruct(@PathVariable Long id, @RequestHeader("X-Actor-Id") Long actorId, @RequestHeader("X-Role") String role) {
+        service.deleteFeeStructure(id, actorId, role);
+    }
+
+    // ========================================================================
+    // 3. STUDENT FEE ALLOCATIONS (Parent-Child Verification Logic)
+    // ========================================================================
+    @PostMapping("/allocations") 
+    public StudentFeeAllocation postAlloc(@Valid @RequestBody StudentFeeAllocation a, @RequestHeader("X-Actor-Id") Long actorId, @RequestHeader("X-Role") String role) { 
+        return service.allocateFee(a, actorId, role); 
+    }
+
+    @GetMapping("/allocations") 
+    public List<StudentFeeAllocation> getAllAlloc(@RequestHeader("X-Actor-Id") Long actorId, 
+                                                  @RequestHeader("X-Role") String role,
+                                                  @RequestParam(required = false) Long userId) { 
+        return service.getAllocations(actorId, role, userId); 
+    }
+
+    @GetMapping("/allocations/{id}")
+    public StudentFeeAllocation getAllocById(@PathVariable Long id, @RequestHeader("X-Actor-Id") Long actorId, @RequestHeader("X-Role") String role) {
+        return service.getAllocationById(id, actorId, role);
+    }
+
+    @PutMapping("/allocations/{id}") 
+    public StudentFeeAllocation putAlloc(@PathVariable Long id, @Valid @RequestBody StudentFeeAllocation a, @RequestHeader("X-Actor-Id") Long actorId, @RequestHeader("X-Role") String role) { 
+        return service.updateAllocation(id, a, actorId, role); 
+    }
+    
+    @DeleteMapping("/allocations/{id}")
+    public void delAlloc(@PathVariable Long id, @RequestHeader("X-Actor-Id") Long actorId, @RequestHeader("X-Role") String role) {
+        service.deleteAllocation(id, actorId, role); // Service layer throws Exception as per Matrix
+    }
+
+    // ========================================================================
+    // 4. STUDENT FEE PAYMENTS (Secure GET by ID)
+    // ========================================================================
+    @PostMapping("/payments") 
+    public StudentFeePayment postPay(@Valid @RequestBody StudentFeePayment p, @RequestHeader("X-Actor-Id") Long actorId, @RequestHeader("X-Role") String role) { 
+        return service.processPayment(p, actorId, role); 
+    }
+
+    @GetMapping("/payments") 
+    public List<StudentFeePayment> getAllPay(@RequestHeader("X-Actor-Id") Long actorId, @RequestHeader("X-Role") String role) { 
+        return service.getPayments(actorId, role); 
+    }
+
+    @GetMapping("/payments/{id}")
+    public StudentFeePayment getPayById(@PathVariable Long id, @RequestHeader("X-Actor-Id") Long actorId, @RequestHeader("X-Role") String role) {
+        return service.getPaymentById(id, actorId, role);
+    }
+
+    // ========================================================================
+    // 5. FEE DISCOUNTS (Parent-Child Secure GET)
+    // ========================================================================
+    @PostMapping("/discounts") 
+    public FeeDiscount postDisc(@Valid @RequestBody FeeDiscount d, @RequestHeader("X-Actor-Id") Long actorId, @RequestHeader("X-Role") String role) { 
+        return service.applyDiscount(d, actorId, role); 
+    }
+
+    @GetMapping("/discounts") 
+    public List<FeeDiscount> getAllDisc(@RequestHeader("X-Actor-Id") Long actorId, @RequestHeader("X-Role") String role) { 
+        return service.getDiscounts(actorId, role); 
+    }
+
+    @GetMapping("/discounts/{id}")
+    public FeeDiscount getDiscById(@PathVariable Long id, @RequestHeader("X-Actor-Id") Long actorId, @RequestHeader("X-Role") String role) {
+        return service.getDiscountById(id, actorId, role);
+    }
+
+    @PutMapping("/discounts/{id}")
+    public FeeDiscount putDisc(@PathVariable Long id, @Valid @RequestBody FeeDiscount d, @RequestHeader("X-Actor-Id") Long actorId, @RequestHeader("X-Role") String role) {
+        return service.updateDiscount(id, d, actorId, role);
+    }
+
+    @DeleteMapping("/discounts/{id}")
+    public void delDisc(@PathVariable Long id, @RequestHeader("X-Actor-Id") Long actorId, @RequestHeader("X-Role") String role) {
+        service.deleteDiscount(id, actorId, role);
+    }
+
+    // ========================================================================
+    // 6. FEE REFUNDS (Parent ❌ Restriction in Service)
+    // ========================================================================
+    @PostMapping("/refunds") 
+    public FeeRefund postRef(@Valid @RequestBody FeeRefund r, @RequestHeader("X-Actor-Id") Long actorId, @RequestHeader("X-Role") String role) { 
+        return service.processRefund(r, actorId, role); 
+    }
+
+    @GetMapping("/refunds") 
+    public List<FeeRefund> getAllRef(@RequestHeader("X-Actor-Id") Long actorId, @RequestHeader("X-Role") String role) { 
+        return service.getRefunds(actorId, role); 
+    }
+
+    @GetMapping("/refunds/{id}")
+    public FeeRefund getRefById(@PathVariable Long id, @RequestHeader("X-Actor-Id") Long actorId, @RequestHeader("X-Role") String role) {
+        return service.getRefundById(id, actorId, role);
+    }
+
+    // ========================================================================
+    // 7. AUDIT LOGS
+    // ========================================================================
+    @GetMapping("/audit") 
+    public List<AuditLog> getAllAudit(@RequestHeader("X-Actor-Id") Long actorId, @RequestHeader("X-Role") String role) { 
+        return service.getAuditLogs(actorId, role); 
+    }
+    
+    @GetMapping("/audit/{id}")
+    public AuditLog getAuditLogById(@PathVariable Long id, @RequestHeader("X-Actor-Id") Long actorId, @RequestHeader("X-Role") String role) {
+        return service.getAuditLogById(id, actorId, role);
+    }
+
+    // ========================================================================
+    // 8. FEE RECEIPTS
+    // ========================================================================
+    @GetMapping("/receipts") 
+    public List<FeeReceipt> getAllRec(@RequestHeader("X-Actor-Id") Long actorId, @RequestHeader("X-Role") String role) { 
+        return service.getReceipts(actorId, role); 
+    }
+
+    @GetMapping("/receipts/{id}")
+    public FeeReceipt getRecById(@PathVariable Long id, @RequestHeader("X-Actor-Id") Long actorId, @RequestHeader("X-Role") String role) {
+        return service.getReceiptById(id, actorId, role);
+    }
 }

@@ -8,6 +8,7 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import java.time.LocalDateTime;
 import java.util.List;
+import java.util.stream.Collectors;
 
 @Service
 public class FeeServiceImpl implements FeeService {
@@ -21,8 +22,20 @@ public class FeeServiceImpl implements FeeService {
     @Autowired private AuditLogRepository auditRepo;
     @Autowired private FeeReceiptRepository receiptRepo;
 
-    private void validateCourseFromAcademic(Long courseId) {
-        if(courseId == null || courseId <= 0) throw new RuntimeException("Academic Validation Failed: Invalid Course ID");
+    // --- SECURITY & AUDIT UTILITIES ---
+
+    private void checkAdmin(String role) {
+        if (!"ADMIN".equalsIgnoreCase(role)) {
+            throw new RuntimeException("Access Denied: Admin role required.");
+        }
+    }
+
+    private void verifyParentChild(Long actorId, Long studentUserId) {
+        // Verification based on existing allocation records for the student
+        boolean exists = allocRepo.existsByUserId(studentUserId);
+        if (!exists) {
+            throw new RuntimeException("Access Denied: No verified relationship with Student ID " + studentUserId);
+        }
     }
 
     private void logAction(String module, Long id, String action, Long actorId) {
@@ -31,170 +44,328 @@ public class FeeServiceImpl implements FeeService {
         log.setEntityId(id);
         log.setAction(action);
         log.setPerformedBy(actorId);
+        log.setPerformedAt(LocalDateTime.now());
         auditRepo.save(log);
     }
 
-    // --- FEE TYPES ---
-    @Override 
-    public FeeType createFeeType(FeeType ft, Long actorId) {
-        ft.setId(null); // FIX: Prevents "Detached Entity" error by forcing a new record
-        ft.setCreatedAt(LocalDateTime.now());
+    // ========================================================================
+    // 1. FEE TYPES
+    // ========================================================================
+    @Override
+    public List<FeeType> getAllFeeTypes(Long actorId, String role) {
+        if (!"ADMIN".equalsIgnoreCase(role) && !"FACULTY".equalsIgnoreCase(role)) {
+            throw new RuntimeException("Access Denied: GET ALL reserved for Admin/Faculty.");
+        }
+        return typeRepo.findAll();
+    }
+
+    @Override
+    public List<FeeType> getActiveFeeTypes() {
+        return typeRepo.findByIsActiveTrue();
+    }
+
+    @Override
+    public FeeType createFeeType(FeeType ft, Long actorId, String role) {
+        checkAdmin(role);
+        ft.setId(null);
         FeeType saved = typeRepo.save(ft);
         logAction("FEE_TYPE", saved.getId(), "POST", actorId);
         return saved;
     }
-    
-    @Override 
-    public FeeType updateFeeType(Long id, FeeType ft, Long actorId) {
-        FeeType ex = typeRepo.findById(id).orElseThrow(() -> new RuntimeException("Update Failed: FeeType ID " + id + " not found"));
-        // Fetch-then-Update: Syncing all columns
-        if(ft.getName() != null) ex.setName(ft.getName());
-        if(ft.getDescription() != null) ex.setDescription(ft.getDescription());
-        if(ft.getIsActive() != null) ex.setIsActive(ft.getIsActive());
+
+    @Override
+    public FeeType getFeeTypeById(Long id, Long actorId, String role) {
+        return typeRepo.findById(id).orElseThrow(() -> new RuntimeException("FeeType not found"));
+    }
+
+    @Override
+    public FeeType updateFeeType(Long id, FeeType ft, Long actorId, String role) {
+        checkAdmin(role);
+        // Fetch-then-Update
+        FeeType ex = typeRepo.findById(id).orElseThrow(() -> new RuntimeException("FeeType ID not found: " + id));
         
-        ex.setUpdatedAt(LocalDateTime.now()); // Mentor rule: Update timestamp on PUT
+        // Map all columns for response visibility
+        ex.setName(ft.getName());
+        ex.setDescription(ft.getDescription());
+        ex.setIsActive(ft.getIsActive());
+        ex.setUpdatedAt(LocalDateTime.now());
+        
         logAction("FEE_TYPE", id, "PUT", actorId);
         return typeRepo.save(ex);
     }
-    @Override public List<FeeType> getAllFeeTypes() { return typeRepo.findAll(); }
-    @Override public FeeType getFeeTypeById(Long id) { return typeRepo.findById(id).orElse(null); }
-    @Override public void deleteFeeType(Long id, Long actorId) { typeRepo.deleteById(id); logAction("FEE_TYPE", id, "DELETE", actorId); }
 
-    // --- FEE STRUCTURES ---
-    @Override 
-    public FeeStructure createFeeStructure(FeeStructure fs, Long actorId) {
-        validateCourseFromAcademic(fs.getCourseId());
-        fs.setId(null); // FIX
-        fs.setCreatedAt(LocalDateTime.now());
+    @Override
+    public void deleteFeeType(Long id, Long actorId, String role) {
+        checkAdmin(role);
+        typeRepo.deleteById(id);
+        logAction("FEE_TYPE", id, "DELETE", actorId);
+    }
+
+    // ========================================================================
+    // 2. FEE STRUCTURES
+    // ========================================================================
+    @Override
+    public List<FeeStructure> getFeeStructures(Long actorId, String role, Long courseId, String academicYear) {
+        if ("ADMIN".equalsIgnoreCase(role)) return structRepo.findAll();
+
+        if ("FACULTY".equalsIgnoreCase(role)) {
+            if (courseId == null) throw new RuntimeException("Faculty must specify a courseId.");
+            return (academicYear != null) ? structRepo.findByCourseIdAndAcademicYear(courseId, academicYear) 
+                                          : structRepo.findByCourseId(courseId);
+        }
+
+        if ("STUDENT".equalsIgnoreCase(role) || "PARENT".equalsIgnoreCase(role)) {
+            return allocRepo.findByUserId(actorId).stream()
+                    .map(StudentFeeAllocation::getFeeStructure)
+                    .distinct()
+                    .collect(Collectors.toList());
+        }
+        throw new RuntimeException("Access Denied.");
+    }
+
+    @Override
+    public FeeStructure createFeeStructure(FeeStructure fs, Long actorId, String role) {
+        checkAdmin(role);
+        fs.setId(null);
         FeeStructure saved = structRepo.save(fs);
         logAction("FEE_STRUCTURE", saved.getId(), "POST", actorId);
         return saved;
     }
-    
-    @Override 
-    public FeeStructure updateFeeStructure(Long id, FeeStructure fs, Long actorId) {
-        FeeStructure ex = structRepo.findById(id).orElseThrow(() -> new RuntimeException("ID Not Found"));
-        if(fs.getAcademicYear() != null) ex.setAcademicYear(fs.getAcademicYear());
-        if(fs.getTotalAmount() != null) ex.setTotalAmount(fs.getTotalAmount());
-        if(fs.getCourseId() != null) { validateCourseFromAcademic(fs.getCourseId()); ex.setCourseId(fs.getCourseId()); }
-        if(fs.getFeeType() != null) ex.setFeeType(fs.getFeeType());
+
+    @Override
+    public FeeStructure getFeeStructureById(Long id, Long actorId, String role) {
+        return structRepo.findById(id).orElseThrow(() -> new RuntimeException("Structure not found"));
+    }
+
+    @Override
+    public FeeStructure updateFeeStructure(Long id, FeeStructure fs, Long actorId, String role) {
+        checkAdmin(role);
+        FeeStructure ex = structRepo.findById(id).orElseThrow(() -> new RuntimeException("Structure ID not found: " + id));
         
+        ex.setAcademicYear(fs.getAcademicYear());
+        ex.setTotalAmount(fs.getTotalAmount());
+        ex.setCourseId(fs.getCourseId());
+        ex.setFeeType(fs.getFeeType());
         ex.setUpdatedAt(LocalDateTime.now());
+        
         logAction("FEE_STRUCTURE", id, "PUT", actorId);
         return structRepo.save(ex);
     }
-    @Override public List<FeeStructure> getAllFeeStructures() { return structRepo.findAll(); }
-    @Override public FeeStructure getFeeStructureById(Long id) { return structRepo.findById(id).orElse(null); }
-    @Override public void deleteFeeStructure(Long id, Long actorId) { structRepo.deleteById(id); logAction("FEE_STRUCTURE", id, "DELETE", actorId); }
 
-    // --- ALLOCATIONS ---
-    @Override 
-    public StudentFeeAllocation allocateFee(StudentFeeAllocation sfa, Long actorId) {
-        sfa.setId(null); // FIX
-        sfa.setCreatedAt(LocalDateTime.now());
+    @Override
+    public void deleteFeeStructure(Long id, Long actorId, String role) {
+        checkAdmin(role);
+        structRepo.deleteById(id);
+        logAction("FEE_STRUCTURE", id, "DELETE", actorId);
+    }
+
+    // ========================================================================
+    // 3. STUDENT FEE ALLOCATIONS
+    // ========================================================================
+    @Override
+    public List<StudentFeeAllocation> getAllocations(Long actorId, String role, Long userId) {
+        if ("ADMIN".equalsIgnoreCase(role)) return allocRepo.findAll();
+        if ("STUDENT".equalsIgnoreCase(role)) return allocRepo.findByUserId(actorId);
+        if ("PARENT".equalsIgnoreCase(role)) {
+            if (userId == null) throw new RuntimeException("Parent must specify student userId.");
+            verifyParentChild(actorId, userId);
+            return allocRepo.findByUserId(userId);
+        }
+        throw new RuntimeException("Access Denied.");
+    }
+
+    @Override
+    public StudentFeeAllocation getAllocationById(Long id, Long actorId, String role) {
+        StudentFeeAllocation sfa = allocRepo.findById(id).orElseThrow(() -> new RuntimeException("Allocation not found"));
+        if ("ADMIN".equalsIgnoreCase(role)) return sfa;
+        if ("STUDENT".equalsIgnoreCase(role) && sfa.getUserId().equals(actorId)) return sfa;
+        if ("PARENT".equalsIgnoreCase(role)) {
+            verifyParentChild(actorId, sfa.getUserId());
+            return sfa;
+        }
+        throw new RuntimeException("Access Denied.");
+    }
+
+    @Override
+    public StudentFeeAllocation allocateFee(StudentFeeAllocation sfa, Long actorId, String role) {
+        checkAdmin(role);
+        sfa.setId(null);
         StudentFeeAllocation saved = allocRepo.save(sfa);
         logAction("ALLOCATION", saved.getId(), "POST", actorId);
         return saved;
     }
-    
-    @Override 
-    public StudentFeeAllocation updateAllocation(Long id, StudentFeeAllocation sfa, Long actorId) {
-        StudentFeeAllocation ex = allocRepo.findById(id).orElseThrow(() -> new RuntimeException("ID Not Found"));
-        if(sfa.getDueDate() != null) ex.setDueDate(sfa.getDueDate());
-        if(sfa.getUserId() != null) ex.setUserId(sfa.getUserId());
-        if(sfa.getFeeStructure() != null) ex.setFeeStructure(sfa.getFeeStructure());
+
+    @Override
+    public StudentFeeAllocation updateAllocation(Long id, StudentFeeAllocation sfa, Long actorId, String role) {
+        checkAdmin(role);
+        StudentFeeAllocation ex = allocRepo.findById(id).orElseThrow(() -> new RuntimeException("Allocation ID not found: " + id));
         
+        ex.setUserId(sfa.getUserId());
+        ex.setFeeStructure(sfa.getFeeStructure());
+        ex.setDueDate(sfa.getDueDate());
+        ex.setAllocationDate(sfa.getAllocationDate());
+        ex.setStatus(sfa.getStatus());
+        ex.setAmountPaid(sfa.getAmountPaid());
         ex.setUpdatedAt(LocalDateTime.now());
+        
         logAction("ALLOCATION", id, "PUT", actorId);
         return allocRepo.save(ex);
     }
-    @Override public List<StudentFeeAllocation> getAllAllocations() { return allocRepo.findAll(); }
-    @Override public StudentFeeAllocation getAllocationById(Long id) { return allocRepo.findById(id).orElse(null); }
-    @Override public void deleteAllocation(Long id, Long actorId) { allocRepo.deleteById(id); logAction("ALLOCATION", id, "DELETE", actorId); }
 
-    // --- PAYMENTS & AUTO RECEIPT ---
-    @Override 
-    @Transactional 
-    public StudentFeePayment processPayment(StudentFeePayment sfp, Long actorId) {
-        sfp.setId(null); // FIX
-        sfp.setCreatedAt(LocalDateTime.now());
-        StudentFeePayment saved = payRepo.save(sfp);
-        
+    @Override
+    public void deleteAllocation(Long id, Long actorId, String role) {
+        throw new RuntimeException("Deletion prohibited for financial audit integrity.");
+    }
+
+    // ========================================================================
+    // 4. STUDENT FEE PAYMENTS
+    // ========================================================================
+    @Override
+    @Transactional
+    public StudentFeePayment processPayment(StudentFeePayment p, Long actorId, String role) {
+        if (!"ADMIN".equalsIgnoreCase(role) && !"STUDENT".equalsIgnoreCase(role)) {
+            throw new RuntimeException("Unauthorized role for payment.");
+        }
+        p.setId(null);
+        StudentFeePayment saved = payRepo.save(p);
+
         FeeReceipt receipt = new FeeReceipt();
         receipt.setStudentFeePayment(saved);
         receipt.setReceiptNumber("REC-" + System.currentTimeMillis());
         receiptRepo.save(receipt);
-        
+
         logAction("PAYMENT", saved.getId(), "POST", actorId);
         return saved;
     }
-    
-    @Override 
-    public StudentFeePayment updatePayment(Long id, StudentFeePayment sfp, Long actorId) {
-        StudentFeePayment ex = payRepo.findById(id).orElseThrow(() -> new RuntimeException("ID Not Found"));
-        if(sfp.getPaidAmount() != null) ex.setPaidAmount(sfp.getPaidAmount());
-        if(sfp.getPaymentMode() != null) ex.setPaymentMode(sfp.getPaymentMode());
-        if(sfp.getTransactionReference() != null) ex.setTransactionReference(sfp.getTransactionReference());
-        
-        ex.setUpdatedAt(LocalDateTime.now());
-        logAction("PAYMENT", id, "PUT", actorId);
-        return payRepo.save(ex);
-    }
-    @Override public List<StudentFeePayment> getAllPayments() { return payRepo.findAll(); }
-    @Override public StudentFeePayment getPaymentById(Long id) { return payRepo.findById(id).orElse(null); }
-    @Override public void deletePayment(Long id, Long actorId) { payRepo.deleteById(id); logAction("PAYMENT", id, "DELETE", actorId); }
 
-    // --- DISCOUNTS ---
-    @Override 
-    public FeeDiscount applyDiscount(FeeDiscount fd, Long actorId) {
-        fd.setId(null); // FIX
-        fd.setCreatedAt(LocalDateTime.now());
+    @Override
+    public List<StudentFeePayment> getPayments(Long actorId, String role) {
+        if ("ADMIN".equalsIgnoreCase(role)) return payRepo.findAll();
+        if ("STUDENT".equalsIgnoreCase(role)) return payRepo.findByStudentFeeAllocationUserId(actorId);
+        if ("PARENT".equalsIgnoreCase(role)) return payRepo.findByStudentFeeAllocationUserId(actorId);
+        throw new RuntimeException("Access Denied.");
+    }
+
+    @Override
+    public StudentFeePayment getPaymentById(Long id, Long actorId, String role) {
+        StudentFeePayment p = payRepo.findById(id).orElseThrow(() -> new RuntimeException("Payment not found"));
+        if ("ADMIN".equalsIgnoreCase(role)) return p;
+        Long studentId = p.getStudentFeeAllocation().getUserId();
+        if ("STUDENT".equalsIgnoreCase(role) && studentId.equals(actorId)) return p;
+        if ("PARENT".equalsIgnoreCase(role)) {
+            verifyParentChild(actorId, studentId);
+            return p;
+        }
+        throw new RuntimeException("Access Denied.");
+    }
+
+    // ========================================================================
+    // 5. FEE DISCOUNTS (New Implementation)
+    // ========================================================================
+    @Override
+    public FeeDiscount applyDiscount(FeeDiscount fd, Long actorId, String role) {
+        checkAdmin(role);
+        fd.setId(null);
         FeeDiscount saved = discRepo.save(fd);
         logAction("DISCOUNT", saved.getId(), "POST", actorId);
         return saved;
     }
-    
-    @Override 
-    public FeeDiscount updateDiscount(Long id, FeeDiscount fd, Long actorId) {
-        FeeDiscount ex = discRepo.findById(id).orElseThrow(() -> new RuntimeException("ID Not Found"));
-        if(fd.getDiscountValue() != null) ex.setDiscountValue(fd.getDiscountValue());
-        if(fd.getReason() != null) ex.setReason(fd.getReason());
+
+    @Override
+    public List<FeeDiscount> getDiscounts(Long actorId, String role) {
+        if ("ADMIN".equalsIgnoreCase(role)) return discRepo.findAll();
+        if ("STUDENT".equalsIgnoreCase(role)) return discRepo.findByUserId(actorId);
+        if ("PARENT".equalsIgnoreCase(role)) return discRepo.findByUserId(actorId);
+        throw new RuntimeException("Access Denied.");
+    }
+
+    @Override
+    public FeeDiscount getDiscountById(Long id, Long actorId, String role) {
+        FeeDiscount fd = discRepo.findById(id).orElseThrow(() -> new RuntimeException("Discount not found"));
+        if ("ADMIN".equalsIgnoreCase(role)) return fd;
+        if (("STUDENT".equalsIgnoreCase(role) || "PARENT".equalsIgnoreCase(role)) && fd.getUserId().equals(actorId)) {
+            if ("PARENT".equalsIgnoreCase(role)) verifyParentChild(actorId, fd.getUserId());
+            return fd;
+        }
+        throw new RuntimeException("Access Denied.");
+    }
+
+    @Override
+    public FeeDiscount updateDiscount(Long id, FeeDiscount fd, Long actorId, String role) {
+        checkAdmin(role);
+        FeeDiscount ex = discRepo.findById(id).orElseThrow(() -> new RuntimeException("Discount ID not found: " + id));
         
+        ex.setUserId(fd.getUserId());
+        ex.setFeeStructure(fd.getFeeStructure());
+        ex.setDiscountType(fd.getDiscountType());
+        ex.setDiscountValue(fd.getDiscountValue());
+        ex.setReason(fd.getReason());
+        ex.setApprovedBy(fd.getApprovedBy());
+        ex.setApprovedDate(fd.getApprovedDate());
         ex.setUpdatedAt(LocalDateTime.now());
+        
         logAction("DISCOUNT", id, "PUT", actorId);
         return discRepo.save(ex);
     }
-    @Override public List<FeeDiscount> getAllDiscounts() { return discRepo.findAll(); }
-    @Override public FeeDiscount getDiscountById(Long id) { return discRepo.findById(id).orElse(null); }
-    @Override public void deleteDiscount(Long id, Long actorId) { discRepo.deleteById(id); logAction("DISCOUNT", id, "DELETE", actorId); }
 
-    // --- REFUNDS ---
-    @Override 
-    public FeeRefund processRefund(FeeRefund fr, Long actorId) {
-        fr.setId(null); // FIX
-        fr.setCreatedAt(LocalDateTime.now());
+    @Override
+    public void deleteDiscount(Long id, Long actorId, String role) {
+        checkAdmin(role);
+        discRepo.deleteById(id);
+        logAction("DISCOUNT", id, "DELETE", actorId);
+    }
+
+    // ========================================================================
+    // 6. FEE REFUNDS
+    // ========================================================================
+    @Override
+    public List<FeeRefund> getRefunds(Long actorId, String role) {
+        if ("ADMIN".equalsIgnoreCase(role)) return refundRepo.findAll();
+        if ("STUDENT".equalsIgnoreCase(role)) return refundRepo.findByStudentFeePaymentStudentFeeAllocationUserId(actorId);
+        throw new RuntimeException("Access Denied: Parents cannot view refunds.");
+    }
+
+    @Override
+    public FeeRefund getRefundById(Long id, Long actorId, String role) {
+        FeeRefund fr = refundRepo.findById(id).orElseThrow(() -> new RuntimeException("Refund not found"));
+        if ("ADMIN".equalsIgnoreCase(role)) return fr;
+        Long studentId = fr.getStudentFeePayment().getStudentFeeAllocation().getUserId();
+        if ("STUDENT".equalsIgnoreCase(role) && studentId.equals(actorId)) return fr;
+        throw new RuntimeException("Access Denied: Restricted access for refunds.");
+    }
+
+    @Override
+    public FeeRefund processRefund(FeeRefund fr, Long actorId, String role) {
+        checkAdmin(role);
+        fr.setId(null);
         FeeRefund saved = refundRepo.save(fr);
         logAction("REFUND", saved.getId(), "POST", actorId);
         return saved;
     }
-    
-    @Override 
-    public FeeRefund updateRefund(Long id, FeeRefund fr, Long actorId) {
-        FeeRefund ex = refundRepo.findById(id).orElseThrow(() -> new RuntimeException("ID Not Found"));
-        if(fr.getRefundAmount() != null) ex.setRefundAmount(fr.getRefundAmount());
-        if(fr.getReason() != null) ex.setReason(fr.getReason());
-        
-        ex.setUpdatedAt(LocalDateTime.now());
-        logAction("REFUND", id, "PUT", actorId);
-        return refundRepo.save(ex);
-    }
-    @Override public List<FeeRefund> getAllRefunds() { return refundRepo.findAll(); }
-    @Override public FeeRefund getRefundById(Long id) { return refundRepo.findById(id).orElse(null); }
-    @Override public void deleteRefund(Long id, Long actorId) { refundRepo.deleteById(id); logAction("REFUND", id, "DELETE", actorId); }
 
-    // --- READ ONLY ---
-    @Override public List<AuditLog> getAllAuditLogs() { return auditRepo.findAll(); }
-    @Override public AuditLog getAuditLogById(Long id) { return auditRepo.findById(id).orElse(null); }
-    @Override public List<FeeReceipt> getAllReceipts() { return receiptRepo.findAll(); }
-    @Override public FeeReceipt getReceiptById(Long id) { return receiptRepo.findById(id).orElse(null); }
+    // ========================================================================
+    // 8. FEE RECEIPTS
+    // ========================================================================
+    @Override
+    public List<FeeReceipt> getReceipts(Long actorId, String role) {
+        if ("ADMIN".equalsIgnoreCase(role)) return receiptRepo.findAll();
+        return receiptRepo.findByStudentFeePaymentStudentFeeAllocationUserId(actorId);
+    }
+
+    @Override
+    public FeeReceipt getReceiptById(Long id, Long actorId, String role) {
+        FeeReceipt fr = receiptRepo.findById(id).orElseThrow(() -> new RuntimeException("Receipt not found"));
+        if ("ADMIN".equalsIgnoreCase(role)) return fr;
+        Long studentId = fr.getStudentFeePayment().getStudentFeeAllocation().getUserId();
+        if ("STUDENT".equalsIgnoreCase(role) && studentId.equals(actorId)) return fr;
+        if ("PARENT".equalsIgnoreCase(role)) {
+            verifyParentChild(actorId, studentId);
+            return fr;
+        }
+        throw new RuntimeException("Access Denied.");
+    }
+    
+    // --- Audit Logs ---
+    @Override public List<AuditLog> getAuditLogs(Long actorId, String role) { checkAdmin(role); return auditRepo.findAll(); }
+    @Override public AuditLog getAuditLogById(Long id, Long actorId, String role) { checkAdmin(role); return auditRepo.findById(id).orElseThrow(() -> new RuntimeException("Log not found")); }
 }

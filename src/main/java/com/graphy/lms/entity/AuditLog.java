@@ -1,28 +1,42 @@
 package com.graphy.lms.entity;
 
 import jakarta.persistence.*;
-import lombok.Data; // <--- This was missing
+import lombok.Data;
+import lombok.NoArgsConstructor;
+import lombok.AllArgsConstructor;
 import java.time.LocalDateTime;
 
 @Entity
 @Table(name = "audit_logs")
-@Data // Lombok will generate Getters, Setters, ToString, etc.
+@Data
+@NoArgsConstructor
+@AllArgsConstructor
 public class AuditLog {
     
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Long id;
     
-    private String module;
+    @Column(nullable = false)
+    private String module; // e.g., "FEE_TYPE", "PAYMENT"
     
-    private Long entityId;
+    @Column(nullable = false)
+    private Long entityId; // The ID of the record being changed
     
-    private String action; // e.g., POST, PUT, DELETE
+    @Column(nullable = false)
+    private String action; // POST, PUT, DELETE
     
-    private Long performedBy; // The userId taken from the token
+    @Column(nullable = false)
+    private Long performedBy; // The actorId (Admin/Faculty/Student)
     
-    private LocalDateTime performedAt = LocalDateTime.now();
+    @Column(updatable = false)
+    private LocalDateTime performedAt;
 
-    // Added for consistency with your mentor's module-wide rules
+    // Included to satisfy your mentor's "All Columns" rule across all 7 tables
     private LocalDateTime updatedAt; 
+
+    @PrePersist
+    protected void onCreate() {
+        this.performedAt = LocalDateTime.now();
+    }
 }

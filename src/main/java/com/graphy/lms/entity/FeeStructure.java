@@ -1,32 +1,51 @@
 package com.graphy.lms.entity;
 
 import jakarta.persistence.*;
-import lombok.Data;              // Fixed: Import for @Data
-import java.time.LocalDateTime;   // Fixed: Import for LocalDateTime
+import lombok.Data;
+import lombok.NoArgsConstructor;
+import lombok.AllArgsConstructor;
+import java.time.LocalDateTime;
 
 @Entity
 @Table(name = "fee_structures")
-@Data // Automatically generates all getters, setters, and required methods
+@Data
+@NoArgsConstructor
+@AllArgsConstructor
 public class FeeStructure {
 
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Long id;
 
-    @ManyToOne
+    // Relationship to Master Data (FeeType)
+    @ManyToOne(fetch = FetchType.EAGER)
     @JoinColumn(name = "fee_type_id", nullable = false)
     private FeeType feeType;
 
+    @Column(nullable = false)
     private String academicYear;
 
-    // This ID is validated via the Finance-to-Academic backend handshake
+    // Critical for Access Matrix: Used to filter by Faculty/Student roles
+    @Column(nullable = false)
     private Long courseId;
 
+    @Column(nullable = false)
     private Double totalAmount;
 
-    // Set automatically on POST
-    private LocalDateTime createdAt = LocalDateTime.now();
+    // Mentor Rule: Set automatically on record creation
+    @Column(updatable = false)
+    private LocalDateTime createdAt;
 
-    // Mentor Rule: Updated during PUT methods, otherwise null
+    // Mentor Rule: Reflects the "Fetch-then-Update" pattern in the response
     private LocalDateTime updatedAt;
+
+    @PrePersist
+    protected void onCreate() {
+        this.createdAt = LocalDateTime.now();
+    }
+
+    @PreUpdate
+    protected void onUpdate() {
+        this.updatedAt = LocalDateTime.now();
+    }
 }

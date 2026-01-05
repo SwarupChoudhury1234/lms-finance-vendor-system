@@ -1,28 +1,43 @@
 package com.graphy.lms.entity;
 
 import jakarta.persistence.*;
-import lombok.Data;              // Missing Import 1: For @Data
-import java.time.LocalDateTime;   // Missing Import 2: For LocalDateTime
+import lombok.Data;
+import lombok.NoArgsConstructor;
+import lombok.AllArgsConstructor;
+import java.time.LocalDateTime;
 
 @Entity
 @Table(name = "fee_receipts")
-@Data 
+@Data
+@NoArgsConstructor
+@AllArgsConstructor
 public class FeeReceipt {
 
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
-    private Long receiptId;
+    private Long id; // Changed to 'id' to maintain consistency with other entities
 
-    @OneToOne
-    @JoinColumn(name = "payment_id")
+    @OneToOne(fetch = FetchType.EAGER)
+    @JoinColumn(name = "payment_id", nullable = false)
     private StudentFeePayment studentFeePayment;
 
+    @Column(unique = true, nullable = false)
     private String receiptNumber;
 
-    // Set automatically at the time of creation
-    private LocalDateTime generatedAt = LocalDateTime.now();
+    // Mentor Rule: Set automatically on record creation (POST)
+    @Column(updatable = false)
+    private LocalDateTime generatedAt;
 
-    // Mentor Rule: Required for all tables. 
-    // Will be null at POST and updated during system-triggered updates.
+    // Mentor Rule: Required for consistency across all 7 tables
     private LocalDateTime updatedAt;
+
+    @PrePersist
+    protected void onCreate() {
+        this.generatedAt = LocalDateTime.now();
+    }
+
+    @PreUpdate
+    protected void onUpdate() {
+        this.updatedAt = LocalDateTime.now();
+    }
 }

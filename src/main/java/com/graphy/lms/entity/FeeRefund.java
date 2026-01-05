@@ -1,32 +1,54 @@
 package com.graphy.lms.entity;
 
 import jakarta.persistence.*;
-import lombok.Data;              // Missing Import 1: Resolves @Data
+import lombok.Data;
+import lombok.NoArgsConstructor;
+import lombok.AllArgsConstructor;
 import java.time.LocalDate;
-import java.time.LocalDateTime;   // Missing Import 2: Resolves LocalDateTime
+import java.time.LocalDateTime;
 
 @Entity
 @Table(name = "fee_refunds")
-@Data // Automatically generates getters, setters, and other boilerplate
+@Data
+@NoArgsConstructor
+@AllArgsConstructor
 public class FeeRefund {
 
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Long id;
 
-    @ManyToOne
-    @JoinColumn(name = "student_fee_payment_id")
+    // Link to the original payment being refunded
+    @ManyToOne(fetch = FetchType.EAGER)
+    @JoinColumn(name = "student_fee_payment_id", nullable = false)
     private StudentFeePayment studentFeePayment;
 
+    @Column(nullable = false)
     private Double refundAmount;
 
+    @Column(nullable = false)
     private LocalDate refundDate;
 
+    @Column(nullable = false)
     private String reason;
 
-    // Required for the "all columns" Postman rule
-    private LocalDateTime createdAt = LocalDateTime.now();
+    // Mentor Rule: Set automatically on record creation (POST)
+    @Column(updatable = false)
+    private LocalDateTime createdAt;
 
-    // Mentor Rule: Set to null on POST, updated automatically on PUT
+    // Mentor Rule: Included for "All Columns" rule; refreshed if a PUT occurs
     private LocalDateTime updatedAt;
+
+    @PrePersist
+    protected void onCreate() {
+        this.createdAt = LocalDateTime.now();
+        if (this.refundDate == null) {
+            this.refundDate = LocalDate.now();
+        }
+    }
+
+    @PreUpdate
+    protected void onUpdate() {
+        this.updatedAt = LocalDateTime.now();
+    }
 }

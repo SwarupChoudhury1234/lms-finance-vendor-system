@@ -6,68 +6,92 @@ import java.util.List;
 public interface FeeService {
 
     // ========================================================================
-    // 1. FEE TYPES (5 Methods)
+    // 1. FEE TYPES
     // ========================================================================
-    FeeType createFeeType(FeeType feeType, Long actorId);
-    List<FeeType> getAllFeeTypes();
-    FeeType getFeeTypeById(Long id);
-    FeeType updateFeeType(Long id, FeeType feeType, Long actorId);
-    void deleteFeeType(Long id, Long actorId);
+    FeeType createFeeType(FeeType feeType, Long actorId, String role);
+    
+    // Matrix Fix: Separated GET ALL (Admin/Faculty) from GET Active (Everyone)
+    List<FeeType> getAllFeeTypes(Long actorId, String role);
+    
+    List<FeeType> getActiveFeeTypes();
+    
+    FeeType getFeeTypeById(Long id, Long actorId, String role);
+    
+    FeeType updateFeeType(Long id, FeeType feeType, Long actorId, String role);
+    
+    void deleteFeeType(Long id, Long actorId, String role);
 
     // ========================================================================
-    // 2. FEE STRUCTURES (5 Methods)
+    // 2. FEE STRUCTURES
     // ========================================================================
-    FeeStructure createFeeStructure(FeeStructure feeStructure, Long actorId);
-    List<FeeStructure> getAllFeeStructures();
-    FeeStructure getFeeStructureById(Long id);
-    FeeStructure updateFeeStructure(Long id, FeeStructure feeStructure, Long actorId);
-    void deleteFeeStructure(Long id, Long actorId);
+    FeeStructure createFeeStructure(FeeStructure feeStructure, Long actorId, String role);
+    
+    // Matrix Fix: Added academicYear to satisfy "GET by course/year"
+    List<FeeStructure> getFeeStructures(Long actorId, String role, Long courseId, String academicYear);
+    
+    FeeStructure getFeeStructureById(Long id, Long actorId, String role);
+    
+    FeeStructure updateFeeStructure(Long id, FeeStructure feeStructure, Long actorId, String role);
+    
+    void deleteFeeStructure(Long id, Long actorId, String role);
 
     // ========================================================================
-    // 3. STUDENT FEE ALLOCATIONS (5 Methods)
+    // 3. STUDENT FEE ALLOCATIONS
     // ========================================================================
-    StudentFeeAllocation allocateFee(StudentFeeAllocation allocation, Long actorId);
-    List<StudentFeeAllocation> getAllAllocations();
-    StudentFeeAllocation getAllocationById(Long id);
-    StudentFeeAllocation updateAllocation(Long id, StudentFeeAllocation allocation, Long actorId);
-    void deleteAllocation(Long id, Long actorId);
+    StudentFeeAllocation allocateFee(StudentFeeAllocation allocation, Long actorId, String role);
+    
+    // Matrix Fix: userId allows Parent to specify child; logic will verify relationship
+    List<StudentFeeAllocation> getAllocations(Long actorId, String role, Long userId);
+    
+    StudentFeeAllocation getAllocationById(Long id, Long actorId, String role);
+    
+    StudentFeeAllocation updateAllocation(Long id, StudentFeeAllocation allocation, Long actorId, String role);
+    
+    void deleteAllocation(Long id, Long actorId, String role);
 
     // ========================================================================
-    // 4. STUDENT FEE PAYMENTS (5 Methods) - Triggers Auto-Receipt
+    // 4. STUDENT FEE PAYMENTS
     // ========================================================================
-    StudentFeePayment processPayment(StudentFeePayment payment, Long actorId);
-    List<StudentFeePayment> getAllPayments();
-    StudentFeePayment getPaymentById(Long id);
-    StudentFeePayment updatePayment(Long id, StudentFeePayment payment, Long actorId);
-    void deletePayment(Long id, Long actorId);
+    StudentFeePayment processPayment(StudentFeePayment payment, Long actorId, String role);
+    
+    // Matrix Fix: Logic will filter by own/child payments
+    List<StudentFeePayment> getPayments(Long actorId, String role);
+    
+    StudentFeePayment getPaymentById(Long id, Long actorId, String role);
 
     // ========================================================================
-    // 5. FEE DISCOUNTS (5 Methods)
+    // 5. FEE DISCOUNTS
     // ========================================================================
-    FeeDiscount applyDiscount(FeeDiscount discount, Long actorId);
-    List<FeeDiscount> getAllDiscounts();
-    FeeDiscount getDiscountById(Long id);
-    FeeDiscount updateDiscount(Long id, FeeDiscount discount, Long actorId);
-    void deleteDiscount(Long id, Long actorId);
+    FeeDiscount applyDiscount(FeeDiscount discount, Long actorId, String role);
+    
+    List<FeeDiscount> getDiscounts(Long actorId, String role);
+    
+    FeeDiscount getDiscountById(Long id, Long actorId, String role);
+    
+    FeeDiscount updateDiscount(Long id, FeeDiscount discount, Long actorId, String role);
+    
+    void deleteDiscount(Long id, Long actorId, String role);
 
     // ========================================================================
-    // 6. FEE REFUNDS (5 Methods)
+    // 6. FEE REFUNDS
     // ========================================================================
-    FeeRefund processRefund(FeeRefund refund, Long actorId);
-    List<FeeRefund> getAllRefunds();
-    FeeRefund getRefundById(Long id);
-    FeeRefund updateRefund(Long id, FeeRefund refund, Long actorId);
-    void deleteRefund(Long id, Long actorId);
+    FeeRefund processRefund(FeeRefund refund, Long actorId, String role);
+    
+    List<FeeRefund> getRefunds(Long actorId, String role);
+    
+    FeeRefund getRefundById(Long id, Long actorId, String role);
 
     // ========================================================================
-    // 7. AUDIT LOGS (2 Methods - System Automated)
+    // 7. AUDIT LOGS
     // ========================================================================
-    List<AuditLog> getAllAuditLogs();
-    AuditLog getAuditLogById(Long id);
+    List<AuditLog> getAuditLogs(Long actorId, String role);
+    
+    AuditLog getAuditLogById(Long id, Long actorId, String role);
 
     // ========================================================================
-    // 8. FEE RECEIPTS (2 Methods - System Automated)
+    // 8. FEE RECEIPTS
     // ========================================================================
-    List<FeeReceipt> getAllReceipts();
-    FeeReceipt getReceiptById(Long id);
+    List<FeeReceipt> getReceipts(Long actorId, String role);
+    
+    FeeReceipt getReceiptById(Long id, Long actorId, String role);
 }
