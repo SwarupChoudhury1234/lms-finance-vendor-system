@@ -1,9 +1,8 @@
 package com.graphy.lms.entity;
 
-import jakarta.persistence.*;
-import lombok.Data;
-import lombok.NoArgsConstructor;
-import lombok.AllArgsConstructor;
+import javax.persistence.*;
+import lombok.*;
+import java.math.BigDecimal;
 import java.time.LocalDateTime;
 
 @Entity
@@ -11,41 +10,70 @@ import java.time.LocalDateTime;
 @Data
 @NoArgsConstructor
 @AllArgsConstructor
+@Builder
 public class FeeStructure {
-
+    
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Long id;
-
-    // Relationship to Master Data (FeeType)
-    @ManyToOne(fetch = FetchType.EAGER)
+    
+    @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "fee_type_id", nullable = false)
     private FeeType feeType;
-
-    @Column(nullable = false)
+    
+    @Column(name = "academic_year", nullable = false, length = 20)
     private String academicYear;
-
-    // Critical for Access Matrix: Used to filter by Faculty/Student roles
-    @Column(nullable = false)
+    
+    @Column(name = "course_id", nullable = false)
     private Long courseId;
-
-    @Column(nullable = false)
-    private Double totalAmount;
-
-    // Mentor Rule: Set automatically on record creation
-    @Column(updatable = false)
+    
+    @Column(name = "batch_id")
+    private Long batchId;
+    
+    @Column(name = "student_category", length = 50)
+    private String studentCategory;
+    
+    @Column(name = "total_amount", nullable = false, precision = 12, scale = 2)
+    private BigDecimal totalAmount;
+    
+    @Column(name = "payment_schedule", length = 20)
+    private String paymentSchedule; // MONTHLY, QUARTERLY, YEARLY
+    
+    @Column(name = "currency", length = 3)
+    private String currency = "INR";
+    
+    @Column(name = "conversion_rate", precision = 10, scale = 4)
+    private BigDecimal conversionRate = BigDecimal.ONE;
+    
+    @Column(name = "is_active")
+    private Boolean isActive = true;
+    
+    @Column(name = "created_at", updatable = false)
     private LocalDateTime createdAt;
-
-    // Mentor Rule: Reflects the "Fetch-then-Update" pattern in the response
+    
+    @Column(name = "updated_at")
     private LocalDateTime updatedAt;
-
+    
+    // Additional fields for real-world usage
+    @Column(name = "gst_applicable")
+    private Boolean gstApplicable = true;
+    
+    @Column(name = "gst_percentage", precision = 5, scale = 2)
+    private BigDecimal gstPercentage = new BigDecimal("18.00");
+    
+    @Column(name = "late_fee_per_day", precision = 10, scale = 2)
+    private BigDecimal lateFeePerDay = new BigDecimal("50.00");
+    
+    @Column(name = "grace_period_days")
+    private Integer gracePeriodDays = 5;
+    
     @PrePersist
     protected void onCreate() {
-        this.createdAt = LocalDateTime.now();
+        createdAt = LocalDateTime.now();
     }
-
+    
     @PreUpdate
     protected void onUpdate() {
-        this.updatedAt = LocalDateTime.now();
+        updatedAt = LocalDateTime.now();
     }
 }

@@ -1,9 +1,8 @@
 package com.graphy.lms.entity;
 
-import jakarta.persistence.*;
-import lombok.Data;
-import lombok.NoArgsConstructor;
-import lombok.AllArgsConstructor;
+import javax.persistence.*;
+import lombok.*;
+import java.math.BigDecimal;
 import java.time.LocalDate;
 import java.time.LocalDateTime;
 
@@ -12,51 +11,71 @@ import java.time.LocalDateTime;
 @Data
 @NoArgsConstructor
 @AllArgsConstructor
+@Builder
 public class FeeDiscount {
-
+    
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Long id;
-
-    // Critical for Access Matrix: Used for GET (self/child) filtering
-    @Column(nullable = false)
+    
+    @Column(name = "user_id", nullable = false)
     private Long userId;
-
-    @ManyToOne(fetch = FetchType.EAGER)
+    
+    @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "fee_structure_id", nullable = false)
     private FeeStructure feeStructure;
-
-    // 'PERCENTAGE' or 'FLAT'
-    @Column(nullable = false)
-    private String discountType; 
-
-    @Column(nullable = false)
-    private Double discountValue;
-
+    
+    @Column(name = "discount_type", length = 20)
+    private String discountType; // PERCENTAGE, FIXED
+    
+    @Column(name = "discount_value", nullable = false, precision = 10, scale = 2)
+    private BigDecimal discountValue;
+    
+    @Column(name = "reason", length = 255)
     private String reason;
-
-    // Ties back to the Admin actorId who approved it
+    
+    @Column(name = "approved_by")
     private Long approvedBy;
-
+    
+    @Column(name = "approved_date")
     private LocalDate approvedDate;
-
-    // Mentor Rule: Set automatically on record creation
-    @Column(updatable = false)
+    
+    @Column(name = "auto_apply")
+    private Boolean autoApply = false;
+    
+    @Column(name = "valid_from")
+    private LocalDate validFrom;
+    
+    @Column(name = "valid_to")
+    private LocalDate validTo;
+    
+    @Column(name = "is_active")
+    private Boolean isActive = true;
+    
+    @Column(name = "created_at", updatable = false)
     private LocalDateTime createdAt;
-
-    // Mentor Rule: Updated during PUT methods
+    
+    @Column(name = "updated_at")
     private LocalDateTime updatedAt;
-
+    
+    // Link to allocation
+    @Column(name = "fee_allocation_id")
+    private Long feeAllocationId;
+    
+    // For tracking discount hierarchy
+    @Column(name = "discount_category", length = 50)
+    private String discountCategory; // MERIT, SIBLING, EARLY_BIRD, etc.
+    
     @PrePersist
     protected void onCreate() {
-        this.createdAt = LocalDateTime.now();
-        if (this.approvedDate == null) {
-            this.approvedDate = LocalDate.now();
+        createdAt = LocalDateTime.now();
+        if (approvedDate == null && approvedBy != null) {
+            approvedDate = LocalDate.now();
         }
     }
-
+    
     @PreUpdate
     protected void onUpdate() {
-        this.updatedAt = LocalDateTime.now();
+        updatedAt = LocalDateTime.now();
     }
 }

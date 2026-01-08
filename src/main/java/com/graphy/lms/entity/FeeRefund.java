@@ -1,9 +1,8 @@
 package com.graphy.lms.entity;
 
-import jakarta.persistence.*;
-import lombok.Data;
-import lombok.NoArgsConstructor;
-import lombok.AllArgsConstructor;
+import javax.persistence.*;
+import lombok.*;
+import java.math.BigDecimal;
 import java.time.LocalDate;
 import java.time.LocalDateTime;
 
@@ -12,43 +11,51 @@ import java.time.LocalDateTime;
 @Data
 @NoArgsConstructor
 @AllArgsConstructor
+@Builder
 public class FeeRefund {
-
+    
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Long id;
-
-    // Link to the original payment being refunded
-    @ManyToOne(fetch = FetchType.EAGER)
+    
+    @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "student_fee_payment_id", nullable = false)
     private StudentFeePayment studentFeePayment;
-
-    @Column(nullable = false)
-    private Double refundAmount;
-
-    @Column(nullable = false)
+    
+    @Column(name = "refund_amount", nullable = false, precision = 12, scale = 2)
+    private BigDecimal refundAmount;
+    
+    @Column(name = "refund_date", nullable = false)
     private LocalDate refundDate;
-
-    @Column(nullable = false)
+    
+    @Column(name = "reason", length = 255)
     private String reason;
-
-    // Mentor Rule: Set automatically on record creation (POST)
-    @Column(updatable = false)
+    
+    @Column(name = "approved_by")
+    private Long approvedBy;
+    
+    @Column(name = "approval_date")
+    private LocalDate approvalDate;
+    
+    @Column(name = "status", length = 20)
+    private String status = "PENDING"; // PENDING, APPROVED, REJECTED, PROCESSED
+    
+    @Column(name = "created_at", updatable = false)
     private LocalDateTime createdAt;
-
-    // Mentor Rule: Included for "All Columns" rule; refreshed if a PUT occurs
+    
+    @Column(name = "updated_at")
     private LocalDateTime updatedAt;
-
+    
     @PrePersist
     protected void onCreate() {
-        this.createdAt = LocalDateTime.now();
-        if (this.refundDate == null) {
-            this.refundDate = LocalDate.now();
+        createdAt = LocalDateTime.now();
+        if (refundDate == null) {
+            refundDate = LocalDate.now();
         }
     }
-
+    
     @PreUpdate
     protected void onUpdate() {
-        this.updatedAt = LocalDateTime.now();
+        updatedAt = LocalDateTime.now();
     }
 }

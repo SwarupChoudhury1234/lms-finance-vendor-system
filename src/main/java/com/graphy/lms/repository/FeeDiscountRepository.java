@@ -7,16 +7,7 @@ import java.util.List;
 
 @Repository
 public interface FeeDiscountRepository extends JpaRepository<FeeDiscount, Long> {
-
-    /**
-     * Satisfies Access Matrix:
-     * GET (self/child) ✅ Student, ✅ Parent
-     * Allows students to view only their applicable discounts in Postman.
-     */
     List<FeeDiscount> findByUserId(Long userId);
-
-    /**
-     * Supports fetching all discounts for a specific Fee Structure
-     */
+    List<FeeDiscount> findByAutoApplyTrueAndIsActiveTrue();
     List<FeeDiscount> findByFeeStructureId(Long feeStructureId);
 }

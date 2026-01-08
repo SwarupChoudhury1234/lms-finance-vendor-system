@@ -1,9 +1,8 @@
 package com.graphy.lms.entity;
 
-import jakarta.persistence.*;
-import lombok.Data;
-import lombok.NoArgsConstructor;
-import lombok.AllArgsConstructor;
+import javax.persistence.*;
+import lombok.*;
+import java.math.BigDecimal;
 import java.time.LocalDate;
 import java.time.LocalDateTime;
 
@@ -12,48 +11,111 @@ import java.time.LocalDateTime;
 @Data
 @NoArgsConstructor
 @AllArgsConstructor
+@Builder
 public class StudentFeeAllocation {
-
+    
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Long id;
-
-    @Column(nullable = false)
+    
+    @Column(name = "user_id", nullable = false)
     private Long userId;
-
-    @ManyToOne(fetch = FetchType.EAGER)
+    
+    @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "fee_structure_id", nullable = false)
     private FeeStructure feeStructure;
-
-    @Column(nullable = false)
+    
+    @Column(name = "original_amount", nullable = false, precision = 12, scale = 2)
+    private BigDecimal originalAmount;
+    
+    @Column(name = "discount_applied", precision = 12, scale = 2)
+    private BigDecimal discountApplied = BigDecimal.ZERO;
+    
+    @Column(name = "payable_amount", nullable = false, precision = 12, scale = 2)
+    private BigDecimal payableAmount;
+    
+    @Column(name = "advance_paid", precision = 12, scale = 2)
+    private BigDecimal advancePaid = BigDecimal.ZERO;
+    
+    @Column(name = "total_paid", precision = 12, scale = 2)
+    private BigDecimal totalPaid = BigDecimal.ZERO;
+    
+    @Column(name = "remaining_amount", nullable = false, precision = 12, scale = 2)
+    private BigDecimal remainingAmount;
+    
+    @Column(name = "installment_count")
+    private Integer installmentCount = 1;
+    
+    @Column(name = "per_installment_amount", precision = 12, scale = 2)
+    private BigDecimal perInstallmentAmount;
+    
+    @Column(name = "custom_installments", columnDefinition = "JSON")
+    private String customInstallments;
+    
+    @Column(name = "payment_plan", columnDefinition = "JSON")
+    private String paymentPlan;
+    
+    @Column(name = "status", length = 20)
+    private String status = "PENDING"; // PENDING, PARTIAL_PAID, PAID, OVERDUE
+    
+    @Column(name = "due_date")
     private LocalDate dueDate;
-
-    @Column(nullable = false)
+    
+    @Column(name = "allocation_date")
     private LocalDate allocationDate;
-
-    // ADD THESE TWO FIELDS FOR MENTOR COMPLIANCE
-    private String status;      // e.g., PENDING, PAID, PARTIAL
-    private Double amountPaid;  // e.g., 5000.0
-
-    @Column(updatable = false)
+    
+    @Column(name = "created_at", updatable = false)
     private LocalDateTime createdAt;
-
+    
+    @Column(name = "updated_at")
     private LocalDateTime updatedAt;
-
+    
+    @Column(name = "created_by")
+    private Long createdBy;
+    
+    @Column(name = "updated_by")
+    private Long updatedBy;
+    
+    // Additional fields
+    @Column(name = "next_reminder_date")
+    private LocalDate nextReminderDate;
+    
+    @Column(name = "reminder_count")
+    private Integer reminderCount = 0;
+    
+    @Column(name = "total_late_fee", precision = 12, scale = 2)
+    private BigDecimal totalLateFee = BigDecimal.ZERO;
+    
+    // Links to new tables
+    @Column(name = "installment_plan_template_id")
+    private Long installmentPlanTemplateId;
+    
+    @Column(name = "payment_link_id")
+    private Long paymentLinkId;
+    
+    @Column(name = "late_fee_rule_id")
+    private Long lateFeeRuleId;
+    
+    @Column(name = "invoice_template_id")
+    private Long invoiceTemplateId;
+    
     @PrePersist
     protected void onCreate() {
-        this.createdAt = LocalDateTime.now();
-        if (this.allocationDate == null) {
-            this.allocationDate = LocalDate.now();
+        createdAt = LocalDateTime.now();
+        if (allocationDate == null) {
+            allocationDate = LocalDate.now();
         }
-        // Initialize amountPaid if null to show in response
-        if (this.amountPaid == null) {
-            this.amountPaid = 0.0;
+        if (remainingAmount == null && payableAmount != null && advancePaid != null) {
+            remainingAmount = payableAmount.subtract(advancePaid);
         }
     }
-
+    
     @PreUpdate
     protected void onUpdate() {
-        this.updatedAt = LocalDateTime.now();
+        updatedAt = LocalDateTime.now();
+        // Auto-calculate remaining amount
+        if (payableAmount != null && totalPaid != null) {
+            remainingAmount = payableAmount.subtract(totalPaid);
+        }
     }
 }

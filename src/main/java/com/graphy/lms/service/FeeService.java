@@ -1,97 +1,178 @@
 package com.graphy.lms.service;
 
-import com.graphy.lms.entity.*;
 import java.util.List;
+import java.util.Map;
 
 public interface FeeService {
-
-    // ========================================================================
-    // 1. FEE TYPES
-    // ========================================================================
-    FeeType createFeeType(FeeType feeType, Long actorId, String role);
     
-    // Matrix Fix: Separated GET ALL (Admin/Faculty) from GET Active (Everyone)
-    List<FeeType> getAllFeeTypes(Long actorId, String role);
+    // ========== CRUD OPERATIONS FOR ALL 23 ENTITIES ==========
     
-    List<FeeType> getActiveFeeTypes();
+    /**
+     * Create a new entity
+     * @param entityType Type of entity to create
+     * @param data Entity data in key-value pairs
+     * @return Created entity
+     */
+    Object create(EntityType entityType, Map<String, Object> data);
     
-    FeeType getFeeTypeById(Long id, Long actorId, String role);
+    /**
+     * Get entity by ID
+     * @param entityType Type of entity
+     * @param id Entity ID
+     * @return Entity object
+     */
+    Object getById(EntityType entityType, Long id);
     
-    FeeType updateFeeType(Long id, FeeType feeType, Long actorId, String role);
+    /**
+     * Get all entities of a type
+     * @param entityType Type of entity
+     * @return List of entities
+     */
+    List<?> getAll(EntityType entityType);
     
-    void deleteFeeType(Long id, Long actorId, String role);
-
-    // ========================================================================
-    // 2. FEE STRUCTURES
-    // ========================================================================
-    FeeStructure createFeeStructure(FeeStructure feeStructure, Long actorId, String role);
+    /**
+     * Update an existing entity
+     * @param entityType Type of entity
+     * @param id Entity ID
+     * @param data Updated data
+     * @return Updated entity
+     */
+    Object update(EntityType entityType, Long id, Map<String, Object> data);
     
-    // Matrix Fix: Added academicYear to satisfy "GET by course/year"
-    List<FeeStructure> getFeeStructures(Long actorId, String role, Long courseId, String academicYear);
+    /**
+     * Delete an entity
+     * @param entityType Type of entity
+     * @param id Entity ID
+     */
+    void delete(EntityType entityType, Long id);
     
-    FeeStructure getFeeStructureById(Long id, Long actorId, String role);
+    /**
+     * Check if entity exists
+     * @param entityType Type of entity
+     * @param id Entity ID
+     * @return true if exists
+     */
+    boolean exists(EntityType entityType, Long id);
     
-    FeeStructure updateFeeStructure(Long id, FeeStructure feeStructure, Long actorId, String role);
+    /**
+     * Count entities of a type
+     * @param entityType Type of entity
+     * @return Count of entities
+     */
+    long count(EntityType entityType);
     
-    void deleteFeeStructure(Long id, Long actorId, String role);
-
-    // ========================================================================
-    // 3. STUDENT FEE ALLOCATIONS
-    // ========================================================================
-    StudentFeeAllocation allocateFee(StudentFeeAllocation allocation, Long actorId, String role);
+    // ========== BUSINESS LOGIC METHODS FOR 20 REQUIREMENTS ==========
     
-    // Matrix Fix: userId allows Parent to specify child; logic will verify relationship
-    List<StudentFeeAllocation> getAllocations(Long actorId, String role, Long userId);
+    /**
+     * Requirement #4: Auto calculate discounts
+     * @param discountRequest Contains original amount and list of discounts
+     * @return Calculated payable amount with discount breakdown
+     */
+    Object calculateDiscount(Map<String, Object> discountRequest);
     
-    StudentFeeAllocation getAllocationById(Long id, Long actorId, String role);
+    /**
+     * Requirement #5: Create installment plans with alternatives
+     * @param installmentRequest Contains payable amount, advance paid, student ID
+     * @return Installment options with suggested amounts
+     */
+    Object createInstallmentPlan(Map<String, Object> installmentRequest);
     
-    StudentFeeAllocation updateAllocation(Long id, StudentFeeAllocation allocation, Long actorId, String role);
+    /**
+     * Requirement #7: Generate payment link for student
+     * @param paymentLinkRequest Contains allocation ID, email, student details
+     * @return Payment link with token and expiry
+     */
+    Object generatePaymentLink(Map<String, Object> paymentLinkRequest);
     
-    void deleteAllocation(Long id, Long actorId, String role);
-
-    // ========================================================================
-    // 4. STUDENT FEE PAYMENTS
-    // ========================================================================
-    StudentFeePayment processPayment(StudentFeePayment payment, Long actorId, String role);
+    /**
+     * Requirement #9: Apply late fee for overdue payments
+     * @param lateFeeRequest Contains allocation ID, overdue months, penalty rules
+     * @return Late fee calculation result
+     */
+    Object applyLateFee(Map<String, Object> lateFeeRequest);
     
-    // Matrix Fix: Logic will filter by own/child payments
-    List<StudentFeePayment> getPayments(Long actorId, String role);
+    /**
+     * Requirements #11 & #12: Generate various reports
+     * @param reportRequest Contains report type and filters
+     * @return Report data based on type
+     */
+    Object generateReport(Map<String, Object> reportRequest);
     
-    StudentFeePayment getPaymentById(Long id, Long actorId, String role);
-
-    // ========================================================================
-    // 5. FEE DISCOUNTS
-    // ========================================================================
-    FeeDiscount applyDiscount(FeeDiscount discount, Long actorId, String role);
+    /**
+     * Requirement #13: Process refund request
+     * @param refundRequest Contains payment ID, refund amount, reason
+     * @return Refund processing result
+     */
+    Object processRefund(Map<String, Object> refundRequest);
     
-    List<FeeDiscount> getDiscounts(Long actorId, String role);
+    /**
+     * Requirement #16: Apply attendance penalty
+     * @param penaltyRequest Contains student ID, absent days, penalty rate
+     * @return Penalty calculation result
+     */
+    Object applyAttendancePenalty(Map<String, Object> penaltyRequest);
     
-    FeeDiscount getDiscountById(Long id, Long actorId, String role);
+    /**
+     * Requirement #18: Check certificate block status
+     * @param studentId Student ID
+     * @return Certificate status information
+     */
+    Object getCertificateStatus(Long studentId);
     
-    FeeDiscount updateDiscount(Long id, FeeDiscount discount, Long actorId, String role);
+    /**
+     * Requirement #20: Setup auto debit
+     * @param autoDebitRequest Contains payment method, account details
+     * @return Auto debit setup result
+     */
+    Object setupAutoDebit(Map<String, Object> autoDebitRequest);
     
-    void deleteDiscount(Long id, Long actorId, String role);
-
-    // ========================================================================
-    // 6. FEE REFUNDS
-    // ========================================================================
-    FeeRefund processRefund(FeeRefund refund, Long actorId, String role);
+    /**
+     * Requirement #17: Link exam fee automatically
+     * @param examFeeRequest Contains exam ID and fee structure
+     * @return Exam fee linking result
+     */
+    Object linkExamFee(Map<String, Object> examFeeRequest);
     
-    List<FeeRefund> getRefunds(Long actorId, String role);
+    /**
+     * Requirement #19: Generate recurring invoice
+     * @param invoiceRequest Contains template, frequency, student details
+     * @return Generated invoice
+     */
+    Object generateInvoice(Map<String, Object> invoiceRequest);
     
-    FeeRefund getRefundById(Long id, Long actorId, String role);
-
-    // ========================================================================
-    // 7. AUDIT LOGS
-    // ========================================================================
-    List<AuditLog> getAuditLogs(Long actorId, String role);
+    /**
+     * Requirement #15: Currency conversion
+     * @param conversionRequest Contains amount, from currency, to currency
+     * @return Converted amount
+     */
+    Object convertCurrency(Map<String, Object> conversionRequest);
     
-    AuditLog getAuditLogById(Long id, Long actorId, String role);
-
-    // ========================================================================
-    // 8. FEE RECEIPTS
-    // ========================================================================
-    List<FeeReceipt> getReceipts(Long actorId, String role);
+    /**
+     * Requirement #8: Get payment history
+     * @param studentId Student ID
+     * @return Payment history with status
+     */
+    Object getPaymentHistory(Long studentId);
     
-    FeeReceipt getReceiptById(Long id, Long actorId, String role);
+    /**
+     * Requirement #14: Get audit trail
+     * @param entityType Type of entity
+     * @param entityId Entity ID
+     * @return Audit logs for the entity
+     */
+    Object getAuditTrail(EntityType entityType, Long entityId);
+    
+    /**
+     * Requirement #10: Process online payment
+     * @param paymentRequest Contains payment details, gateway info
+     * @return Payment processing result
+     */
+    Object processOnlinePayment(Map<String, Object> paymentRequest);
+    
+    /**
+     * Requirement #11: Send payment notification
+     * @param notificationRequest Contains recipient, message type, content
+     * @return Notification sending result
+     */
+    Object sendNotification(Map<String, Object> notificationRequest);
 }

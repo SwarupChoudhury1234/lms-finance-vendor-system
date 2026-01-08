@@ -1,9 +1,7 @@
 package com.graphy.lms.entity;
 
-import jakarta.persistence.*;
-import lombok.Data;
-import lombok.NoArgsConstructor;
-import lombok.AllArgsConstructor;
+import javax.persistence.*;
+import lombok.*;
 import java.time.LocalDateTime;
 
 @Entity
@@ -11,32 +9,45 @@ import java.time.LocalDateTime;
 @Data
 @NoArgsConstructor
 @AllArgsConstructor
+@Builder
 public class AuditLog {
     
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Long id;
     
-    @Column(nullable = false)
-    private String module; // e.g., "FEE_TYPE", "PAYMENT"
+    @Column(name = "module", nullable = false, length = 50)
+    private String module;
     
-    @Column(nullable = false)
-    private Long entityId; // The ID of the record being changed
+    @Column(name = "entity_id")
+    private Long entityId;
     
-    @Column(nullable = false)
-    private String action; // POST, PUT, DELETE
+    @Column(name = "action", nullable = false, length = 20)
+    private String action; // CREATE, UPDATE, DELETE
     
-    @Column(nullable = false)
-    private Long performedBy; // The actorId (Admin/Faculty/Student)
+    @Column(name = "performed_by", nullable = false)
+    private Long performedBy;
     
-    @Column(updatable = false)
+    @Column(name = "performed_at", updatable = false)
     private LocalDateTime performedAt;
-
-    // Included to satisfy your mentor's "All Columns" rule across all 7 tables
-    private LocalDateTime updatedAt; 
-
+    
+    @Column(name = "ip_address", length = 45)
+    private String ipAddress;
+    
+    @Column(name = "user_agent", length = 500)
+    private String userAgent;
+    
+    @Column(name = "old_values", columnDefinition = "JSON")
+    private String oldValues;
+    
+    @Column(name = "new_values", columnDefinition = "JSON")
+    private String newValues;
+    
+    @Column(name = "remarks", length = 255)
+    private String remarks;
+    
     @PrePersist
     protected void onCreate() {
-        this.performedAt = LocalDateTime.now();
+        performedAt = LocalDateTime.now();
     }
 }

@@ -1,6 +1,6 @@
 package com.graphy.lms.entity;
 
-import jakarta.persistence.*;
+import javax.persistence.*; 
 import lombok.Data;
 
 @Entity
