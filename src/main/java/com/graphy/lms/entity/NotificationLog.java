@@ -1,41 +1,27 @@
 package com.graphy.lms.entity;
 
-import javax.persistence.*;
-import lombok.*;
+import jakarta.persistence.*;
 import java.time.LocalDateTime;
 
 @Entity
 @Table(name = "notification_logs")
-@Data
-@NoArgsConstructor
-@AllArgsConstructor
-@Builder
 public class NotificationLog {
-    
-    @Id
-    @GeneratedValue(strategy = GenerationType.IDENTITY)
-    private Long id;
-    
-    @Column(name = "user_id", nullable = false)
-    private Long userId;
-    
-    @Column(name = "notification_type", length = 20)
-    private String notificationType; // EMAIL, SMS, WHATSAPP
-    
-    @Column(name = "subject", length = 255)
+    @Id @GeneratedValue(strategy = GenerationType.IDENTITY) private Long id;
+    @Column(name = "user_id", nullable = false) private Long userId;
+    @Column(name = "notification_type") private String notificationType;
     private String subject;
+    @Column(columnDefinition = "TEXT") private String message;
+    @Column(name = "sent_at") private LocalDateTime sentAt = LocalDateTime.now();
+    private String status = "SENT";
     
-    @Column(name = "message", columnDefinition = "TEXT")
-    private String message;
+    public NotificationLog() {}
     
-    @Column(name = "sent_at", updatable = false)
-    private LocalDateTime sentAt;
-    
-    @Column(name = "status", length = 20)
-    private String status = "SENT"; // SENT, FAILED, PENDING
-    
-    @PrePersist
-    protected void onCreate() {
-        sentAt = LocalDateTime.now();
-    }
+    // Getters/Setters
+    public Long getId() { return id; } public void setId(Long id) { this.id = id; }
+    public Long getUserId() { return userId; } public void setUserId(Long userId) { this.userId = userId; }
+    public String getNotificationType() { return notificationType; } public void setNotificationType(String notificationType) { this.notificationType = notificationType; }
+    public String getSubject() { return subject; } public void setSubject(String subject) { this.subject = subject; }
+    public String getMessage() { return message; } public void setMessage(String message) { this.message = message; }
+    public LocalDateTime getSentAt() { return sentAt; } public void setSentAt(LocalDateTime sentAt) { this.sentAt = sentAt; }
+    public String getStatus() { return status; } public void setStatus(String status) { this.status = status; }
 }

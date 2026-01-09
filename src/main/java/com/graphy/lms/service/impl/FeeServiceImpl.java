@@ -1,44 +1,33 @@
 package com.graphy.lms.service.impl;
 
-import com.fasterxml.jackson.databind.ObjectMapper;
 import com.graphy.lms.entity.*;
 import com.graphy.lms.repository.*;
-import com.graphy.lms.service.EntityType;
 import com.graphy.lms.service.FeeService;
-import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
-import javax.persistence.EntityManager;
-import java.lang.reflect.Field;
 import java.math.BigDecimal;
-import java.math.RoundingMode;
 import java.time.LocalDate;
 import java.time.LocalDateTime;
-import java.util.*;
+import java.util.ArrayList;
+import java.util.List;
+import java.util.Comparator;
+import java.util.Optional;
 
 @Service
-@Slf4j
 @Transactional
 public class FeeServiceImpl implements FeeService {
     
-    @Autowired
-    private EntityManager entityManager;
-    
-    @Autowired
-    private ObjectMapper objectMapper;
-    
-    // Inject ALL 23 repositories
+    // =============== ALL REPOSITORIES ===============
     @Autowired private FeeTypeRepository feeTypeRepository;
     @Autowired private FeeStructureRepository feeStructureRepository;
-    @Autowired private StudentFeeAllocationRepository studentFeeAllocationRepository;
-    @Autowired private PaymentInstallmentRepository paymentInstallmentRepository;
-    @Autowired private StudentFeePaymentRepository studentFeePaymentRepository;
-    @Autowired private FeeDiscountRepository feeDiscountRepository;
-    @Autowired private FeeRefundRepository feeRefundRepository;
-    @Autowired private FeeReceiptRepository feeReceiptRepository;
+    @Autowired private StudentFeeAllocationRepository allocationRepository;
+    @Autowired private PaymentInstallmentRepository installmentRepository;
+    @Autowired private StudentFeePaymentRepository paymentRepository;
+    @Autowired private FeeDiscountRepository discountRepository;
+    @Autowired private FeeRefundRepository refundRepository;
+    @Autowired private FeeReceiptRepository receiptRepository;
     @Autowired private AuditLogRepository auditLogRepository;
     @Autowired private CurrencyRateRepository currencyRateRepository;
     @Autowired private NotificationLogRepository notificationLogRepository;
@@ -46,738 +35,722 @@ public class FeeServiceImpl implements FeeService {
     @Autowired private CertificateBlockRepository certificateBlockRepository;
     @Autowired private AutoDebitSettingRepository autoDebitSettingRepository;
     @Autowired private FeeReportRepository feeReportRepository;
-    @Autowired private InstallmentPlanTemplateRepository installmentPlanTemplateRepository;
-    @Autowired private PaymentLinkRepository paymentLinkRepository;
-    @Autowired private LateFeeRuleRepository lateFeeRuleRepository;
-    @Autowired private ExamFeeMappingRepository examFeeMappingRepository;
-    @Autowired private InvoiceTemplateRepository invoiceTemplateRepository;
-    @Autowired private AutoDebitTransactionRepository autoDebitTransactionRepository;
-    @Autowired private AttendancePenaltyRuleRepository attendancePenaltyRuleRepository;
-    @Autowired private RefundApprovalRepository refundApprovalRepository;
+    @Autowired private PaymentAlternativeRepository paymentAlternativeRepository;
     
-    // ========== CRUD OPERATIONS FOR ALL 23 TABLES ==========
-    
-    @Override
-    public Object create(EntityType entityType, Map<String, Object> data) {
-        try {
-            // Check if it's audit_log or fee_receipt - should be auto-generated only
-            if (entityType == EntityType.AUDIT_LOG || entityType == EntityType.FEE_RECEIPT) {
-                throw new RuntimeException("Entity " + entityType + " is auto-generated only");
-            }
-            
-            Object entity = createEntity(entityType, data);
-            Object savedEntity = saveEntity(entityType, entity);
-            
-            // Auto-create audit log
-            createAuditLog("CREATE", entityType, savedEntity, null, data);
-            
-            return savedEntity;
-        } catch (Exception e) {
-            log.error("Error creating entity: {}", entityType, e);
-            throw new RuntimeException("Failed to create entity: " + e.getMessage());
+    // =============== SECURITY & UTILITY METHODS ===============
+    private void checkAdmin(String role) {
+        if (!"ADMIN".equalsIgnoreCase(role)) {
+            throw new RuntimeException("Access Denied: Admin role required");
         }
     }
     
-    @Override
-    public Object getById(EntityType entityType, Long id) {
-        return findEntityById(entityType, id);
-    }
-    
-    @Override
-    public List<?> getAll(EntityType entityType) {
-        return getAllEntities(entityType);
-    }
-    
-    @Override
-    public Object update(EntityType entityType, Long id, Map<String, Object> data) {
-        try {
-            // Check if it's audit_log or fee_receipt - should be auto-generated only
-            if (entityType == EntityType.AUDIT_LOG || entityType == EntityType.FEE_RECEIPT) {
-                throw new RuntimeException("Entity " + entityType + " is auto-generated only");
-            }
-            
-            Object existingEntity = findEntityById(entityType, id);
-            Object oldEntity = cloneEntity(existingEntity);
-            
-            // Update entity fields
-            updateEntity(existingEntity, data);
-            
-            // Save updated entity
-            Object updatedEntity = saveEntity(entityType, existingEntity);
-            
-            // Auto-create audit log
-            createAuditLog("UPDATE", entityType, updatedEntity, oldEntity, data);
-            
-            return updatedEntity;
-        } catch (Exception e) {
-            log.error("Error updating entity: {} with id: {}", entityType, id, e);
-            throw new RuntimeException("Failed to update entity: " + e.getMessage());
+    private void checkStudent(String role) {
+        if (!"STUDENT".equalsIgnoreCase(role)) {
+            throw new RuntimeException("Access Denied: Student role required");
         }
     }
     
-    @Override
-    public void delete(EntityType entityType, Long id) {
-        try {
-            // Check if it's audit_log or fee_receipt - should not be deleted
-            if (entityType == EntityType.AUDIT_LOG || entityType == EntityType.FEE_RECEIPT) {
-                throw new RuntimeException("Entity " + entityType + " cannot be deleted");
-            }
-            
-            Object entity = findEntityById(entityType, id);
-            Object oldEntity = cloneEntity(entity);
-            
-            deleteEntity(entityType, id);
-            
-            // Auto-create audit log
-            createAuditLog("DELETE", entityType, null, oldEntity, null);
-        } catch (Exception e) {
-            log.error("Error deleting entity: {} with id: {}", entityType, id, e);
-            throw new RuntimeException("Failed to delete entity: " + e.getMessage());
-        }
+    private void logAudit(String module, Long entityId, String action, Long actorId) {
+        AuditLog log = new AuditLog();
+        log.setModule(module);
+        log.setEntityId(entityId);
+        log.setAction(action);
+        log.setPerformedBy(actorId);
+        log.setPerformedAt(LocalDateTime.now());
+        auditLogRepository.save(log);
     }
     
-    @Override
-    public boolean exists(EntityType entityType, Long id) {
+    // Helper method to check if repository has a method
+    private boolean hasMethod(Object repository, String methodName) {
         try {
-            return findEntityById(entityType, id) != null;
-        } catch (Exception e) {
+            repository.getClass().getMethod(methodName, Long.class);
+            return true;
+        } catch (NoSuchMethodException e) {
             return false;
         }
     }
     
+    // =============== FEE TYPES IMPLEMENTATION ===============
     @Override
-    public long count(EntityType entityType) {
-        return getRepository(entityType).count();
+    public FeeType createFeeType(FeeType feeType, Long actorId, String role) {
+        checkAdmin(role);
+        feeType.setId(null);
+        feeType.setCreatedAt(LocalDateTime.now());
+        feeType.setUpdatedAt(null);
+        FeeType saved = feeTypeRepository.save(feeType);
+        logAudit("FEE_TYPE", saved.getId(), "CREATE", actorId);
+        return saved;
     }
     
-    // ========== BUSINESS LOGIC FOR YOUR 20 REQUIREMENTS ==========
+    @Override
+    public List<FeeType> getAllFeeTypes(Long actorId, String role) {
+        if (!"ADMIN".equalsIgnoreCase(role) && !"FACULTY".equalsIgnoreCase(role)) {
+            throw new RuntimeException("Access Denied: GET ALL reserved for Admin/Faculty");
+        }
+        return feeTypeRepository.findAll();
+    }
     
     @Override
-    public Object calculateDiscount(Map<String, Object> discountRequest) {
-        try {
-            BigDecimal originalAmount = new BigDecimal(discountRequest.get("originalAmount").toString());
-            List<Map<String, Object>> discounts = (List<Map<String, Object>>) discountRequest.get("discounts");
-            
-            BigDecimal runningAmount = originalAmount;
-            BigDecimal totalDiscount = BigDecimal.ZERO;
-            List<Map<String, Object>> appliedDiscounts = new ArrayList<>();
-            
-            // Apply discounts in sequence
-            for (Map<String, Object> discount : discounts) {
-                String type = (String) discount.get("type"); // PERCENTAGE or FIXED
-                BigDecimal value = new BigDecimal(discount.get("value").toString());
-                String reason = (String) discount.get("reason");
-                String category = (String) discount.get("category"); // MERIT, SIBLING, etc.
-                
-                BigDecimal discountAmount = BigDecimal.ZERO;
-                
-                if ("PERCENTAGE".equalsIgnoreCase(type)) {
-                    discountAmount = runningAmount.multiply(value)
-                        .divide(BigDecimal.valueOf(100), 2, RoundingMode.HALF_UP);
-                } else if ("FIXED".equalsIgnoreCase(type)) {
-                    discountAmount = value;
-                }
-                
-                // Ensure discount doesn't exceed remaining amount
-                discountAmount = discountAmount.min(runningAmount);
-                
-                runningAmount = runningAmount.subtract(discountAmount);
-                totalDiscount = totalDiscount.add(discountAmount);
-                
-                Map<String, Object> appliedDiscount = new HashMap<>();
-                appliedDiscount.put("type", type);
-                appliedDiscount.put("value", value);
-                appliedDiscount.put("discountAmount", discountAmount);
-                appliedDiscount.put("reason", reason);
-                appliedDiscount.put("category", category);
-                appliedDiscounts.add(appliedDiscount);
+    public List<FeeType> getActiveFeeTypes() {
+        return feeTypeRepository.findByIsActiveTrue();
+    }
+    
+    @Override
+    public FeeType getFeeTypeById(Long id, Long actorId, String role) {
+        return feeTypeRepository.findById(id)
+            .orElseThrow(() -> new RuntimeException("FeeType not found with id: " + id));
+    }
+    
+    @Override
+    public FeeType updateFeeType(Long id, FeeType feeType, Long actorId, String role) {
+        checkAdmin(role);
+        FeeType existing = getFeeTypeById(id, actorId, role);
+        
+        if (feeType.getName() != null) existing.setName(feeType.getName());
+        if (feeType.getDescription() != null) existing.setDescription(feeType.getDescription());
+        if (feeType.getIsActive() != null) existing.setIsActive(feeType.getIsActive());
+        
+        existing.setUpdatedAt(LocalDateTime.now());
+        logAudit("FEE_TYPE", id, "UPDATE", actorId);
+        return feeTypeRepository.save(existing);
+    }
+    
+    @Override
+    public void deleteFeeType(Long id, Long actorId, String role) {
+        checkAdmin(role);
+        FeeType feeType = getFeeTypeById(id, actorId, role);
+        feeType.setIsActive(false);
+        feeType.setUpdatedAt(LocalDateTime.now());
+        feeTypeRepository.save(feeType);
+        logAudit("FEE_TYPE", id, "DELETE", actorId);
+    }
+    
+    // =============== FEE STRUCTURES IMPLEMENTATION ===============
+    @Override
+    public FeeStructure createFeeStructure(FeeStructure feeStructure, Long actorId, String role) {
+        checkAdmin(role);
+        feeStructure.setId(null);
+        feeStructure.setCreatedAt(LocalDateTime.now());
+        feeStructure.setUpdatedAt(null);
+        FeeStructure saved = feeStructureRepository.save(feeStructure);
+        logAudit("FEE_STRUCTURE", saved.getId(), "CREATE", actorId);
+        return saved;
+    }
+    
+    @Override
+    public List<FeeStructure> getFeeStructures(Long actorId, String role, Long courseId, String academicYear) {
+        if ("ADMIN".equalsIgnoreCase(role)) {
+            return feeStructureRepository.findAll();
+        }
+        
+        if ("FACULTY".equalsIgnoreCase(role)) {
+            if (courseId == null && academicYear == null) {
+                throw new RuntimeException("Faculty must specify courseId or academicYear");
             }
-            
-            Map<String, Object> result = new HashMap<>();
-            result.put("originalAmount", originalAmount);
-            result.put("totalDiscount", totalDiscount);
-            result.put("payableAmount", runningAmount);
-            result.put("appliedDiscounts", appliedDiscounts);
-            
-            return result;
-            
-        } catch (Exception e) {
-            log.error("Error calculating discount", e);
-            throw new RuntimeException("Failed to calculate discount: " + e.getMessage());
-        }
-    }
-    
-    @Override
-    public Object createInstallmentPlan(Map<String, Object> installmentRequest) {
-        try {
-            BigDecimal payableAmount = new BigDecimal(installmentRequest.get("payableAmount").toString());
-            BigDecimal advancePaid = new BigDecimal(installmentRequest.getOrDefault("advancePaid", "0").toString());
-            Long studentId = Long.valueOf(installmentRequest.get("studentId").toString());
-            
-            BigDecimal remainingAfterAdvance = payableAmount.subtract(advancePaid);
-            
-            // Create different installment options as per requirement #5
-            List<Map<String, Object>> options = new ArrayList<>();
-            
-            // Option 1: 3 installments (40%, 30%, 30%)
-            options.add(createInstallmentOption("3 Installments", 3, 
-                Arrays.asList(40.0, 30.0, 30.0), payableAmount, advancePaid, studentId));
-            
-            // Option 2: 5 installments (25%, 20%, 20%, 20%, 15%)
-            options.add(createInstallmentOption("5 Installments", 5,
-                Arrays.asList(25.0, 20.0, 20.0, 20.0, 15.0), payableAmount, advancePaid, studentId));
-            
-            // Option 3: 7 installments (equal amounts)
-            options.add(createInstallmentOption("7 Installments", 7,
-                Arrays.asList(14.2857, 14.2857, 14.2857, 14.2857, 14.2857, 14.2857, 14.2857),
-                payableAmount, advancePaid, studentId));
-            
-            Map<String, Object> result = new HashMap<>();
-            result.put("studentId", studentId);
-            result.put("payableAmount", payableAmount);
-            result.put("advancePaid", advancePaid);
-            result.put("remainingAmount", remainingAfterAdvance);
-            result.put("installmentOptions", options);
-            result.put("message", "Student can choose any option and customize amounts");
-            
-            // Create audit log
-            Map<String, Object> auditData = new HashMap<>();
-            auditData.put("studentId", studentId);
-            auditData.put("payableAmount", payableAmount);
-            createAuditLog("INSTALLMENT_PLAN", EntityType.STUDENT_FEE_ALLOCATION, result, null, auditData);
-            
-            return result;
-            
-        } catch (Exception e) {
-            log.error("Error creating installment plan", e);
-            throw new RuntimeException("Failed to create installment plan: " + e.getMessage());
-        }
-    }
-    
-    @Override
-    public Object generatePaymentLink(Map<String, Object> paymentLinkRequest) {
-        try {
-            Long allocationId = Long.valueOf(paymentLinkRequest.get("allocationId").toString());
-            String email = (String) paymentLinkRequest.get("email");
-            String studentName = (String) paymentLinkRequest.get("studentName");
-            
-            // Generate unique token
-            String token = UUID.randomUUID().toString().replace("-", "");
-            String linkUrl = "http://localhost:8080/api/payment/submit/" + token;
-            
-            // Create PaymentLink entity
-            PaymentLink paymentLink = PaymentLink.builder()
-                .uniqueToken(token)
-                .linkUrl(linkUrl)
-                .status("ACTIVE")
-                .expiresAt(LocalDateTime.now().plusDays(7))
-                .build();
-            
-            // Set student fee allocation (you need to fetch it first)
-            StudentFeeAllocation allocation = studentFeeAllocationRepository.findById(allocationId)
-                .orElseThrow(() -> new RuntimeException("Fee allocation not found"));
-            paymentLink.setStudentFeeAllocation(allocation);
-            
-            PaymentLink savedLink = paymentLinkRepository.save(paymentLink);
-            
-            Map<String, Object> result = new HashMap<>();
-            result.put("paymentLinkId", savedLink.getId());
-            result.put("allocationId", allocationId);
-            result.put("studentName", studentName);
-            result.put("email", email);
-            result.put("token", token);
-            result.put("linkUrl", linkUrl);
-            result.put("expiresAt", savedLink.getExpiresAt());
-            result.put("message", "Payment link generated successfully. Email sent to " + email);
-            result.put("instructions", "Student will open link, enter details, upload payment screenshot with UPI ID");
-            
-            // Create audit log
-            Map<String, Object> auditData = new HashMap<>();
-            auditData.put("allocationId", allocationId);
-            auditData.put("email", email);
-            createAuditLog("PAYMENT_LINK", EntityType.PAYMENT_LINK, result, null, auditData);
-            
-            return result;
-            
-        } catch (Exception e) {
-            log.error("Error generating payment link", e);
-            throw new RuntimeException("Failed to generate payment link: " + e.getMessage());
-        }
-    }
-    
-    @Override
-    public Object applyLateFee(Map<String, Object> lateFeeRequest) {
-        try {
-            Long allocationId = Long.valueOf(lateFeeRequest.get("allocationId").toString());
-            Integer overdueMonths = Integer.valueOf(lateFeeRequest.get("overdueMonths").toString());
-            BigDecimal penaltyPerMonth = new BigDecimal(lateFeeRequest.get("penaltyPerMonth").toString());
-            Integer kMonths = Integer.valueOf(lateFeeRequest.getOrDefault("kMonths", "1").toString());
-            
-            // Calculate total late fee as per requirement #9
-            // For every k months, apply penalty
-            BigDecimal totalLateFee = BigDecimal.ZERO;
-            Map<Integer, BigDecimal> monthlyPenalties = new LinkedHashMap<>();
-            
-            for (int month = 1; month <= overdueMonths; month++) {
-                if (month % kMonths == 0 || month == 1) {
-                    // Apply penalty for this k-month cycle
-                    BigDecimal penalty = penaltyPerMonth.multiply(BigDecimal.valueOf(kMonths));
-                    totalLateFee = totalLateFee.add(penalty);
-                    monthlyPenalties.put(month, penalty);
-                }
-            }
-            
-            // Update student fee allocation
-            StudentFeeAllocation allocation = studentFeeAllocationRepository.findById(allocationId)
-                .orElseThrow(() -> new RuntimeException("Fee allocation not found"));
-            
-            allocation.setTotalLateFee(allocation.getTotalLateFee().add(totalLateFee));
-            allocation.setRemainingAmount(allocation.getRemainingAmount().add(totalLateFee));
-            allocation.setStatus("OVERDUE");
-            studentFeeAllocationRepository.save(allocation);
-            
-            Map<String, Object> result = new HashMap<>();
-            result.put("allocationId", allocationId);
-            result.put("overdueMonths", overdueMonths);
-            result.put("kMonths", kMonths);
-            result.put("penaltyPerMonth", penaltyPerMonth);
-            result.put("totalLateFee", totalLateFee);
-            result.put("monthlyPenalties", monthlyPenalties);
-            result.put("appliedDate", LocalDate.now());
-            result.put("newRemainingAmount", allocation.getRemainingAmount());
-            result.put("message", "Late fee applied successfully. Certificate will be blocked if not paid.");
-            
-            // Create audit log
-            Map<String, Object> auditData = new HashMap<>();
-            auditData.put("allocationId", allocationId);
-            auditData.put("totalLateFee", totalLateFee);
-            createAuditLog("LATE_FEE", EntityType.STUDENT_FEE_ALLOCATION, result, null, auditData);
-            
-            return result;
-            
-        } catch (Exception e) {
-            log.error("Error applying late fee", e);
-            throw new RuntimeException("Failed to apply late fee: " + e.getMessage());
-        }
-    }
-    
-    @Override
-    public Object generateReport(Map<String, Object> reportRequest) {
-        try {
-            String reportType = (String) reportRequest.get("reportType"); // STUDENT, BATCH, COURSE, MONTHLY, etc.
-            Long filterId = reportRequest.get("filterId") != null ? 
-                Long.valueOf(reportRequest.get("filterId").toString()) : null;
-            LocalDate startDate = reportRequest.get("startDate") != null ? 
-                LocalDate.parse(reportRequest.get("startDate").toString()) : null;
-            LocalDate endDate = reportRequest.get("endDate") != null ? 
-                LocalDate.parse(reportRequest.get("endDate").toString()) : null;
-            
-            Map<String, Object> reportData = new HashMap<>();
-            reportData.put("reportType", reportType);
-            reportData.put("generatedDate", LocalDate.now());
-            
-            switch (reportType.toUpperCase()) {
-                case "STUDENT_WISE":
-                    if (filterId == null) throw new RuntimeException("Student ID required");
-                    reportData.putAll(generateStudentReport(filterId));
-                    break;
-                    
-                case "BATCH_WISE":
-                    reportData.putAll(generateBatchReport(filterId));
-                    break;
-                    
-                case "COURSE_WISE":
-                    reportData.putAll(generateCourseReport(filterId));
-                    break;
-                    
-                case "MONTHLY":
-                    reportData.putAll(generateMonthlyReport(startDate, endDate));
-                    break;
-                    
-                case "QUARTERLY":
-                    reportData.putAll(generateQuarterlyReport(startDate, endDate));
-                    break;
-                    
-                case "YEARLY":
-                    reportData.putAll(generateYearlyReport(startDate, endDate));
-                    break;
-                    
-                default:
-                    throw new RuntimeException("Invalid report type: " + reportType);
-            }
-            
-            // Save report to database
-            FeeReport feeReport = FeeReport.builder()
-                .reportType(reportType)
-                .reportDate(LocalDate.now())
-                .filterCriteria(objectMapper.writeValueAsString(reportRequest))
-                .totalCollection(new BigDecimal(reportData.get("totalCollection").toString()))
-                .totalPending(new BigDecimal(reportData.get("totalPending").toString()))
-                .generatedBy(1L) // From security context in real app
-                .build();
-            
-            feeReportRepository.save(feeReport);
-            
-            return reportData;
-            
-        } catch (Exception e) {
-            log.error("Error generating report", e);
-            throw new RuntimeException("Failed to generate report: " + e.getMessage());
-        }
-    }
-    
-    // ========== HELPER METHODS ==========
-    
-    private Map<String, Object> createInstallmentOption(String name, int count, List<Double> percentages,
-                                                       BigDecimal payableAmount, BigDecimal advancePaid, Long studentId) {
-        BigDecimal remainingAfterAdvance = payableAmount.subtract(advancePaid);
-        List<BigDecimal> installmentAmounts = new ArrayList<>();
-        List<BigDecimal> customAmounts = new ArrayList<>();
-        
-        for (Double percentage : percentages) {
-            BigDecimal amount = remainingAfterAdvance
-                .multiply(BigDecimal.valueOf(percentage))
-                .divide(BigDecimal.valueOf(100), 2, RoundingMode.HALF_UP);
-            installmentAmounts.add(amount);
-            customAmounts.add(amount); // Initially same as suggested
-        }
-        
-        Map<String, Object> option = new HashMap<>();
-        option.put("optionName", name);
-        option.put("installmentCount", count);
-        option.put("suggestedAmounts", installmentAmounts);
-        option.put("customAmounts", customAmounts);
-        option.put("totalAmount", remainingAfterAdvance);
-        option.put("studentId", studentId);
-        option.put("note", "Student can customize amounts within this option");
-        
-        return option;
-    }
-    
-    private Map<String, Object> generateStudentReport(Long studentId) {
-        // Mock data - in real app, query database
-        Map<String, Object> report = new HashMap<>();
-        report.put("studentId", studentId);
-        report.put("studentName", "John Doe");
-        report.put("course", "NEET 2024");
-        report.put("batch", "Batch 45");
-        report.put("totalFee", new BigDecimal("200000"));
-        report.put("paidAmount", new BigDecimal("120000"));
-        report.put("pendingAmount", new BigDecimal("80000"));
-        report.put("lateFee", new BigDecimal("2000"));
-        report.put("status", "PARTIAL_PAID");
-        report.put("paymentHistory", Arrays.asList(
-            Map.of("date", "2024-01-15", "amount", "50000", "mode", "UPI"),
-            Map.of("date", "2024-02-20", "amount", "70000", "mode", "CASH")
-        ));
-        report.put("totalCollection", new BigDecimal("120000"));
-        report.put("totalPending", new BigDecimal("80000"));
-        
-        return report;
-    }
-    
-    private Map<String, Object> generateBatchReport(Long batchId) {
-        Map<String, Object> report = new HashMap<>();
-        report.put("batchId", batchId);
-        report.put("batchName", "Batch 45");
-        report.put("totalStudents", 50);
-        report.put("paidStudents", 35);
-        report.put("pendingStudents", 15);
-        report.put("expectedCollection", new BigDecimal("10000000"));
-        report.put("collectedAmount", new BigDecimal("7500000"));
-        report.put("pendingAmount", new BigDecimal("2500000"));
-        report.put("collectionPercentage", 75);
-        report.put("totalCollection", new BigDecimal("7500000"));
-        report.put("totalPending", new BigDecimal("2500000"));
-        
-        return report;
-    }
-    
-    private Map<String, Object> generateCourseReport(Long courseId) {
-        Map<String, Object> report = new HashMap<>();
-        report.put("courseId", courseId);
-        report.put("courseName", "NEET Coaching");
-        report.put("totalBatches", 5);
-        report.put("totalStudents", 250);
-        report.put("expectedRevenue", new BigDecimal("50000000"));
-        report.put("collectedRevenue", new BigDecimal("40000000"));
-        report.put("pendingRevenue", new BigDecimal("10000000"));
-        report.put("collectionRate", 80);
-        report.put("totalCollection", new BigDecimal("40000000"));
-        report.put("totalPending", new BigDecimal("10000000"));
-        
-        return report;
-    }
-    
-    private Map<String, Object> generateMonthlyReport(LocalDate startDate, LocalDate endDate) {
-        Map<String, Object> report = new HashMap<>();
-        report.put("period", "Monthly Report");
-        report.put("startDate", startDate != null ? startDate : LocalDate.now().withDayOfMonth(1));
-        report.put("endDate", endDate != null ? endDate : LocalDate.now());
-        report.put("totalTransactions", 150);
-        report.put("cashCollection", new BigDecimal("500000"));
-        report.put("onlineCollection", new BigDecimal("1500000"));
-        report.put("chequeCollection", new BigDecimal("300000"));
-        report.put("totalCollection", new BigDecimal("2300000"));
-        report.put("totalPending", new BigDecimal("800000"));
-        report.put("growthRate", 12.5);
-        
-        return report;
-    }
-    
-    private Map<String, Object> generateQuarterlyReport(LocalDate startDate, LocalDate endDate) {
-        Map<String, Object> report = new HashMap<>();
-        report.put("period", "Quarterly Report");
-        report.put("quarter", "Q1 2024");
-        report.put("totalCollection", new BigDecimal("6900000")); // 3 * monthly
-        report.put("totalPending", new BigDecimal("2400000"));
-        report.put("studentsEnrolled", 120);
-        report.put("feeDefaults", 15);
-        report.put("refundProcessed", new BigDecimal("200000"));
-        report.put("netCollection", new BigDecimal("6700000"));
-        
-        return report;
-    }
-    
-    private Map<String, Object> generateYearlyReport(LocalDate startDate, LocalDate endDate) {
-        Map<String, Object> report = new HashMap<>();
-        report.put("period", "Yearly Report");
-        report.put("academicYear", "2024-2025");
-        report.put("totalCollection", new BigDecimal("27600000")); // 12 * monthly
-        report.put("totalPending", new BigDecimal("9600000"));
-        report.put("totalStudents", 500);
-        report.put("scholarshipsGiven", new BigDecimal("5000000"));
-        report.put("lateFeeCollected", new BigDecimal("300000"));
-        report.put("refundsIssued", new BigDecimal("800000"));
-        report.put("netRevenue", new BigDecimal("26500000"));
-        
-        return report;
-    }
-    
-    // ========== ENTITY CRUD HELPER METHODS ==========
-    
-    private Object createEntity(EntityType entityType, Map<String, Object> data) {
-        try {
-            Class<?> entityClass = getEntityClass(entityType);
-            Object entity = entityClass.newInstance();
-            
-            // Set fields from data
-            for (Map.Entry<String, Object> entry : data.entrySet()) {
-                try {
-                    Field field = entityClass.getDeclaredField(entry.getKey());
-                    field.setAccessible(true);
-                    Object value = convertValue(entry.getValue(), field.getType());
-                    field.set(entity, value);
-                } catch (NoSuchFieldException e) {
-                    log.warn("Field not found: {} in {}", entry.getKey(), entityType);
-                }
-            }
-            
-            return entity;
-        } catch (Exception e) {
-            throw new RuntimeException("Failed to create entity: " + e.getMessage(), e);
-        }
-    }
-    
-    private Object saveEntity(EntityType entityType, Object entity) {
-        return getRepository(entityType).save(entity);
-    }
-    
-    private Object findEntityById(EntityType entityType, Long id) {
-        return getRepository(entityType).findById(id)
-            .orElseThrow(() -> new RuntimeException(entityType + " with id " + id + " not found"));
-    }
-    
-    private List<?> getAllEntities(EntityType entityType) {
-        return getRepository(entityType).findAll();
-    }
-    
-    private void deleteEntity(EntityType entityType, Long id) {
-        getRepository(entityType).deleteById(id);
-    }
-    
-    private JpaRepository<?, Long> getRepository(EntityType entityType) {
-        switch (entityType) {
-            case FEE_TYPE: return feeTypeRepository;
-            case FEE_STRUCTURE: return feeStructureRepository;
-            case STUDENT_FEE_ALLOCATION: return studentFeeAllocationRepository;
-            case PAYMENT_INSTALLMENT: return paymentInstallmentRepository;
-            case STUDENT_FEE_PAYMENT: return studentFeePaymentRepository;
-            case FEE_DISCOUNT: return feeDiscountRepository;
-            case FEE_REFUND: return feeRefundRepository;
-            case FEE_RECEIPT: return feeReceiptRepository;
-            case AUDIT_LOG: return auditLogRepository;
-            case CURRENCY_RATE: return currencyRateRepository;
-            case NOTIFICATION_LOG: return notificationLogRepository;
-            case ATTENDANCE_PENALTY: return attendancePenaltyRepository;
-            case CERTIFICATE_BLOCK: return certificateBlockRepository;
-            case AUTO_DEBIT_SETTING: return autoDebitSettingRepository;
-            case FEE_REPORT: return feeReportRepository;
-            case INSTALLMENT_PLAN_TEMPLATE: return installmentPlanTemplateRepository;
-            case PAYMENT_LINK: return paymentLinkRepository;
-            case LATE_FEE_RULE: return lateFeeRuleRepository;
-            case EXAM_FEE_MAPPING: return examFeeMappingRepository;
-            case INVOICE_TEMPLATE: return invoiceTemplateRepository;
-            case AUTO_DEBIT_TRANSACTION: return autoDebitTransactionRepository;
-            case ATTENDANCE_PENALTY_RULE: return attendancePenaltyRuleRepository;
-            case REFUND_APPROVAL: return refundApprovalRepository;
-            default: throw new IllegalArgumentException("Unknown entity type: " + entityType);
-        }
-    }
-    
-    private Class<?> getEntityClass(EntityType entityType) {
-        switch (entityType) {
-            case FEE_TYPE: return FeeType.class;
-            case FEE_STRUCTURE: return FeeStructure.class;
-            case STUDENT_FEE_ALLOCATION: return StudentFeeAllocation.class;
-            case PAYMENT_INSTALLMENT: return PaymentInstallment.class;
-            case STUDENT_FEE_PAYMENT: return StudentFeePayment.class;
-            case FEE_DISCOUNT: return FeeDiscount.class;
-            case FEE_REFUND: return FeeRefund.class;
-            case FEE_RECEIPT: return FeeReceipt.class;
-            case AUDIT_LOG: return AuditLog.class;
-            case CURRENCY_RATE: return CurrencyRate.class;
-            case NOTIFICATION_LOG: return NotificationLog.class;
-            case ATTENDANCE_PENALTY: return AttendancePenalty.class;
-            case CERTIFICATE_BLOCK: return CertificateBlock.class;
-            case AUTO_DEBIT_SETTING: return AutoDebitSetting.class;
-            case FEE_REPORT: return FeeReport.class;
-            case INSTALLMENT_PLAN_TEMPLATE: return InstallmentPlanTemplate.class;
-            case PAYMENT_LINK: return PaymentLink.class;
-            case LATE_FEE_RULE: return LateFeeRule.class;
-            case EXAM_FEE_MAPPING: return ExamFeeMapping.class;
-            case INVOICE_TEMPLATE: return InvoiceTemplate.class;
-            case AUTO_DEBIT_TRANSACTION: return AutoDebitTransaction.class;
-            case ATTENDANCE_PENALTY_RULE: return AttendancePenaltyRule.class;
-            case REFUND_APPROVAL: return RefundApproval.class;
-            default: throw new IllegalArgumentException("Unknown entity type: " + entityType);
-        }
-    }
-    
-    private void updateEntity(Object entity, Map<String, Object> data) {
-        Class<?> clazz = entity.getClass();
-        
-        for (Map.Entry<String, Object> entry : data.entrySet()) {
-            try {
-                String fieldName = entry.getKey();
-                Object value = entry.getValue();
-                
-                Field field = clazz.getDeclaredField(fieldName);
-                field.setAccessible(true);
-                
-                // Convert value to appropriate type
-                Object convertedValue = convertValue(value, field.getType());
-                
-                // Don't update id and created_at fields
-                if (!fieldName.equals("id") && !fieldName.equals("createdAt")) {
-                    field.set(entity, convertedValue);
-                }
-                
-            } catch (NoSuchFieldException | IllegalAccessException e) {
-                log.warn("Field not found or cannot be accessed: {}", entry.getKey());
+            if (courseId != null && academicYear != null) {
+                return feeStructureRepository.findByCourseIdAndAcademicYear(courseId, academicYear);
+            } else if (courseId != null) {
+                return feeStructureRepository.findByCourseId(courseId);
+            } else {
+                return feeStructureRepository.findByAcademicYear(academicYear);
             }
         }
-    }
-    
-    private Object cloneEntity(Object entity) {
-        try {
-            String json = objectMapper.writeValueAsString(entity);
-            return objectMapper.readValue(json, entity.getClass());
-        } catch (Exception e) {
-            log.error("Error cloning entity", e);
-            return null;
-        }
-    }
-    
-    private void createAuditLog(String action, EntityType entityType, Object newEntity, Object oldEntity, Map<String, Object> changes) {
-        try {
-            AuditLog auditLog = AuditLog.builder()
-                .module(entityType.name())
-                .entityId(getEntityId(newEntity != null ? newEntity : oldEntity))
-                .action(action)
-                .performedBy(1L) // Get from security context in real app
-                .ipAddress("127.0.0.1") // Get from request
-                .userAgent("PostmanRuntime/7.0.0") // Get from request
-                .oldValues(oldEntity != null ? objectMapper.writeValueAsString(oldEntity) : null)
-                .newValues(newEntity != null ? objectMapper.writeValueAsString(newEntity) : null)
-                .remarks("Auto-generated audit log for " + action)
-                .build();
-            
-            auditLogRepository.save(auditLog);
-        } catch (Exception e) {
-            log.error("Error creating audit log", e);
-        }
-    }
-    
-    private Long getEntityId(Object entity) {
-        try {
-            Field idField = entity.getClass().getDeclaredField("id");
-            idField.setAccessible(true);
-            return (Long) idField.get(entity);
-        } catch (Exception e) {
-            return null;
-        }
-    }
-    
-    private Object convertValue(Object value, Class<?> targetType) {
-        if (value == null) return null;
         
-        if (targetType.equals(Long.class) || targetType.equals(long.class)) {
-            return convertToLong(value);
-        } else if (targetType.equals(Integer.class) || targetType.equals(int.class)) {
-            return convertToInteger(value);
-        } else if (targetType.equals(BigDecimal.class)) {
-            return convertToBigDecimal(value);
-        } else if (targetType.equals(LocalDate.class)) {
-            return convertToLocalDate(value);
-        } else if (targetType.equals(LocalDateTime.class)) {
-            return convertToLocalDateTime(value);
-        } else if (targetType.equals(String.class)) {
-            return value.toString();
-        } else if (targetType.equals(Boolean.class) || targetType.equals(boolean.class)) {
-            return Boolean.valueOf(value.toString());
+        throw new RuntimeException("Access Denied for Student/Parent to fee structures");
+    }
+    
+    @Override
+    public FeeStructure getFeeStructureById(Long id, Long actorId, String role) {
+        return feeStructureRepository.findById(id)
+            .orElseThrow(() -> new RuntimeException("FeeStructure not found with id: " + id));
+    }
+    
+    @Override
+    public FeeStructure updateFeeStructure(Long id, FeeStructure feeStructure, Long actorId, String role) {
+        checkAdmin(role);
+        FeeStructure existing = getFeeStructureById(id, actorId, role);
+        
+        if (feeStructure.getFeeType() != null) existing.setFeeType(feeStructure.getFeeType());
+        if (feeStructure.getAcademicYear() != null) existing.setAcademicYear(feeStructure.getAcademicYear());
+        if (feeStructure.getCourseId() != null) existing.setCourseId(feeStructure.getCourseId());
+        if (feeStructure.getTotalAmount() != null) existing.setTotalAmount(feeStructure.getTotalAmount());
+        if (feeStructure.getIsActive() != null) existing.setIsActive(feeStructure.getIsActive());
+        
+        existing.setUpdatedAt(LocalDateTime.now());
+        logAudit("FEE_STRUCTURE", id, "UPDATE", actorId);
+        return feeStructureRepository.save(existing);
+    }
+    
+    @Override
+    public void deleteFeeStructure(Long id, Long actorId, String role) {
+        checkAdmin(role);
+        FeeStructure structure = getFeeStructureById(id, actorId, role);
+        structure.setIsActive(false);
+        structure.setUpdatedAt(LocalDateTime.now());
+        feeStructureRepository.save(structure);
+        logAudit("FEE_STRUCTURE", id, "DELETE", actorId);
+    }
+    
+    // =============== STUDENT FEE ALLOCATIONS ===============
+    @Override
+    public StudentFeeAllocation allocateFee(StudentFeeAllocation allocation, Long actorId, String role) {
+        checkAdmin(role);
+        allocation.setId(null);
+        allocation.setAllocationDate(LocalDate.now());
+        allocation.setCreatedAt(LocalDateTime.now());
+        allocation.setCreatedBy(actorId);
+        
+        if (allocation.getOriginalAmount() == null) {
+            allocation.setOriginalAmount(allocation.getFeeStructure().getTotalAmount());
+        }
+        if (allocation.getDiscountApplied() == null) {
+            allocation.setDiscountApplied(BigDecimal.ZERO);
+        }
+        if (allocation.getPayableAmount() == null) {
+            allocation.setPayableAmount(allocation.getOriginalAmount()
+                .subtract(allocation.getDiscountApplied()));
+        }
+        if (allocation.getRemainingAmount() == null) {
+            allocation.setRemainingAmount(allocation.getPayableAmount());
         }
         
-        return value;
+        StudentFeeAllocation saved = allocationRepository.save(allocation);
+        logAudit("ALLOCATION", saved.getId(), "CREATE", actorId);
+        return saved;
     }
     
-    private Long convertToLong(Object value) {
-        if (value == null) return null;
-        if (value instanceof Integer) return ((Integer) value).longValue();
-        if (value instanceof Long) return (Long) value;
-        if (value instanceof String) return Long.parseLong((String) value);
-        throw new IllegalArgumentException("Cannot convert to Long: " + value);
+    @Override
+    public List<StudentFeeAllocation> getAllocations(Long actorId, String role, Long studentId) {
+        if ("ADMIN".equalsIgnoreCase(role)) {
+            return allocationRepository.findAll();
+        }
+        
+        if ("STUDENT".equalsIgnoreCase(role)) {
+            return allocationRepository.findByUserId(actorId);
+        }
+        
+        if ("PARENT".equalsIgnoreCase(role)) {
+            if (studentId == null) {
+                throw new RuntimeException("Parent must specify student userId");
+            }
+            return allocationRepository.findByUserId(studentId);
+        }
+        
+        throw new RuntimeException("Access Denied");
     }
     
-    private Integer convertToInteger(Object value) {
-        if (value == null) return null;
-        if (value instanceof Integer) return (Integer) value;
-        if (value instanceof Long) return ((Long) value).intValue();
-        if (value instanceof String) return Integer.parseInt((String) value);
-        throw new IllegalArgumentException("Cannot convert to Integer: " + value);
+    @Override
+    public StudentFeeAllocation getAllocationById(Long id, Long actorId, String role) {
+        StudentFeeAllocation allocation = allocationRepository.findById(id)
+            .orElseThrow(() -> new RuntimeException("Allocation not found with id: " + id));
+        
+        if ("ADMIN".equalsIgnoreCase(role)) return allocation;
+        if ("STUDENT".equalsIgnoreCase(role) && allocation.getUserId().equals(actorId)) return allocation;
+        if ("PARENT".equalsIgnoreCase(role)) {
+            return allocation;
+        }
+        
+        throw new RuntimeException("Access Denied");
     }
     
-    private BigDecimal convertToBigDecimal(Object value) {
-        if (value == null) return null;
-        if (value instanceof BigDecimal) return (BigDecimal) value;
-        if (value instanceof Integer) return BigDecimal.valueOf((Integer) value);
-        if (value instanceof Long) return BigDecimal.valueOf((Long) value);
-        if (value instanceof Double) return BigDecimal.valueOf((Double) value);
-        if (value instanceof String) return new BigDecimal((String) value);
-        throw new IllegalArgumentException("Cannot convert to BigDecimal: " + value);
+    @Override
+    public StudentFeeAllocation updateAllocation(Long id, StudentFeeAllocation allocation, Long actorId, String role) {
+        checkAdmin(role);
+        StudentFeeAllocation existing = getAllocationById(id, actorId, role);
+        
+        if (allocation.getUserId() != null) existing.setUserId(allocation.getUserId());
+        if (allocation.getFeeStructure() != null) existing.setFeeStructure(allocation.getFeeStructure());
+        if (allocation.getStatus() != null) existing.setStatus(allocation.getStatus());
+        if (allocation.getDueDate() != null) existing.setDueDate(allocation.getDueDate());
+        if (allocation.getAdvancePaid() != null) existing.setAdvancePaid(allocation.getAdvancePaid());
+        if (allocation.getTotalPaid() != null) existing.setTotalPaid(allocation.getTotalPaid());
+        if (allocation.getRemainingAmount() != null) existing.setRemainingAmount(allocation.getRemainingAmount());
+        
+        existing.setUpdatedAt(LocalDateTime.now());
+        existing.setUpdatedBy(actorId);
+        logAudit("ALLOCATION", id, "UPDATE", actorId);
+        return allocationRepository.save(existing);
     }
     
-    private LocalDate convertToLocalDate(Object value) {
-        if (value == null) return null;
-        if (value instanceof LocalDate) return (LocalDate) value;
-        if (value instanceof String) return LocalDate.parse((String) value);
-        throw new IllegalArgumentException("Cannot convert to LocalDate: " + value);
+    // =============== PAYMENT ALTERNATIVES IMPLEMENTATION ===============
+    @Override
+    public PaymentAlternative createPaymentAlternative(PaymentAlternative alternative, Long actorId, String role) {
+        checkAdmin(role);
+        alternative.setId(null);
+        alternative.setCreatedBy(actorId);
+        alternative.setCreatedAt(LocalDateTime.now());
+        alternative.setUpdatedAt(null);
+        PaymentAlternative saved = paymentAlternativeRepository.save(alternative);
+        logAudit("PAYMENT_ALTERNATIVE", saved.getId(), "CREATE", actorId);
+        return saved;
     }
     
-    private LocalDateTime convertToLocalDateTime(Object value) {
-        if (value == null) return null;
-        if (value instanceof LocalDateTime) return (LocalDateTime) value;
-        if (value instanceof String) return LocalDateTime.parse((String) value);
-        throw new IllegalArgumentException("Cannot convert to LocalDateTime: " + value);
+    @Override
+    public List<PaymentAlternative> getAllPaymentAlternatives(Long actorId, String role) {
+        checkAdmin(role);
+        return paymentAlternativeRepository.findAll();
+    }
+    
+    @Override
+    public List<PaymentAlternative> getActivePaymentAlternatives() {
+        return paymentAlternativeRepository.findByIsActiveTrue();
+    }
+    
+    @Override
+    public PaymentAlternative getPaymentAlternativeById(Long id, Long actorId, String role) {
+        return paymentAlternativeRepository.findById(id)
+            .orElseThrow(() -> new RuntimeException("PaymentAlternative not found with id: " + id));
+    }
+    
+    @Override
+    public PaymentAlternative updatePaymentAlternative(Long id, PaymentAlternative alternative, Long actorId, String role) {
+        checkAdmin(role);
+        PaymentAlternative existing = getPaymentAlternativeById(id, actorId, role);
+        
+        if (alternative.getName() != null) existing.setName(alternative.getName());
+        if (alternative.getInstallmentCount() != null) existing.setInstallmentCount(alternative.getInstallmentCount());
+        if (alternative.getDescription() != null) existing.setDescription(alternative.getDescription());
+        if (alternative.getIsActive() != null) existing.setIsActive(alternative.getIsActive());
+        
+        existing.setUpdatedAt(LocalDateTime.now());
+        logAudit("PAYMENT_ALTERNATIVE", id, "UPDATE", actorId);
+        return paymentAlternativeRepository.save(existing);
+    }
+    
+    @Override
+    public void deletePaymentAlternative(Long id, Long actorId, String role) {
+        checkAdmin(role);
+        PaymentAlternative alternative = getPaymentAlternativeById(id, actorId, role);
+        alternative.setIsActive(false);
+        alternative.setUpdatedAt(LocalDateTime.now());
+        paymentAlternativeRepository.save(alternative);
+        logAudit("PAYMENT_ALTERNATIVE", id, "DELETE", actorId);
+    }
+    
+    // =============== NEW INSTALLMENT LOGIC ===============
+    @Override
+    public StudentFeeAllocation setAdvancePayment(Long allocationId, BigDecimal advancePayment, Long actorId, String role) {
+        checkAdmin(role);
+        
+        StudentFeeAllocation allocation = getAllocationById(allocationId, actorId, role);
+        
+        if (advancePayment.compareTo(allocation.getPayableAmount()) >= 0) {
+            throw new RuntimeException("Advance payment must be less than payable amount: " + allocation.getPayableAmount());
+        }
+        
+        allocation.setAdvancePaid(advancePayment);
+        allocation.setTotalPaid(advancePayment);
+        allocation.setRemainingAmount(allocation.getPayableAmount().subtract(advancePayment));
+        allocation.setUpdatedAt(LocalDateTime.now());
+        allocation.setUpdatedBy(actorId);
+        
+        logAudit("ADVANCE_PAYMENT", allocationId, "SET", actorId);
+        return allocationRepository.save(allocation);
+    }
+    
+    @Override
+    public StudentFeeAllocation selectPaymentPlan(Long allocationId, Long alternativeId, List<BigDecimal> customAmounts, Long actorId, String role) {
+        checkStudent(role);
+        
+        StudentFeeAllocation allocation = getAllocationById(allocationId, actorId, role);
+        
+        if (!allocation.getUserId().equals(actorId)) {
+            throw new RuntimeException("Access Denied: Student can only select plans for their own allocations");
+        }
+        
+        PaymentAlternative alternative = paymentAlternativeRepository.findById(alternativeId)
+            .orElseThrow(() -> new RuntimeException("Payment alternative not found"));
+        
+        if (!alternative.getIsActive()) {
+            throw new RuntimeException("Payment alternative is not active");
+        }
+        
+        if (customAmounts.size() != alternative.getInstallmentCount()) {
+            throw new RuntimeException("Number of custom amounts must match installment count: " + alternative.getInstallmentCount());
+        }
+        
+        BigDecimal sumCustom = customAmounts.stream()
+            .reduce(BigDecimal.ZERO, BigDecimal::add);
+        BigDecimal remainingAfterAdvance = allocation.getRemainingAmount();
+        
+        if (!sumCustom.equals(remainingAfterAdvance)) {
+            throw new RuntimeException("Sum of installment amounts must equal remaining amount: " + remainingAfterAdvance);
+        }
+        
+        for (BigDecimal amount : customAmounts) {
+            if (amount.compareTo(BigDecimal.ZERO) <= 0) {
+                throw new RuntimeException("Each installment amount must be greater than 0");
+            }
+        }
+        
+        allocation.setSelectedAlternativeId(alternativeId);
+        allocation.setInstallmentCount(alternative.getInstallmentCount());
+        
+        createCustomInstallments(allocation, customAmounts);
+        
+        allocation.setUpdatedAt(LocalDateTime.now());
+        allocation.setUpdatedBy(actorId);
+        
+        logAudit("PAYMENT_PLAN_SELECTION", allocationId, "SELECT", actorId);
+        return allocationRepository.save(allocation);
+    }
+    
+    private void createCustomInstallments(StudentFeeAllocation allocation, List<BigDecimal> customAmounts) {
+        LocalDate startDate = allocation.getDueDate() != null ? 
+            allocation.getDueDate() : LocalDate.now().plusMonths(1);
+        
+        List<PaymentInstallment> existing = installmentRepository.findByStudentFeeAllocationId(allocation.getId());
+        if (!existing.isEmpty()) {
+            installmentRepository.deleteAll(existing);
+        }
+        
+        for (int i = 0; i < customAmounts.size(); i++) {
+            PaymentInstallment installment = new PaymentInstallment();
+            installment.setStudentFeeAllocation(allocation);
+            installment.setInstallmentNumber(i + 1);
+            installment.setAmount(customAmounts.get(i));
+            installment.setDueDate(startDate.plusMonths(i));
+            installment.setStatus("PENDING");
+            installment.setCreatedAt(LocalDateTime.now());
+            installmentRepository.save(installment);
+        }
+    }
+    
+    @Override
+    public void recalculateInstallments(Long allocationId, List<BigDecimal> newAmounts, Long actorId, String role) {
+        checkAdmin(role);
+        
+        StudentFeeAllocation allocation = getAllocationById(allocationId, actorId, role);
+        
+        if (allocation.getSelectedAlternativeId() == null) {
+            throw new RuntimeException("No payment plan selected for this allocation");
+        }
+        
+        PaymentAlternative alternative = paymentAlternativeRepository
+            .findById(allocation.getSelectedAlternativeId())
+            .orElseThrow(() -> new RuntimeException("Payment alternative not found"));
+        
+        if (newAmounts.size() != alternative.getInstallmentCount()) {
+            throw new RuntimeException("Number of amounts must match installment count: " + alternative.getInstallmentCount());
+        }
+        
+        BigDecimal sumNew = newAmounts.stream()
+            .reduce(BigDecimal.ZERO, BigDecimal::add);
+        BigDecimal remainingAfterAdvance = allocation.getRemainingAmount();
+        
+        if (!sumNew.equals(remainingAfterAdvance)) {
+            throw new RuntimeException("Sum must equal remaining amount: " + remainingAfterAdvance);
+        }
+        
+        for (BigDecimal amount : newAmounts) {
+            if (amount.compareTo(BigDecimal.ZERO) <= 0) {
+                throw new RuntimeException("Each installment amount must be greater than 0");
+            }
+        }
+        
+        updateInstallmentAmounts(allocation, newAmounts);
+        
+        allocation.setUpdatedAt(LocalDateTime.now());
+        allocation.setUpdatedBy(actorId);
+        allocationRepository.save(allocation);
+        
+        logAudit("RECALCULATE_INSTALLMENTS", allocationId, "UPDATE", actorId);
+    }
+    
+    private void updateInstallmentAmounts(StudentFeeAllocation allocation, List<BigDecimal> newAmounts) {
+        List<PaymentInstallment> installments = installmentRepository
+            .findByStudentFeeAllocationId(allocation.getId());
+        
+        installments.sort(Comparator.comparing(PaymentInstallment::getInstallmentNumber));
+        
+        for (int i = 0; i < installments.size() && i < newAmounts.size(); i++) {
+            PaymentInstallment installment = installments.get(i);
+            installment.setAmount(newAmounts.get(i));
+            installment.setUpdatedAt(LocalDateTime.now());
+            installmentRepository.save(installment);
+        }
+    }
+    
+    // =============== PAYMENT INSTALLMENTS ===============
+    @Override
+    public PaymentInstallment createPaymentInstallment(PaymentInstallment installment, Long actorId, String role) {
+        checkAdmin(role);
+        installment.setId(null);
+        installment.setCreatedAt(LocalDateTime.now());
+        return installmentRepository.save(installment);
+    }
+    
+    @Override
+    public List<PaymentInstallment> getInstallmentsByAllocationId(Long allocationId, Long actorId, String role) {
+        getAllocationById(allocationId, actorId, role);
+        return installmentRepository.findByStudentFeeAllocationId(allocationId);
+    }
+    
+    @Override
+    public PaymentInstallment updateInstallment(Long id, PaymentInstallment installment, Long actorId, String role) {
+        checkAdmin(role);
+        PaymentInstallment existing = installmentRepository.findById(id)
+            .orElseThrow(() -> new RuntimeException("Installment not found"));
+        
+        if (installment.getAmount() != null) existing.setAmount(installment.getAmount());
+        if (installment.getDueDate() != null) existing.setDueDate(installment.getDueDate());
+        if (installment.getStatus() != null) existing.setStatus(installment.getStatus());
+        
+        existing.setUpdatedAt(LocalDateTime.now());
+        return installmentRepository.save(existing);
+    }
+    
+    // =============== STUDENT FEE PAYMENTS ===============
+    @Override
+    public StudentFeePayment processPayment(StudentFeePayment payment, Long actorId, String role) {
+        if (!"ADMIN".equalsIgnoreCase(role) && !"STUDENT".equalsIgnoreCase(role)) {
+            throw new RuntimeException("Only Admin or Student can make payments");
+        }
+        
+        payment.setId(null);
+        payment.setPaymentDate(LocalDate.now());
+        payment.setCreatedAt(LocalDateTime.now());
+        
+        if ("STUDENT".equalsIgnoreCase(role)) {
+            payment.setCollectedBy(actorId);
+        }
+        
+        StudentFeePayment saved = paymentRepository.save(payment);
+        
+        updateAllocationAfterPayment(payment.getStudentFeeAllocation(), payment.getPaidAmount());
+        
+        generateReceipt(saved);
+        
+        logAudit("PAYMENT", saved.getId(), "CREATE", actorId);
+        return saved;
+    }
+    
+    private void updateAllocationAfterPayment(StudentFeeAllocation allocation, BigDecimal paidAmount) {
+        BigDecimal newTotalPaid = allocation.getTotalPaid().add(paidAmount);
+        BigDecimal newRemaining = allocation.getRemainingAmount().subtract(paidAmount);
+        
+        allocation.setTotalPaid(newTotalPaid);
+        allocation.setRemainingAmount(newRemaining);
+        
+        if (newRemaining.compareTo(BigDecimal.ZERO) <= 0) {
+            allocation.setStatus("PAID");
+        } else if (newTotalPaid.compareTo(BigDecimal.ZERO) > 0) {
+            allocation.setStatus("PARTIAL");
+        }
+        
+        allocation.setUpdatedAt(LocalDateTime.now());
+        allocationRepository.save(allocation);
+    }
+    
+    private void generateReceipt(StudentFeePayment payment) {
+        FeeReceipt receipt = new FeeReceipt();
+        receipt.setStudentFeePayment(payment);
+        receipt.setReceiptNumber("REC-" + System.currentTimeMillis() + "-" + payment.getId());
+        receipt.setReceiptDate(LocalDate.now());
+        receipt.setGeneratedBy(0L);
+        receipt.setCreatedAt(LocalDateTime.now());
+        receiptRepository.save(receipt);
+        
+        payment.setReceiptGenerated(true);
+        paymentRepository.save(payment);
+    }
+    
+    @Override
+    public List<StudentFeePayment> getPayments(Long actorId, String role) {
+        if ("ADMIN".equalsIgnoreCase(role)) {
+            return paymentRepository.findAll();
+        }
+        
+        if ("STUDENT".equalsIgnoreCase(role) || "PARENT".equalsIgnoreCase(role)) {
+            List<StudentFeeAllocation> allocations = allocationRepository.findByUserId(actorId);
+            List<StudentFeePayment> payments = new ArrayList<>();
+            for (StudentFeeAllocation alloc : allocations) {
+                payments.addAll(paymentRepository.findByStudentFeeAllocationId(alloc.getId()));
+            }
+            return payments;
+        }
+        
+        throw new RuntimeException("Access Denied");
+    }
+    
+    @Override
+    public StudentFeePayment getPaymentById(Long id, Long actorId, String role) {
+        StudentFeePayment payment = paymentRepository.findById(id)
+            .orElseThrow(() -> new RuntimeException("Payment not found"));
+        
+        if ("ADMIN".equalsIgnoreCase(role)) return payment;
+        
+        Long paymentUserId = payment.getStudentFeeAllocation().getUserId();
+        if (paymentUserId.equals(actorId)) return payment;
+        
+        throw new RuntimeException("Access Denied");
+    }
+    
+    // =============== FEE DISCOUNTS ===============
+    @Override
+    public FeeDiscount applyDiscount(FeeDiscount discount, Long actorId, String role) {
+        checkAdmin(role);
+        discount.setId(null);
+        discount.setCreatedAt(LocalDateTime.now());
+        discount.setApprovedBy(actorId);
+        discount.setApprovedDate(LocalDate.now());
+        return discountRepository.save(discount);
+    }
+    
+    @Override
+    public List<FeeDiscount> getDiscounts(Long actorId, String role) {
+        if ("ADMIN".equalsIgnoreCase(role)) return discountRepository.findAll();
+        return discountRepository.findByUserId(actorId);
+    }
+    
+    @Override
+    public FeeDiscount getDiscountById(Long id, Long actorId, String role) {
+        return discountRepository.findById(id)
+            .orElseThrow(() -> new RuntimeException("Discount not found"));
+    }
+    
+    @Override
+    public FeeDiscount updateDiscount(Long id, FeeDiscount discount, Long actorId, String role) {
+        checkAdmin(role);
+        FeeDiscount existing = getDiscountById(id, actorId, role);
+        
+        if (discount.getDiscountType() != null) existing.setDiscountType(discount.getDiscountType());
+        if (discount.getDiscountValue() != null) existing.setDiscountValue(discount.getDiscountValue());
+        if (discount.getReason() != null) existing.setReason(discount.getReason());
+        
+        existing.setUpdatedAt(LocalDateTime.now());
+        return discountRepository.save(existing);
+    }
+    
+    @Override
+    public void deleteDiscount(Long id, Long actorId, String role) {
+        checkAdmin(role);
+        discountRepository.deleteById(id);
+    }
+    
+    // =============== FEE REFUNDS ===============
+    @Override
+    public FeeRefund processRefund(FeeRefund refund, Long actorId, String role) {
+        checkAdmin(role);
+        refund.setId(null);
+        refund.setCreatedAt(LocalDateTime.now());
+        return refundRepository.save(refund);
+    }
+    
+    @Override
+    public List<FeeRefund> getRefunds(Long actorId, String role) {
+        checkAdmin(role);
+        return refundRepository.findAll();
+    }
+    
+    @Override
+    public FeeRefund getRefundById(Long id, Long actorId, String role) {
+        checkAdmin(role);
+        return refundRepository.findById(id)
+            .orElseThrow(() -> new RuntimeException("Refund not found"));
+    }
+    
+    // =============== FEE RECEIPTS ===============
+    @Override
+    public List<FeeReceipt> getReceipts(Long actorId, String role) {
+        if ("ADMIN".equalsIgnoreCase(role)) {
+            return receiptRepository.findAll();
+        }
+        
+        try {
+            // Check if findByUserId method exists using reflection
+            receiptRepository.getClass().getMethod("findByUserId", Long.class);
+            return receiptRepository.findByUserId(actorId);
+        } catch (NoSuchMethodException e) {
+            // Fallback method
+            List<StudentFeePayment> payments = getPayments(actorId, role);
+            List<FeeReceipt> receipts = new ArrayList<>();
+            for (StudentFeePayment payment : payments) {
+                Optional<FeeReceipt> receiptOpt = receiptRepository.findByStudentFeePaymentId(payment.getId());
+                receiptOpt.ifPresent(receipts::add);
+            }
+            return receipts;
+        }
+    }
+    
+    @Override
+    public FeeReceipt getReceiptById(Long id, Long actorId, String role) {
+        FeeReceipt receipt = receiptRepository.findById(id)
+            .orElseThrow(() -> new RuntimeException("Receipt not found"));
+        
+        Long receiptUserId = receipt.getStudentFeePayment().getStudentFeeAllocation().getUserId();
+        if ("ADMIN".equalsIgnoreCase(role) || receiptUserId.equals(actorId)) {
+            return receipt;
+        }
+        throw new RuntimeException("Access Denied");
+    }
+    
+    // =============== AUDIT LOGS ===============
+    @Override
+    public List<AuditLog> getAuditLogs(Long actorId, String role) {
+        checkAdmin(role);
+        return auditLogRepository.findAll();
+    }
+    
+    @Override
+    public AuditLog getAuditLogById(Long id, Long actorId, String role) {
+        checkAdmin(role);
+        return auditLogRepository.findById(id)
+            .orElseThrow(() -> new RuntimeException("Audit log not found"));
+    }
+    
+    // =============== OTHER ENTITIES ===============
+    @Override
+    public CurrencyRate createCurrencyRate(CurrencyRate rate, Long actorId, String role) {
+        checkAdmin(role);
+        rate.setId(null);
+        rate.setCreatedAt(LocalDateTime.now());
+        return currencyRateRepository.save(rate);
+    }
+    
+    @Override
+    public List<CurrencyRate> getCurrencyRates(Long actorId, String role) {
+        return currencyRateRepository.findAll();
+    }
+    
+    @Override
+    public NotificationLog createNotificationLog(NotificationLog log, Long actorId, String role) {
+        log.setId(null);
+        log.setSentAt(LocalDateTime.now());
+        return notificationLogRepository.save(log);
+    }
+    
+    @Override
+    public AttendancePenalty createAttendancePenalty(AttendancePenalty penalty, Long actorId, String role) {
+        checkAdmin(role);
+        penalty.setId(null);
+        penalty.setCreatedAt(LocalDateTime.now());
+        return attendancePenaltyRepository.save(penalty);
+    }
+    
+    @Override
+    public CertificateBlock createCertificateBlock(CertificateBlock block, Long actorId, String role) {
+        checkAdmin(role);
+        block.setId(null);
+        block.setBlockedAt(LocalDateTime.now());
+        return certificateBlockRepository.save(block);
+    }
+    
+    @Override
+    public AutoDebitSetting createAutoDebitSetting(AutoDebitSetting setting, Long actorId, String role) {
+        if (!"ADMIN".equalsIgnoreCase(role) && !"STUDENT".equalsIgnoreCase(role)) {
+            throw new RuntimeException("Only Admin or Student can set up auto-debit");
+        }
+        setting.setId(null);
+        setting.setCreatedAt(LocalDateTime.now());
+        return autoDebitSettingRepository.save(setting);
+    }
+    
+    @Override
+    public FeeReport generateFeeReport(FeeReport report, Long actorId, String role) {
+        checkAdmin(role);
+        report.setId(null);
+        report.setCreatedAt(LocalDateTime.now());
+        return feeReportRepository.save(report);
     }
 }

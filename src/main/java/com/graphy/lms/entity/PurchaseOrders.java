@@ -1,6 +1,6 @@
 package com.graphy.lms.entity;
 
-import javax.persistence.*; 
+import jakarta.persistence.*; 
 import lombok.Data;
 import java.math.BigDecimal;
 import java.time.LocalDate;
