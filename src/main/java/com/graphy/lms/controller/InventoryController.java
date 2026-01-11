@@ -1,6 +1,8 @@
 package com.graphy.lms.controller;
 
 import com.graphy.lms.entity.*;
+import org.springframework.security.access.prepost.PreAuthorize;
+
 import com.graphy.lms.service.InventoryService;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.web.bind.annotation.*;
@@ -10,54 +12,148 @@ import java.util.List;
 @RequestMapping("/api/inventory")
 public class InventoryController {
 
-    @Autowired private InventoryService service;
+    @Autowired
+    private InventoryService inventoryService;
 
-    // 1. CATEGORIES
-    @PostMapping("/categories") public InventoryCategory addCat(@RequestBody InventoryCategory c) { return service.saveCategory(c); }
-    @GetMapping("/categories/{id}") public InventoryCategory getCat(@PathVariable Long id) { return service.getCategoryById(id); }
-    @GetMapping("/categories") public List<InventoryCategory> getAllCat() { return service.getAllCategories(); }
-    @PutMapping("/categories/{id}") public InventoryCategory updateCat(@PathVariable Long id, @RequestBody InventoryCategory c) { return service.updateCategory(id, c); }
-    @DeleteMapping("/categories/{id}") public String delCat(@PathVariable Long id) { service.deleteCategory(id); return "Category Deleted: " + id; }
+    @PostMapping("/category")
+    @PreAuthorize("hasRole('ADMIN')")
+    public InventoryCategory createCategory(@RequestBody InventoryCategory c){
+        return inventoryService.createCategory(c);
+    }
 
-    // 2. ITEMS
-    @PostMapping("/items") public InventoryItem addItem(@RequestBody InventoryItem i) { return service.saveItem(i); }
-    @GetMapping("/items/{id}") public InventoryItem getItem(@PathVariable Long id) { return service.getItemById(id); }
-    @GetMapping("/items") public List<InventoryItem> getAllItems() { return service.getAllItems(); }
-    @PutMapping("/items/{id}") public InventoryItem updateItem(@PathVariable Long id, @RequestBody InventoryItem i) { return service.updateItem(id, i); }
-    @DeleteMapping("/items/{id}") public String delItem(@PathVariable Long id) { service.deleteItem(id); return "Item Deleted: " + id; }
+    @GetMapping("/category")
+    @PreAuthorize("hasAnyRole('ADMIN','FACULTY','STUDENT')")
+    public List<InventoryCategory> getAllCategory(){
+        return inventoryService.getAllCategory();
+    }
 
-    // 3. STOCK LEVELS
-    @PostMapping("/stock") public StockLevel addStock(@RequestBody StockLevel s) { return service.saveStockLevel(s); }
-    @GetMapping("/stock/{id}") public StockLevel getStock(@PathVariable Long id) { return service.getStockLevelById(id); }
-    @GetMapping("/stock") public List<StockLevel> getAllStock() { return service.getAllStockLevels(); }
-    @PutMapping("/stock/{id}") public StockLevel updateStock(@PathVariable Long id, @RequestBody StockLevel s) { return service.updateStockLevel(id, s); }
-    @DeleteMapping("/stock/{id}") public String delStock(@PathVariable Long id) { service.deleteStockLevel(id); return "Stock Level Deleted: " + id; }
+    @GetMapping("/category/{id}")
+    @PreAuthorize("hasAnyRole('ADMIN','FACULTY','STUDENT')")
+    public InventoryCategory getCategory(@PathVariable Long id){
+        return inventoryService.getCategory(id);
+    }
 
-    // 4. ASSETS ASSIGNED
-    @PostMapping("/assignments") public AssetsAssigned addAss(@RequestBody AssetsAssigned a) { return service.saveAssignment(a); }
-    @GetMapping("/assignments/{id}") public AssetsAssigned getAss(@PathVariable Long id) { return service.getAssignmentById(id); }
-    @GetMapping("/assignments") public List<AssetsAssigned> getAllAss() { return service.getAllAssignments(); }
-    @PutMapping("/assignments/{id}") public AssetsAssigned updateAss(@PathVariable Long id, @RequestBody AssetsAssigned a) { return service.updateAssignment(id, a); }
-    @DeleteMapping("/assignments/{id}") public String delAss(@PathVariable Long id) { service.deleteAssignment(id); return "Assignment Deleted: " + id; }
+    @PutMapping("/category/{id}")
+    @PreAuthorize("hasRole('ADMIN')")
+    public InventoryCategory updateCategory(@PathVariable Long id,@RequestBody InventoryCategory c){
+        return inventoryService.updateCategory(id,c);
+    }
 
-    // 5. ASSETS RETURN
-    @PostMapping("/returns") public AssetsReturn addRet(@RequestBody AssetsReturn r) { return service.saveReturn(r); }
-    @GetMapping("/returns/{id}") public AssetsReturn getRet(@PathVariable Long id) { return service.getReturnById(id); }
-    @GetMapping("/returns") public List<AssetsReturn> getAllRet() { return service.getAllReturns(); }
-    @PutMapping("/returns/{id}") public AssetsReturn updateRet(@PathVariable Long id, @RequestBody AssetsReturn r) { return service.updateReturn(id, r); }
-    @DeleteMapping("/returns/{id}") public String delRet(@PathVariable Long id) { service.deleteReturn(id); return "Return Deleted: " + id; }
+    @DeleteMapping("/category/{id}")
+    @PreAuthorize("hasRole('ADMIN')")
+    public void deleteCategory(@PathVariable Long id){
+        inventoryService.deleteCategory(id);
+    }
+    @PostMapping("/item")
+    @PreAuthorize("hasRole('ADMIN')")
+    public InventoryItem createItem(@RequestBody InventoryItem item){
+        return inventoryService.createItem(item);
+    }
 
-    // 6. PROCUREMENT
-    @PostMapping("/procurement") public Procurement addPro(@RequestBody Procurement p) { return service.saveProcurement(p); }
-    @GetMapping("/procurement/{id}") public Procurement getPro(@PathVariable Long id) { return service.getProcurementById(id); }
-    @GetMapping("/procurement") public List<Procurement> getAllPro() { return service.getAllProcurements(); }
-    @PutMapping("/procurement/{id}") public Procurement updatePro(@PathVariable Long id, @RequestBody Procurement p) { return service.updateProcurement(id, p); }
-    @DeleteMapping("/procurement/{id}") public String delPro(@PathVariable Long id) { service.deleteProcurement(id); return "Procurement Deleted: " + id; }
+    @GetMapping("/item")
+    @PreAuthorize("hasAnyRole('ADMIN','FACULTY')")
+    public List<InventoryItem> getAllItems(){
+        return inventoryService.getAllItems();
+    }
 
-    // 7. STOCK TRANSACTIONS
-    @PostMapping("/transactions") public StockTransaction addTra(@RequestBody StockTransaction t) { return service.saveTransaction(t); }
-    @GetMapping("/transactions/{id}") public StockTransaction getTra(@PathVariable Long id) { return service.getTransactionById(id); }
-    @GetMapping("/transactions") public List<StockTransaction> getAllTra() { return service.getAllTransactions(); }
-    @PutMapping("/transactions/{id}") public StockTransaction updateTra(@PathVariable Long id, @RequestBody StockTransaction t) { return service.updateTransaction(id, t); }
-    @DeleteMapping("/transactions/{id}") public String delTra(@PathVariable Long id) { service.deleteTransaction(id); return "Transaction Deleted: " + id; }
+    @GetMapping("/item/{id}")
+    @PreAuthorize("hasAnyRole('ADMIN','FACULTY')")
+    public InventoryItem getItem(@PathVariable Long id){
+        return inventoryService.getItem(id);
+    }
+
+    @PutMapping("/item/{id}")
+    @PreAuthorize("hasRole('ADMIN')")
+    public InventoryItem updateItem(@PathVariable Long id,@RequestBody InventoryItem item){
+        return inventoryService.updateItem(id,item);
+    }
+    @PostMapping("/assign")
+    @PreAuthorize("hasRole('ADMIN')")
+    public AssetsAssigned assign(@RequestBody AssetsAssigned a,
+                                 @RequestHeader("X-USER-ID") Long userId,
+                                 @RequestHeader("X-ROLE") String role){
+        return inventoryService.assignAsset(a,userId,role);
+    }
+
+    @GetMapping("/my-assets")
+    @PreAuthorize("hasAnyRole('FACULTY','STUDENT')")
+    public List<AssetsAssigned> myAssets(@RequestHeader("X-USER-ID") Long userId){
+        return inventoryService.getMyAssets(userId);
+    }
+    @PostMapping("/return")
+    @PreAuthorize("hasAnyRole('FACULTY','STUDENT')")
+    public AssetsReturn returnAsset(@RequestBody AssetsReturn r){
+        return inventoryService.returnAsset(r);
+    }
+    @PostMapping("/procurement")
+    @PreAuthorize("hasRole('ADMIN')")
+    public Procurement procure(@RequestBody Procurement p){
+        return inventoryService.procureItem(p);
+    }
+
+    @GetMapping("/procurement")
+    @PreAuthorize("hasRole('ADMIN')")
+    public List<Procurement> allProcurement(){
+        return inventoryService.getAllProcurement();
+    }
+
+    @GetMapping("/procurement/{id}")
+    @PreAuthorize("hasRole('ADMIN')")
+    public Procurement getProcurement(@PathVariable Long id){
+        return inventoryService.getProcurement(id);
+    }
+    @GetMapping("/transactions")
+    @PreAuthorize("hasRole('ADMIN')")
+    public List<StockTransaction> allTransactions(){
+        return inventoryService.getAllStockTransactions();
+    }
+
+    @GetMapping("/transactions/{id}")
+    @PreAuthorize("hasRole('ADMIN')")
+    public StockTransaction transaction(@PathVariable Long id){
+        return inventoryService.getStockTransaction(id);
+    }
+    @GetMapping("/low-stock")
+    @PreAuthorize("hasRole('ADMIN')")
+    public List<StockLevel> lowStock(){
+        return inventoryService.getLowStockItems();
+    }
+    @GetMapping("/stock")
+    @PreAuthorize("hasRole('ADMIN')")
+    public List<StockLevel> allStock(){
+        return inventoryService.getAllStockLevels();
+    }
+
+    @GetMapping("/stock/{id}")
+    @PreAuthorize("hasRole('ADMIN')")
+    public StockLevel stock(@PathVariable Long id){
+        return inventoryService.getStockLevel(id);
+    }
+    @GetMapping("/assigned")
+    @PreAuthorize("hasRole('ADMIN')")
+    public List<AssetsAssigned> allAssigned(){
+        return inventoryService.getAllAssignedAssets();
+    }
+    @GetMapping("/returns")
+    @PreAuthorize("hasRole('ADMIN')")
+    public List<AssetsReturn> allReturns(){
+        return inventoryService.getAllReturns();
+    }
+
+    @GetMapping("/returns/{id}")
+    @PreAuthorize("hasRole('ADMIN')")
+    public AssetsReturn getReturn(@PathVariable Long id){
+        return inventoryService.getReturn(id);
+    }
+
+    @PutMapping("/returns/{id}")
+    @PreAuthorize("hasRole('ADMIN')")
+    public AssetsReturn updateReturn(@PathVariable Long id, @RequestBody AssetsReturn r){
+        return inventoryService.updateReturn(id, r);
+    }
+
+
+
+
+
 }

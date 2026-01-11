@@ -1,25 +1,22 @@
 package com.graphy.lms.repository;
 
-import com.graphy.lms.entity.FeeReceipt;
+import com.graphy.lms.entity.*;
 import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.data.jpa.repository.Query;
+import org.springframework.data.repository.query.Param;
 import org.springframework.stereotype.Repository;
-import java.util.Optional;
+
+import java.time.LocalDate;
 import java.util.List;
+import java.util.Optional;
+
 
 @Repository
 public interface FeeReceiptRepository extends JpaRepository<FeeReceipt, Long> {
-    
-    // Method returns Optional to handle null cases properly
-    Optional<FeeReceipt> findByStudentFeePaymentId(Long paymentId);
-    
-    // Find receipts by date range
-    List<FeeReceipt> findByReceiptDateBetween(java.time.LocalDate start, java.time.LocalDate end);
-    
-    // Find all receipts for a specific user (student)
-    @Query("SELECT r FROM FeeReceipt r WHERE r.studentFeePayment.studentFeeAllocation.userId = :userId")
-    List<FeeReceipt> findByUserId(Long userId);
-    
-    // Optional: Find by receipt number if you need it
+    Optional<FeeReceipt> findByPaymentId(Long paymentId);
     Optional<FeeReceipt> findByReceiptNumber(String receiptNumber);
+    List<FeeReceipt> findByEmailSent(Boolean emailSent);
+    
+    @Query("SELECT fr FROM FeeReceipt fr JOIN StudentFeePayment sfp ON fr.paymentId = sfp.id JOIN StudentFeeAllocation sfa ON sfp.studentFeeAllocationId = sfa.id WHERE sfa.userId = :userId")
+    List<FeeReceipt> findByStudentUserId(@Param("userId") Long userId);
 }

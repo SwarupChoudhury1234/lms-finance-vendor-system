@@ -1,149 +1,228 @@
 package com.graphy.lms.service.impl;
 
+//===== ALL REQUIRED IMPORTS WILL ALWAYS BE INCLUDED =====
 import com.graphy.lms.entity.*;
 import com.graphy.lms.repository.*;
 import com.graphy.lms.service.InventoryService;
+
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
+
+import java.time.LocalDate;
 import java.util.List;
+import java.util.Optional;
 
 @Service
+@Transactional
 public class InventoryServiceImpl implements InventoryService {
 
-    @Autowired private InventoryCategoryRepository catRepo;
+    @Autowired
+    private InventoryCategoryRepository categoryRepo;
+
+    public InventoryCategory createCategory(InventoryCategory c){
+        return categoryRepo.save(c);
+    }
+
+    public List<InventoryCategory> getAllCategory(){
+        return categoryRepo.findAll();
+    }
+
+    public InventoryCategory getCategory(Long id){
+        return categoryRepo.findById(id).orElseThrow();
+    }
+
+    public InventoryCategory updateCategory(Long id, InventoryCategory c){
+
+        InventoryCategory existing = categoryRepo.findById(id).orElseThrow();
+
+        existing.setCategoryName(c.getCategoryName());
+        existing.setDescription(c.getDescription());
+        existing.setStatus(c.getStatus());
+
+        return categoryRepo.save(existing);
+    }
+
+
+    public void deleteCategory(Long id){
+        categoryRepo.deleteById(id);
+    }
     @Autowired private InventoryItemRepository itemRepo;
     @Autowired private StockLevelRepository stockRepo;
-    @Autowired private AssetsAssignedRepository assignRepo;
-    @Autowired private AssetsReturnRepository returnRepo;
-    @Autowired private ProcurementRepository procRepo;
-    @Autowired private StockTransactionRepository transRepo;
 
-    // --- 1. CATEGORIES ---
-    @Override public InventoryCategory saveCategory(InventoryCategory c) { return catRepo.save(c); }
-    @Override public InventoryCategory getCategoryById(Long id) { return catRepo.findById(id).orElseThrow(() -> new RuntimeException("Category not found with ID: " + id)); }
-    @Override public List<InventoryCategory> getAllCategories() { return catRepo.findAll(); }
-    @Override public InventoryCategory updateCategory(Long id, InventoryCategory c) {
-        InventoryCategory ex = getCategoryById(id);
-        ex.setCategoryName(c.getCategoryName()); 
-        ex.setDescription(c.getDescription()); 
-        ex.setStatus(c.getStatus());
-        return catRepo.save(ex);
-    }
-    @Override public void deleteCategory(Long id) { catRepo.deleteById(id); }
+    public InventoryItem createItem(InventoryItem item){
 
-    // --- 2. ITEMS ---
-    @Override public InventoryItem saveItem(InventoryItem i) { return itemRepo.save(i); }
-    @Override public InventoryItem getItemById(Long id) { return itemRepo.findById(id).orElseThrow(() -> new RuntimeException("Item not found with ID: " + id)); }
-    @Override public List<InventoryItem> getAllItems() { return itemRepo.findAll(); }
-    @Override public InventoryItem updateItem(Long id, InventoryItem i) {
-        InventoryItem ex = getItemById(id);
-        ex.setItemName(i.getItemName()); 
-        ex.setCategory(i.getCategory()); 
-        ex.setTotalQuantity(i.getTotalQuantity());
-        ex.setUnitPrice(i.getUnitPrice()); 
-        ex.setStatus(i.getStatus());
-        return itemRepo.save(ex);
-    }
-    @Override public void deleteItem(Long id) { itemRepo.deleteById(id); }
+        InventoryItem saved = itemRepo.save(item);
 
-    // --- 3. STOCK LEVELS ---
-    @Override public StockLevel saveStockLevel(StockLevel s) { return stockRepo.save(s); }
-    @Override public StockLevel getStockLevelById(Long id) { return stockRepo.findById(id).orElseThrow(() -> new RuntimeException("Stock Level not found with ID: " + id)); }
-    @Override public List<StockLevel> getAllStockLevels() { return stockRepo.findAll(); }
-    @Override public StockLevel updateStockLevel(Long id, StockLevel s) {
-        StockLevel ex = getStockLevelById(id);
-        ex.setItem(s.getItem()); 
-        ex.setAvailableQuantity(s.getAvailableQuantity()); 
-        ex.setLowStockThreshold(s.getLowStockThreshold());
-        return stockRepo.save(ex);
-    }
-    @Override public void deleteStockLevel(Long id) { stockRepo.deleteById(id); }
-
-    // --- 4. ASSETS ASSIGNED ---
-    @Override public AssetsAssigned saveAssignment(AssetsAssigned a) { return assignRepo.save(a); }
-    @Override public AssetsAssigned getAssignmentById(Long id) { return assignRepo.findById(id).orElseThrow(() -> new RuntimeException("Assignment not found with ID: " + id)); }
-    @Override public List<AssetsAssigned> getAllAssignments() { return assignRepo.findAll(); }
-    @Override public AssetsAssigned updateAssignment(Long id, AssetsAssigned a) {
-        AssetsAssigned ex = getAssignmentById(id);
-        ex.setUserId(a.getUserId()); 
-        ex.setUserRole(a.getUserRole()); 
-        ex.setItem(a.getItem());
-        ex.setQuantity(a.getQuantity()); 
-        ex.setGivenDate(a.getGivenDate()); 
-        ex.setStatus(a.getStatus());
-        return assignRepo.save(ex);
-    }
-    @Override public void deleteAssignment(Long id) { assignRepo.deleteById(id); }
-
-    // --- 5. ASSETS RETURN ---
-    @Override public AssetsReturn saveReturn(AssetsReturn r) { return returnRepo.save(r); }
-    @Override public AssetsReturn getReturnById(Long id) { return returnRepo.findById(id).orElseThrow(() -> new RuntimeException("Return record not found with ID: " + id)); }
-    @Override public List<AssetsReturn> getAllReturns() { return returnRepo.findAll(); }
-    @Override public AssetsReturn updateReturn(Long id, AssetsReturn r) {
-        AssetsReturn ex = getReturnById(id);
-        ex.setAssignment(r.getAssignment()); 
-        ex.setReturnedQuantity(r.getReturnedQuantity());
-        ex.setReturnDate(r.getReturnDate()); 
-        ex.setConditionStatus(r.getConditionStatus()); 
-        ex.setRemarks(r.getRemarks());
-        return returnRepo.save(ex);
-    }
-    @Override public void deleteReturn(Long id) { returnRepo.deleteById(id); }
-
-    // --- 6. PROCUREMENT ---
-    @Override public Procurement saveProcurement(Procurement p) { return procRepo.save(p); }
-    @Override public Procurement getProcurementById(Long id) { return procRepo.findById(id).orElseThrow(() -> new RuntimeException("Procurement not found with ID: " + id)); }
-    @Override public List<Procurement> getAllProcurements() { return procRepo.findAll(); }
-    @Override public Procurement updateProcurement(Long id, Procurement p) {
-        Procurement ex = getProcurementById(id);
-        ex.setItem(p.getItem()); 
-        ex.setVendorId(p.getVendorId()); 
-        ex.setQuantity(p.getQuantity());
-        ex.setPurchaseDate(p.getPurchaseDate()); 
-        ex.setCost(p.getCost());
-        return procRepo.save(ex);
-    }
-    @Override public void deleteProcurement(Long id) { procRepo.deleteById(id); }
-
-    // --- 7. STOCK TRANSACTIONS (With Snapshot Logic) ---
-    @Override 
-    public StockTransaction saveTransaction(StockTransaction t) {
-        // Fetch current stock for the item to calculate snapshots
-        StockLevel stock = stockRepo.findAll().stream()
-            .filter(s -> s.getItem().getId().equals(t.getItem().getId()))
-            .findFirst()
-            .orElseThrow(() -> new RuntimeException("Stock level not found for Item ID: " + t.getItem().getId()));
-
-        // Snapshot: Previous balance
-        t.setPreviousBalance(stock.getAvailableQuantity());
-        
-        // Logic: Calculate New Balance based on type
-        if ("IN".equalsIgnoreCase(t.getTransactionType())) {
-            t.setNewBalance(t.getPreviousBalance() + t.getQuantity());
-        } else {
-            t.setNewBalance(t.getPreviousBalance() - t.getQuantity());
-        }
-
-        // Sync StockLevel table with the new balance
-        stock.setAvailableQuantity(t.getNewBalance());
+        StockLevel stock = new StockLevel();
+        stock.setInventoryId(saved.getId());
+        stock.setAvailableQuantity(saved.getTotalQuantity());
+        stock.setLowStockThreshold(5); // default
         stockRepo.save(stock);
 
-        return transRepo.save(t);
+        return saved;
     }
+
+    public List<InventoryItem> getAllItems(){
+        return itemRepo.findAll();
+    }
+
+    public InventoryItem getItem(Long id){
+        return itemRepo.findById(id).orElseThrow();
+    }
+
+    public InventoryItem updateItem(Long id, InventoryItem item){
+
+        InventoryItem existing = itemRepo.findById(id).orElseThrow();
+
+        existing.setItemName(item.getItemName());
+        existing.setCategoryId(item.getCategoryId());
+        existing.setTotalQuantity(item.getTotalQuantity());
+        existing.setUnitPrice(item.getUnitPrice());
+        existing.setStatus(item.getStatus());
+
+        return itemRepo.save(existing);
+    }
+
+    @Autowired private AssetsAssignedRepository assetRepo;
     
-    @Override public StockTransaction getTransactionById(Long id) { return transRepo.findById(id).orElseThrow(() -> new RuntimeException("Transaction not found with ID: " + id)); }
-    @Override public List<StockTransaction> getAllTransactions() { return transRepo.findAll(); }
-    @Override public StockTransaction updateTransaction(Long id, StockTransaction t) {
-        StockTransaction ex = getTransactionById(id);
-        ex.setItem(t.getItem()); 
-        ex.setTransactionType(t.getTransactionType()); 
-        ex.setQuantity(t.getQuantity());
-        ex.setTransactionDate(t.getTransactionDate()); 
-        ex.setReferenceId(t.getReferenceId());
-        ex.setRemarks(t.getRemarks()); 
-        ex.setPreviousBalance(t.getPreviousBalance()); 
-        ex.setNewBalance(t.getNewBalance());
-        return transRepo.save(ex);
+    @Autowired private StockTransactionRepository txnRepo;
+
+    public AssetsAssigned assignAsset(AssetsAssigned a, Long tokenUserId, String role){
+
+        a.setUserId(tokenUserId);
+        a.setUserRole(role);
+
+        StockLevel stock = stockRepo.findByInventoryId(a.getItemId()).orElseThrow();
+
+        if(stock.getAvailableQuantity() < a.getQuantity()){
+            throw new RuntimeException("Insufficient Stock");
+        }
+
+        stock.setAvailableQuantity(stock.getAvailableQuantity() - a.getQuantity());
+        stockRepo.save(stock);
+
+        AssetsAssigned saved = assetRepo.save(a);
+
+        StockTransaction txn = new StockTransaction();
+        txn.setItemId(a.getItemId());
+        txn.setTransactionType("OUT");
+        txn.setQuantity(a.getQuantity());
+        txn.setTransactionDate(LocalDate.now());
+        txn.setReferenceId(saved.getId());
+        txn.setRemarks("Asset Assigned");
+
+        txnRepo.save(txn);
+
+        return saved;
     }
-    @Override public void deleteTransaction(Long id) { transRepo.deleteById(id); }
+
+    public List<AssetsAssigned> getMyAssets(Long userId){
+        return assetRepo.findByUserId(userId);
+    }
+    @Autowired private AssetsReturnRepository returnRepo;
+    @Autowired private AssetsAssignedRepository assignRepo;
+
+    public AssetsReturn returnAsset(AssetsReturn r){
+
+        AssetsAssigned assigned = assignRepo.findById(r.getAssignmentId()).orElseThrow();
+
+        StockLevel stock = stockRepo.findByInventoryId(assigned.getItemId()).orElseThrow();
+
+        stock.setAvailableQuantity(stock.getAvailableQuantity() + r.getReturnedQuantity());
+        stockRepo.save(stock);
+
+        AssetsReturn saved = returnRepo.save(r);
+
+        StockTransaction txn = new StockTransaction();
+        txn.setItemId(assigned.getItemId());
+        txn.setTransactionType("IN");
+        txn.setQuantity(r.getReturnedQuantity());
+        txn.setTransactionDate(LocalDate.now());
+        txn.setReferenceId(saved.getId());
+        txn.setRemarks("Asset Returned : " + r.getConditionStatus());
+
+        txnRepo.save(txn);
+
+        return saved;
+    }
+    @Autowired private ProcurementRepository procurementRepo;
+
+    public Procurement procureItem(Procurement p){
+
+        Procurement saved = procurementRepo.save(p);
+
+        StockLevel stock = stockRepo.findByInventoryId(p.getItemId()).orElseThrow();
+        stock.setAvailableQuantity(stock.getAvailableQuantity() + p.getQuantity());
+        stockRepo.save(stock);
+
+        StockTransaction txn = new StockTransaction();
+        txn.setItemId(p.getItemId());
+        txn.setTransactionType("IN");
+        txn.setQuantity(p.getQuantity());
+        txn.setTransactionDate(LocalDate.now());
+        txn.setReferenceId(saved.getId());
+        txn.setRemarks("Procurement from Vendor");
+
+        txnRepo.save(txn);
+
+        return saved;
+    }
+
+    public List<Procurement> getAllProcurement(){
+        return procurementRepo.findAll();
+    }
+
+    public Procurement getProcurement(Long id){
+        return procurementRepo.findById(id).orElseThrow();
+    }
+    public List<StockTransaction> getAllStockTransactions(){
+        return txnRepo.findAll();
+    }
+
+    public StockTransaction getStockTransaction(Long id){
+        return txnRepo.findById(id).orElseThrow();
+    }
+    public List<StockLevel> getLowStockItems() {
+        return stockRepo.findAll()
+                .stream()
+                .filter(s -> s.getAvailableQuantity() <= s.getLowStockThreshold())
+                .toList();
+    }
+    @Override
+    public List<StockLevel> getAllStockLevels() {
+        return stockRepo.findAll();
+    }
+
+    @Override
+    public StockLevel getStockLevel(Long id) {
+        return stockRepo.findById(id).orElseThrow();
+    }
+    @Override
+    public List<AssetsAssigned> getAllAssignedAssets() {
+        return assetRepo.findAll();
+    }
+    @Override
+    public List<AssetsReturn> getAllReturns() {
+        return returnRepo.findAll();
+    }
+
+    @Override
+    public AssetsReturn getReturn(Long id) {
+        return returnRepo.findById(id).orElseThrow();
+    }
+
+    public AssetsReturn updateReturn(Long id, AssetsReturn r){
+
+        AssetsReturn existing = returnRepo.findById(id).orElseThrow();
+
+        existing.setReturnedQuantity(r.getReturnedQuantity());
+        existing.setReturnDate(r.getReturnDate());
+        existing.setConditionStatus(r.getConditionStatus());
+        existing.setRemarks(r.getRemarks());
+
+        return returnRepo.save(existing);
+    }
+
+
 }

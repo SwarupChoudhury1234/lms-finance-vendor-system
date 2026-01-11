@@ -1,6 +1,6 @@
 Manifest-Version: 1.0
 Build-Jdk-Spec: 21
-Implementation-Title: lms-fee-management
+Implementation-Title: LMS Fee Management
 Implementation-Version: 1.0.0
 Created-By: Maven Integration for Eclipse
 

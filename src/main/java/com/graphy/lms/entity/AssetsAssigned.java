@@ -6,22 +6,35 @@ import java.time.LocalDate;
 import java.time.LocalDateTime;
 
 @Entity
-@Table(name = "assets_assigned")
+@Table(name="assets_assigned")
 @Data
 public class AssetsAssigned {
+
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Long id;
 
-    private Long userId;          // student / faculty ID 
-    private String userRole;      // STUDENT / FACULTY 
-
-    @ManyToOne
-    @JoinColumn(name = "item_id", nullable = false)
-    private InventoryItem item;
-
+    private Long userId;          // from JWT
+    private String userRole;
+    private Long itemId;
     private Integer quantity;
     private LocalDate givenDate;
-    private String status = "ACTIVE";
-    private LocalDateTime createdAt = LocalDateTime.now();
+    private String status;
+
+    @Column(name="created_at", updatable = false)
+    private LocalDateTime createdAt;
+
+    @Column(name="updated_at")
+    private LocalDateTime updatedAt;
+
+    @PrePersist
+    public void onCreate() {
+        this.createdAt = LocalDateTime.now();
+    }
+
+    @PreUpdate
+    public void onUpdate() {
+        this.updatedAt = LocalDateTime.now();
+    }
+
 }

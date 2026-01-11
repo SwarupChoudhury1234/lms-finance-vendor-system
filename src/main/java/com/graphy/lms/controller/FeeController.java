@@ -1,491 +1,615 @@
 package com.graphy.lms.controller;
 
 import com.graphy.lms.entity.*;
+import org.springframework.security.access.prepost.PreAuthorize;
+
 import com.graphy.lms.service.FeeService;
-import org.springframework.beans.factory.annotation.Autowired;
+import lombok.RequiredArgsConstructor;
+import org.springframework.format.annotation.DateTimeFormat;
+import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
-import java.util.List;
+
 import java.math.BigDecimal;
+import java.time.LocalDate;
+import java.util.List;
+import java.util.Map;
 
 @RestController
-@RequestMapping("/api/finance")
+@RequestMapping("/api/fee")
+@RequiredArgsConstructor
+@CrossOrigin(origins = "*")
 public class FeeController {
     
-    @Autowired
-    private FeeService feeService;
+    private final FeeService feeManagementService;
     
-    // ========================================================================
-    // 1. FEE TYPES (Access: Admin only for POST/PUT/DELETE)
-    // ========================================================================
+    // Helper method to extract user ID from token (in real implementation)
+    // For now, we'll use a request header
+    private Long getPerformedBy(@RequestHeader(value = "X-User-Id", required = false) Long userId) {
+        return userId != null ? userId : 1L; // Default to 1 for testing
+    }
+    
+    // ========================================
+    // FEE TYPE ENDPOINTS
+    // ========================================
     @PostMapping("/types")
     public ResponseEntity<FeeType> createFeeType(
             @RequestBody FeeType feeType,
-            @RequestHeader("X-User-Id") Long userId,
-            @RequestHeader("X-Role") String role) {
-        FeeType created = feeService.createFeeType(feeType, userId, role);
-        return ResponseEntity.ok(created);
+            @RequestHeader(value = "X-User-Id", required = false) Long userId) {
+        FeeType created = feeManagementService.createFeeType(feeType, getPerformedBy(userId));
+        return new ResponseEntity<>(created, HttpStatus.CREATED);
     }
     
     @GetMapping("/types")
-    public ResponseEntity<List<FeeType>> getAllFeeTypes(
-            @RequestHeader("X-User-Id") Long userId,
-            @RequestHeader("X-Role") String role) {
-        List<FeeType> feeTypes = feeService.getAllFeeTypes(userId, role);
-        return ResponseEntity.ok(feeTypes);
+    public ResponseEntity<List<FeeType>> getAllFeeTypes() {
+        return ResponseEntity.ok(feeManagementService.getAllFeeTypes());
     }
     
     @GetMapping("/types/active")
     public ResponseEntity<List<FeeType>> getActiveFeeTypes() {
-        List<FeeType> feeTypes = feeService.getActiveFeeTypes();
-        return ResponseEntity.ok(feeTypes);
+        return ResponseEntity.ok(feeManagementService.getActiveFeeTypes());
     }
     
     @GetMapping("/types/{id}")
-    public ResponseEntity<FeeType> getFeeTypeById(
-            @PathVariable Long id,
-            @RequestHeader("X-User-Id") Long userId,
-            @RequestHeader("X-Role") String role) {
-        FeeType feeType = feeService.getFeeTypeById(id, userId, role);
-        return ResponseEntity.ok(feeType);
+    public ResponseEntity<FeeType> getFeeTypeById(@PathVariable Long id) {
+        return ResponseEntity.ok(feeManagementService.getFeeTypeById(id));
     }
     
     @PutMapping("/types/{id}")
     public ResponseEntity<FeeType> updateFeeType(
             @PathVariable Long id,
             @RequestBody FeeType feeType,
-            @RequestHeader("X-User-Id") Long userId,
-            @RequestHeader("X-Role") String role) {
-        FeeType updated = feeService.updateFeeType(id, feeType, userId, role);
+            @RequestHeader(value = "X-User-Id", required = false) Long userId) {
+        FeeType updated = feeManagementService.updateFeeType(id, feeType, getPerformedBy(userId));
         return ResponseEntity.ok(updated);
     }
     
     @DeleteMapping("/types/{id}")
-    public ResponseEntity<String> deleteFeeType(
+    public ResponseEntity<Void> deleteFeeType(
             @PathVariable Long id,
-            @RequestHeader("X-User-Id") Long userId,
-            @RequestHeader("X-Role") String role) {
-        feeService.deleteFeeType(id, userId, role);
-        return ResponseEntity.ok("FeeType deleted successfully");
+            @RequestHeader(value = "X-User-Id", required = false) Long userId) {
+        feeManagementService.deleteFeeType(id, getPerformedBy(userId));
+        return ResponseEntity.noContent().build();
     }
     
-    // ========================================================================
-    // 2. FEE STRUCTURES (Access: Admin only for POST/PUT/DELETE)
-    // ========================================================================
+    // ========================================
+    // FEE STRUCTURE ENDPOINTS
+    // ========================================
     @PostMapping("/structures")
     public ResponseEntity<FeeStructure> createFeeStructure(
             @RequestBody FeeStructure feeStructure,
-            @RequestHeader("X-User-Id") Long userId,
-            @RequestHeader("X-Role") String role) {
-        FeeStructure created = feeService.createFeeStructure(feeStructure, userId, role);
-        return ResponseEntity.ok(created);
+            @RequestHeader(value = "X-User-Id", required = false) Long userId) {
+        FeeStructure created = feeManagementService.createFeeStructure(feeStructure, getPerformedBy(userId));
+        return new ResponseEntity<>(created, HttpStatus.CREATED);
     }
     
     @GetMapping("/structures")
-    public ResponseEntity<List<FeeStructure>> getFeeStructures(
-            @RequestHeader("X-User-Id") Long userId,
-            @RequestHeader("X-Role") String role,
-            @RequestParam(required = false) Long courseId,
-            @RequestParam(required = false) String academicYear) {
-        List<FeeStructure> structures = feeService.getFeeStructures(userId, role, courseId, academicYear);
-        return ResponseEntity.ok(structures);
+    public ResponseEntity<List<FeeStructure>> getAllFeeStructures() {
+        return ResponseEntity.ok(feeManagementService.getAllFeeStructures());
     }
     
     @GetMapping("/structures/{id}")
-    public ResponseEntity<FeeStructure> getFeeStructureById(
-            @PathVariable Long id,
-            @RequestHeader("X-User-Id") Long userId,
-            @RequestHeader("X-Role") String role) {
-        FeeStructure structure = feeService.getFeeStructureById(id, userId, role);
-        return ResponseEntity.ok(structure);
+    public ResponseEntity<FeeStructure> getFeeStructureById(@PathVariable Long id) {
+        return ResponseEntity.ok(feeManagementService.getFeeStructureById(id));
+    }
+    
+    @GetMapping("/structures/course/{courseId}/year/{academicYear}")
+    public ResponseEntity<List<FeeStructure>> getFeeStructuresByCourseAndYear(
+            @PathVariable Long courseId,
+            @PathVariable String academicYear) {
+        return ResponseEntity.ok(feeManagementService.getFeeStructuresByCourseAndYear(courseId, academicYear));
     }
     
     @PutMapping("/structures/{id}")
     public ResponseEntity<FeeStructure> updateFeeStructure(
             @PathVariable Long id,
             @RequestBody FeeStructure feeStructure,
-            @RequestHeader("X-User-Id") Long userId,
-            @RequestHeader("X-Role") String role) {
-        FeeStructure updated = feeService.updateFeeStructure(id, feeStructure, userId, role);
+            @RequestHeader(value = "X-User-Id", required = false) Long userId) {
+        FeeStructure updated = feeManagementService.updateFeeStructure(id, feeStructure, getPerformedBy(userId));
         return ResponseEntity.ok(updated);
     }
     
     @DeleteMapping("/structures/{id}")
-    public ResponseEntity<String> deleteFeeStructure(
+    public ResponseEntity<Void> deleteFeeStructure(
             @PathVariable Long id,
-            @RequestHeader("X-User-Id") Long userId,
-            @RequestHeader("X-Role") String role) {
-        feeService.deleteFeeStructure(id, userId, role);
-        return ResponseEntity.ok("FeeStructure deleted successfully");
+            @RequestHeader(value = "X-User-Id", required = false) Long userId) {
+        feeManagementService.deleteFeeStructure(id, getPerformedBy(userId));
+        return ResponseEntity.noContent().build();
     }
     
-    // ========================================================================
-    // 3. STUDENT FEE ALLOCATIONS (Your installment logic)
-    // ========================================================================
+    // ========================================
+    // STUDENT FEE ALLOCATION ENDPOINTS
+    // ========================================
     @PostMapping("/allocations")
-    public ResponseEntity<StudentFeeAllocation> allocateFee(
+    public ResponseEntity<StudentFeeAllocation> createStudentFeeAllocation(
             @RequestBody StudentFeeAllocation allocation,
-            @RequestHeader("X-User-Id") Long userId,
-            @RequestHeader("X-Role") String role) {
-        StudentFeeAllocation created = feeService.allocateFee(allocation, userId, role);
-        return ResponseEntity.ok(created);
+            @RequestHeader(value = "X-User-Id", required = false) Long userId) {
+        StudentFeeAllocation created = feeManagementService.createStudentFeeAllocation(allocation, getPerformedBy(userId));
+        return new ResponseEntity<>(created, HttpStatus.CREATED);
     }
     
     @GetMapping("/allocations")
-    public ResponseEntity<List<StudentFeeAllocation>> getAllocations(
-            @RequestHeader("X-User-Id") Long userId,
-            @RequestHeader("X-Role") String role,
-            @RequestParam(required = false) Long studentId) {
-        List<StudentFeeAllocation> allocations = feeService.getAllocations(userId, role, studentId);
-        return ResponseEntity.ok(allocations);
+    public ResponseEntity<List<StudentFeeAllocation>> getAllStudentFeeAllocations() {
+        return ResponseEntity.ok(feeManagementService.getAllStudentFeeAllocations());
     }
     
     @GetMapping("/allocations/{id}")
-    public ResponseEntity<StudentFeeAllocation> getAllocationById(
-            @PathVariable Long id,
-            @RequestHeader("X-User-Id") Long userId,
-            @RequestHeader("X-Role") String role) {
-        StudentFeeAllocation allocation = feeService.getAllocationById(id, userId, role);
-        return ResponseEntity.ok(allocation);
+    public ResponseEntity<StudentFeeAllocation> getStudentFeeAllocationById(@PathVariable Long id) {
+        return ResponseEntity.ok(feeManagementService.getStudentFeeAllocationById(id));
+    }
+    
+    @GetMapping("/allocations/user/{userId}")
+    public ResponseEntity<List<StudentFeeAllocation>> getStudentFeeAllocationsByUserId(@PathVariable Long userId) {
+        return ResponseEntity.ok(feeManagementService.getStudentFeeAllocationsByUserId(userId));
     }
     
     @PutMapping("/allocations/{id}")
-    public ResponseEntity<StudentFeeAllocation> updateAllocation(
+    public ResponseEntity<StudentFeeAllocation> updateStudentFeeAllocation(
             @PathVariable Long id,
             @RequestBody StudentFeeAllocation allocation,
-            @RequestHeader("X-User-Id") Long userId,
-            @RequestHeader("X-Role") String role) {
-        StudentFeeAllocation updated = feeService.updateAllocation(id, allocation, userId, role);
+            @RequestHeader(value = "X-User-Id", required = false) Long userId) {
+        StudentFeeAllocation updated = feeManagementService.updateStudentFeeAllocation(id, allocation, getPerformedBy(userId));
         return ResponseEntity.ok(updated);
     }
     
-    // ========================================================================
-    // NEW PAYMENT ALTERNATIVES ENDPOINTS
-    // ========================================================================
-    
-    // Admin sets advance payment
-    @PostMapping("/allocations/{id}/advance")
-    public ResponseEntity<StudentFeeAllocation> setAdvancePayment(
+    @DeleteMapping("/allocations/{id}")
+    public ResponseEntity<Void> deleteStudentFeeAllocation(
             @PathVariable Long id,
-            @RequestParam BigDecimal advancePayment,
-            @RequestHeader("X-User-Id") Long userId,
-            @RequestHeader("X-Role") String role) {
-        StudentFeeAllocation updated = feeService.setAdvancePayment(id, advancePayment, userId, role);
-        return ResponseEntity.ok(updated);
+            @RequestHeader(value = "X-User-Id", required = false) Long userId) {
+        feeManagementService.deleteStudentFeeAllocation(id, getPerformedBy(userId));
+        return ResponseEntity.noContent().build();
     }
     
-    // Student selects payment plan with custom amounts
-    @PostMapping("/allocations/{id}/select-plan")
-    public ResponseEntity<StudentFeeAllocation> selectPaymentPlan(
-            @PathVariable Long id,
-            @RequestParam Long alternativeId,
-            @RequestBody List<BigDecimal> customAmounts,
-            @RequestHeader("X-User-Id") Long userId,
-            @RequestHeader("X-Role") String role) {
-        StudentFeeAllocation plan = feeService.selectPaymentPlan(id, alternativeId, customAmounts, userId, role);
-        return ResponseEntity.ok(plan);
+    // Special allocation endpoints
+    @PostMapping("/allocations/allocate")
+    public ResponseEntity<StudentFeeAllocation> allocateFeeToStudent(
+            @RequestParam Long userId,
+            @RequestParam Long feeStructureId,
+            @RequestParam @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate dueDate,
+            @RequestParam BigDecimal initialPayment,
+            @RequestParam Integer numberOfInstallments,
+            @RequestHeader(value = "X-User-Id", required = false) Long performedById) {
+        StudentFeeAllocation allocated = feeManagementService.allocateFeeToStudent(
+            userId, feeStructureId, dueDate, initialPayment, numberOfInstallments, getPerformedBy(performedById)
+        );
+        return new ResponseEntity<>(allocated, HttpStatus.CREATED);
     }
     
-    // Admin recalculates installments (student request)
-    @PostMapping("/allocations/{id}/recalculate")
-    public ResponseEntity<String> recalculateInstallments(
-            @PathVariable Long id,
-            @RequestBody List<BigDecimal> newAmounts,
-            @RequestHeader("X-User-Id") Long userId,
-            @RequestHeader("X-Role") String role) {
-        feeService.recalculateInstallments(id, newAmounts, userId, role);
-        return ResponseEntity.ok("Installments recalculated successfully");
-    }
-    
-    // ========================================================================
-    // 4. PAYMENT INSTALLMENTS
-    // ========================================================================
-    @GetMapping("/allocations/{allocationId}/installments")
-    public ResponseEntity<List<PaymentInstallment>> getInstallmentsByAllocation(
+    @PostMapping("/allocations/{allocationId}/apply-discount/{discountId}")
+    public ResponseEntity<Void> applyDiscountToAllocation(
             @PathVariable Long allocationId,
-            @RequestHeader("X-User-Id") Long userId,
-            @RequestHeader("X-Role") String role) {
-        List<PaymentInstallment> installments = feeService.getInstallmentsByAllocationId(allocationId, userId, role);
-        return ResponseEntity.ok(installments);
+            @PathVariable Long discountId,
+            @RequestHeader(value = "X-User-Id", required = false) Long userId) {
+        feeManagementService.applyDiscountToAllocation(allocationId, discountId, getPerformedBy(userId));
+        return ResponseEntity.ok().build();
     }
     
-    // ========================================================================
-    // 5. PAYMENT ALTERNATIVES CRUD
-    // ========================================================================
-    @PostMapping("/payment-alternatives")
-    public ResponseEntity<PaymentAlternative> createPaymentAlternative(
-            @RequestBody PaymentAlternative alternative,
-            @RequestHeader("X-User-Id") Long userId,
-            @RequestHeader("X-Role") String role) {
-        PaymentAlternative created = feeService.createPaymentAlternative(alternative, userId, role);
-        return ResponseEntity.ok(created);
+    @PostMapping("/allocations/{allocationId}/adjust-installments")
+    public ResponseEntity<Void> adjustInstallmentPlan(
+            @PathVariable Long allocationId,
+            @RequestBody List<BigDecimal> newInstallmentAmounts,
+            @RequestHeader(value = "X-User-Id", required = false) Long userId) {
+        feeManagementService.adjustInstallmentPlan(allocationId, newInstallmentAmounts, getPerformedBy(userId));
+        return ResponseEntity.ok().build();
     }
     
-    @GetMapping("/payment-alternatives")
-    public ResponseEntity<List<PaymentAlternative>> getAllPaymentAlternatives(
-            @RequestHeader("X-User-Id") Long userId,
-            @RequestHeader("X-Role") String role) {
-        List<PaymentAlternative> alternatives = feeService.getAllPaymentAlternatives(userId, role);
-        return ResponseEntity.ok(alternatives);
+    // ========================================
+    // FEE INSTALLMENT PLAN ENDPOINTS
+    // ========================================
+    @PostMapping("/installments")
+    public ResponseEntity<FeeInstallmentPlan> createFeeInstallmentPlan(
+            @RequestBody FeeInstallmentPlan installmentPlan,
+            @RequestHeader(value = "X-User-Id", required = false) Long userId) {
+        FeeInstallmentPlan created = feeManagementService.createFeeInstallmentPlan(installmentPlan, getPerformedBy(userId));
+        return new ResponseEntity<>(created, HttpStatus.CREATED);
     }
     
-    @GetMapping("/payment-alternatives/active")
-    public ResponseEntity<List<PaymentAlternative>> getActivePaymentAlternatives() {
-        List<PaymentAlternative> alternatives = feeService.getActivePaymentAlternatives();
-        return ResponseEntity.ok(alternatives);
+    @GetMapping("/installments")
+    public ResponseEntity<List<FeeInstallmentPlan>> getAllFeeInstallmentPlans() {
+        return ResponseEntity.ok(feeManagementService.getAllFeeInstallmentPlans());
     }
     
-    @GetMapping("/payment-alternatives/{id}")
-    public ResponseEntity<PaymentAlternative> getPaymentAlternativeById(
+    @GetMapping("/installments/{id}")
+    public ResponseEntity<FeeInstallmentPlan> getFeeInstallmentPlanById(@PathVariable Long id) {
+        return ResponseEntity.ok(feeManagementService.getFeeInstallmentPlanById(id));
+    }
+    
+    @GetMapping("/installments/allocation/{allocationId}")
+    public ResponseEntity<List<FeeInstallmentPlan>> getInstallmentPlansByAllocationId(@PathVariable Long allocationId) {
+        return ResponseEntity.ok(feeManagementService.getInstallmentPlansByAllocationId(allocationId));
+    }
+    
+    @PutMapping("/installments/{id}")
+    public ResponseEntity<FeeInstallmentPlan> updateFeeInstallmentPlan(
             @PathVariable Long id,
-            @RequestHeader("X-User-Id") Long userId,
-            @RequestHeader("X-Role") String role) {
-        PaymentAlternative alternative = feeService.getPaymentAlternativeById(id, userId, role);
-        return ResponseEntity.ok(alternative);
-    }
-    
-    @PutMapping("/payment-alternatives/{id}")
-    public ResponseEntity<PaymentAlternative> updatePaymentAlternative(
-            @PathVariable Long id,
-            @RequestBody PaymentAlternative alternative,
-            @RequestHeader("X-User-Id") Long userId,
-            @RequestHeader("X-Role") String role) {
-        PaymentAlternative updated = feeService.updatePaymentAlternative(id, alternative, userId, role);
+            @RequestBody FeeInstallmentPlan installmentPlan,
+            @RequestHeader(value = "X-User-Id", required = false) Long userId) {
+        FeeInstallmentPlan updated = feeManagementService.updateFeeInstallmentPlan(id, installmentPlan, getPerformedBy(userId));
         return ResponseEntity.ok(updated);
     }
     
-    @DeleteMapping("/payment-alternatives/{id}")
-    public ResponseEntity<String> deletePaymentAlternative(
+    @DeleteMapping("/installments/{id}")
+    public ResponseEntity<Void> deleteFeeInstallmentPlan(
             @PathVariable Long id,
-            @RequestHeader("X-User-Id") Long userId,
-            @RequestHeader("X-Role") String role) {
-        feeService.deletePaymentAlternative(id, userId, role);
-        return ResponseEntity.ok("Payment alternative deleted successfully");
+            @RequestHeader(value = "X-User-Id", required = false) Long userId) {
+        feeManagementService.deleteFeeInstallmentPlan(id, getPerformedBy(userId));
+        return ResponseEntity.noContent().build();
     }
     
-    // ========================================================================
-    // 6. STUDENT FEE PAYMENTS (Student can POST)
-    // ========================================================================
+    @PostMapping("/installments/update-overdue")
+    public ResponseEntity<Void> updateOverdueInstallments() {
+        feeManagementService.updateOverdueInstallments();
+        return ResponseEntity.ok().build();
+    }
+    
+    @PostMapping("/installments/calculate-late-fees/{allocationId}")
+    public ResponseEntity<Void> calculateLateFees(@PathVariable Long allocationId) {
+        feeManagementService.calculateLateFees(allocationId);
+        return ResponseEntity.ok().build();
+    }
+    
+    // ========================================
+    // STUDENT FEE PAYMENT ENDPOINTS
+    // ========================================
     @PostMapping("/payments")
-    public ResponseEntity<StudentFeePayment> processPayment(
+    public ResponseEntity<StudentFeePayment> createStudentFeePayment(
             @RequestBody StudentFeePayment payment,
-            @RequestHeader("X-User-Id") Long userId,
-            @RequestHeader("X-Role") String role) {
-        StudentFeePayment processed = feeService.processPayment(payment, userId, role);
-        return ResponseEntity.ok(processed);
+            @RequestHeader(value = "X-User-Id", required = false) Long userId) {
+        payment.setCollectedBy(getPerformedBy(userId));
+        StudentFeePayment created = feeManagementService.createStudentFeePayment(payment, getPerformedBy(userId));
+        return new ResponseEntity<>(created, HttpStatus.CREATED);
     }
     
     @GetMapping("/payments")
-    public ResponseEntity<List<StudentFeePayment>> getPayments(
-            @RequestHeader("X-User-Id") Long userId,
-            @RequestHeader("X-Role") String role) {
-        List<StudentFeePayment> payments = feeService.getPayments(userId, role);
-        return ResponseEntity.ok(payments);
+    public ResponseEntity<List<StudentFeePayment>> getAllStudentFeePayments() {
+        return ResponseEntity.ok(feeManagementService.getAllStudentFeePayments());
     }
     
     @GetMapping("/payments/{id}")
-    public ResponseEntity<StudentFeePayment> getPaymentById(
-            @PathVariable Long id,
-            @RequestHeader("X-User-Id") Long userId,
-            @RequestHeader("X-Role") String role) {
-        StudentFeePayment payment = feeService.getPaymentById(id, userId, role);
-        return ResponseEntity.ok(payment);
+    public ResponseEntity<StudentFeePayment> getStudentFeePaymentById(@PathVariable Long id) {
+        return ResponseEntity.ok(feeManagementService.getStudentFeePaymentById(id));
     }
     
-    // ========================================================================
-    // 7. FEE DISCOUNTS
-    // ========================================================================
+    @GetMapping("/payments/allocation/{allocationId}")
+    public ResponseEntity<List<StudentFeePayment>> getPaymentsByAllocationId(@PathVariable Long allocationId) {
+        return ResponseEntity.ok(feeManagementService.getPaymentsByAllocationId(allocationId));
+    }
+    
+    @GetMapping("/payments/history/{userId}")
+    public ResponseEntity<List<StudentFeePayment>> getPaymentHistory(@PathVariable Long userId) {
+        return ResponseEntity.ok(feeManagementService.getPaymentHistory(userId));
+    }
+    
+    @PutMapping("/payments/{id}")
+    public ResponseEntity<StudentFeePayment> updateStudentFeePayment(
+            @PathVariable Long id,
+            @RequestBody StudentFeePayment payment,
+            @RequestHeader(value = "X-User-Id", required = false) Long userId) {
+        StudentFeePayment updated = feeManagementService.updateStudentFeePayment(id, payment, getPerformedBy(userId));
+        return ResponseEntity.ok(updated);
+    }
+    
+    @DeleteMapping("/payments/{id}")
+    public ResponseEntity<Void> deleteStudentFeePayment(
+            @PathVariable Long id,
+            @RequestHeader(value = "X-User-Id", required = false) Long userId) {
+        feeManagementService.deleteStudentFeePayment(id, getPerformedBy(userId));
+        return ResponseEntity.noContent().build();
+    }
+    
+    @PostMapping("/payments/record")
+    public ResponseEntity<StudentFeePayment> recordPayment(
+            @RequestParam Long allocationId,
+            @RequestParam BigDecimal amount,
+            @RequestParam String paymentMode,
+            @RequestParam(required = false) String transactionRef,
+            @RequestHeader(value = "X-User-Id", required = false) Long userId) {
+        StudentFeePayment payment = feeManagementService.recordPayment(
+            allocationId, amount, paymentMode, transactionRef, getPerformedBy(userId)
+        );
+        return new ResponseEntity<>(payment, HttpStatus.CREATED);
+    }
+    
+    @PostMapping("/payments/record-installment")
+    public ResponseEntity<StudentFeePayment> recordInstallmentPayment(
+            @RequestParam Long installmentPlanId,
+            @RequestParam BigDecimal amount,
+            @RequestParam String paymentMode,
+            @RequestParam(required = false) String transactionRef,
+            @RequestHeader(value = "X-User-Id", required = false) Long userId) {
+        StudentFeePayment payment = feeManagementService.recordInstallmentPayment(
+            installmentPlanId, amount, paymentMode, transactionRef, getPerformedBy(userId)
+        );
+        return new ResponseEntity<>(payment, HttpStatus.CREATED);
+    }
+    
+    // ========================================
+    // FEE DISCOUNT ENDPOINTS
+    // ========================================
     @PostMapping("/discounts")
-    public ResponseEntity<FeeDiscount> applyDiscount(
+    public ResponseEntity<FeeDiscount> createFeeDiscount(
             @RequestBody FeeDiscount discount,
-            @RequestHeader("X-User-Id") Long userId,
-            @RequestHeader("X-Role") String role) {
-        FeeDiscount applied = feeService.applyDiscount(discount, userId, role);
-        return ResponseEntity.ok(applied);
+            @RequestHeader(value = "X-User-Id", required = false) Long userId) {
+        FeeDiscount created = feeManagementService.createFeeDiscount(discount, getPerformedBy(userId));
+        return new ResponseEntity<>(created, HttpStatus.CREATED);
     }
     
     @GetMapping("/discounts")
-    public ResponseEntity<List<FeeDiscount>> getDiscounts(
-            @RequestHeader("X-User-Id") Long userId,
-            @RequestHeader("X-Role") String role) {
-        List<FeeDiscount> discounts = feeService.getDiscounts(userId, role);
-        return ResponseEntity.ok(discounts);
+    public ResponseEntity<List<FeeDiscount>> getAllFeeDiscounts() {
+        return ResponseEntity.ok(feeManagementService.getAllFeeDiscounts());
     }
     
     @GetMapping("/discounts/{id}")
-    public ResponseEntity<FeeDiscount> getDiscountById(
-            @PathVariable Long id,
-            @RequestHeader("X-User-Id") Long userId,
-            @RequestHeader("X-Role") String role) {
-        FeeDiscount discount = feeService.getDiscountById(id, userId, role);
-        return ResponseEntity.ok(discount);
+    public ResponseEntity<FeeDiscount> getFeeDiscountById(@PathVariable Long id) {
+        return ResponseEntity.ok(feeManagementService.getFeeDiscountById(id));
+    }
+    
+    @GetMapping("/discounts/user/{userId}")
+    public ResponseEntity<List<FeeDiscount>> getDiscountsByUserId(@PathVariable Long userId) {
+        return ResponseEntity.ok(feeManagementService.getDiscountsByUserId(userId));
     }
     
     @PutMapping("/discounts/{id}")
-    public ResponseEntity<FeeDiscount> updateDiscount(
+    public ResponseEntity<FeeDiscount> updateFeeDiscount(
             @PathVariable Long id,
             @RequestBody FeeDiscount discount,
-            @RequestHeader("X-User-Id") Long userId,
-            @RequestHeader("X-Role") String role) {
-        FeeDiscount updated = feeService.updateDiscount(id, discount, userId, role);
+            @RequestHeader(value = "X-User-Id", required = false) Long userId) {
+        FeeDiscount updated = feeManagementService.updateFeeDiscount(id, discount, getPerformedBy(userId));
         return ResponseEntity.ok(updated);
     }
     
     @DeleteMapping("/discounts/{id}")
-    public ResponseEntity<String> deleteDiscount(
+    public ResponseEntity<Void> deleteFeeDiscount(
             @PathVariable Long id,
-            @RequestHeader("X-User-Id") Long userId,
-            @RequestHeader("X-Role") String role) {
-        feeService.deleteDiscount(id, userId, role);
-        return ResponseEntity.ok("Discount deleted successfully");
+            @RequestHeader(value = "X-User-Id", required = false) Long userId) {
+        feeManagementService.deleteFeeDiscount(id, getPerformedBy(userId));
+        return ResponseEntity.noContent().build();
     }
     
-    // ========================================================================
-    // 8. FEE REFUNDS (Admin only)
-    // ========================================================================
+    @PostMapping("/discounts/{id}/approve")
+    public ResponseEntity<FeeDiscount> approveDiscount(
+            @PathVariable Long id,
+            @RequestHeader(value = "X-User-Id", required = false) Long userId) {
+        FeeDiscount approved = feeManagementService.approveDiscount(id, getPerformedBy(userId));
+        return ResponseEntity.ok(approved);
+    }
+    
+    @PostMapping("/discounts/{id}/reject")
+    public ResponseEntity<FeeDiscount> rejectDiscount(
+            @PathVariable Long id,
+            @RequestParam String reason,
+            @RequestHeader(value = "X-User-Id", required = false) Long userId) {
+        FeeDiscount rejected = feeManagementService.rejectDiscount(id, getPerformedBy(userId), reason);
+        return ResponseEntity.ok(rejected);
+    }
+    
+    // ========================================
+    // FEE REFUND ENDPOINTS
+    // ========================================
     @PostMapping("/refunds")
-    public ResponseEntity<FeeRefund> processRefund(
+    public ResponseEntity<FeeRefund> createFeeRefund(
             @RequestBody FeeRefund refund,
-            @RequestHeader("X-User-Id") Long userId,
-            @RequestHeader("X-Role") String role) {
-        FeeRefund processed = feeService.processRefund(refund, userId, role);
-        return ResponseEntity.ok(processed);
+            @RequestHeader(value = "X-User-Id", required = false) Long userId) {
+        FeeRefund created = feeManagementService.createFeeRefund(refund, getPerformedBy(userId));
+        return new ResponseEntity<>(created, HttpStatus.CREATED);
     }
     
     @GetMapping("/refunds")
-    public ResponseEntity<List<FeeRefund>> getRefunds(
-            @RequestHeader("X-User-Id") Long userId,
-            @RequestHeader("X-Role") String role) {
-        List<FeeRefund> refunds = feeService.getRefunds(userId, role);
-        return ResponseEntity.ok(refunds);
+    public ResponseEntity<List<FeeRefund>> getAllFeeRefunds() {
+        return ResponseEntity.ok(feeManagementService.getAllFeeRefunds());
     }
     
     @GetMapping("/refunds/{id}")
-    public ResponseEntity<FeeRefund> getRefundById(
-            @PathVariable Long id,
-            @RequestHeader("X-User-Id") Long userId,
-            @RequestHeader("X-Role") String role) {
-        FeeRefund refund = feeService.getRefundById(id, userId, role);
-        return ResponseEntity.ok(refund);
+    public ResponseEntity<FeeRefund> getFeeRefundById(@PathVariable Long id) {
+        return ResponseEntity.ok(feeManagementService.getFeeRefundById(id));
     }
     
-    // ========================================================================
-    // 9. FEE RECEIPTS (Auto-generated, read-only)
-    // ========================================================================
+    @GetMapping("/refunds/user/{userId}")
+    public ResponseEntity<List<FeeRefund>> getRefundsByUserId(@PathVariable Long userId) {
+        return ResponseEntity.ok(feeManagementService.getRefundsByUserId(userId));
+    }
+    
+    @PutMapping("/refunds/{id}")
+    public ResponseEntity<FeeRefund> updateFeeRefund(
+            @PathVariable Long id,
+            @RequestBody FeeRefund refund,
+            @RequestHeader(value = "X-User-Id", required = false) Long userId) {
+        FeeRefund updated = feeManagementService.updateFeeRefund(id, refund, getPerformedBy(userId));
+        return ResponseEntity.ok(updated);
+    }
+    
+    @DeleteMapping("/refunds/{id}")
+    public ResponseEntity<Void> deleteFeeRefund(
+            @PathVariable Long id,
+            @RequestHeader(value = "X-User-Id", required = false) Long userId) {
+        feeManagementService.deleteFeeRefund(id, getPerformedBy(userId));
+        return ResponseEntity.noContent().build();
+    }
+    
+    @PostMapping("/refunds/{id}/approve")
+    public ResponseEntity<FeeRefund> approveRefund(
+            @PathVariable Long id,
+            @RequestHeader(value = "X-User-Id", required = false) Long userId) {
+        FeeRefund approved = feeManagementService.approveRefund(id, getPerformedBy(userId));
+        return ResponseEntity.ok(approved);
+    }
+    
+    @PostMapping("/refunds/{id}/reject")
+    public ResponseEntity<FeeRefund> rejectRefund(
+            @PathVariable Long id,
+            @RequestParam String reason,
+            @RequestHeader(value = "X-User-Id", required = false) Long userId) {
+        FeeRefund rejected = feeManagementService.rejectRefund(id, getPerformedBy(userId), reason);
+        return ResponseEntity.ok(rejected);
+    }
+    
+    @PostMapping("/refunds/{id}/process")
+    public ResponseEntity<FeeRefund> processRefund(
+            @PathVariable Long id,
+            @RequestParam String transactionRef,
+            @RequestHeader(value = "X-User-Id", required = false) Long userId) {
+        FeeRefund processed = feeManagementService.processRefund(id, transactionRef, getPerformedBy(userId));
+        return ResponseEntity.ok(processed);
+    }
+    
+    // ========================================
+    // FEE RECEIPT ENDPOINTS (READ-ONLY)
+    // ========================================
     @GetMapping("/receipts")
-    public ResponseEntity<List<FeeReceipt>> getReceipts(
-            @RequestHeader("X-User-Id") Long userId,
-            @RequestHeader("X-Role") String role) {
-        List<FeeReceipt> receipts = feeService.getReceipts(userId, role);
-        return ResponseEntity.ok(receipts);
+    public ResponseEntity<List<FeeReceipt>> getAllFeeReceipts() {
+        return ResponseEntity.ok(feeManagementService.getAllFeeReceipts());
     }
     
     @GetMapping("/receipts/{id}")
-    public ResponseEntity<FeeReceipt> getReceiptById(
+    public ResponseEntity<FeeReceipt> getFeeReceiptById(@PathVariable Long id) {
+        return ResponseEntity.ok(feeManagementService.getFeeReceiptById(id));
+    }
+    
+    @GetMapping("/receipts/payment/{paymentId}")
+    public ResponseEntity<FeeReceipt> getFeeReceiptByPaymentId(@PathVariable Long paymentId) {
+        return ResponseEntity.ok(feeManagementService.getFeeReceiptByPaymentId(paymentId));
+    }
+    
+    @GetMapping("/receipts/student/{userId}")
+    public ResponseEntity<List<FeeReceipt>> getReceiptsByStudentUserId(@PathVariable Long userId) {
+        return ResponseEntity.ok(feeManagementService.getReceiptsByStudentUserId(userId));
+    }
+    
+    @PostMapping("/receipts/send-email/{receiptId}")
+    public ResponseEntity<Void> sendReceiptEmail(
+            @PathVariable Long receiptId,
+            @RequestParam String studentEmail) {
+        feeManagementService.sendReceiptEmail(receiptId, studentEmail);
+        return ResponseEntity.ok().build();
+    }
+    
+    // ========================================
+    // AUDIT LOG ENDPOINTS (READ-ONLY)
+    // ========================================
+    @GetMapping("/audit-logs")
+    public ResponseEntity<List<AuditLog>> getAllAuditLogs() {
+        return ResponseEntity.ok(feeManagementService.getAllAuditLogs());
+    }
+    
+    @GetMapping("/audit-logs/{id}")
+    public ResponseEntity<AuditLog> getAuditLogById(@PathVariable Long id) {
+        return ResponseEntity.ok(feeManagementService.getAuditLogById(id));
+    }
+    
+    @GetMapping("/audit-logs/module/{module}")
+    public ResponseEntity<List<AuditLog>> getAuditLogsByModule(@PathVariable String module) {
+        return ResponseEntity.ok(feeManagementService.getAuditLogsByModule(module));
+    }
+    
+    @GetMapping("/audit-logs/entity/{entityType}/{entityId}")
+    public ResponseEntity<List<AuditLog>> getAuditLogsByEntity(
+            @PathVariable String entityType,
+            @PathVariable Long entityId) {
+        return ResponseEntity.ok(feeManagementService.getAuditLogsByEntity(entityType, entityId));
+    }
+    
+    // ========================================
+    // LATE FEE RULE ENDPOINTS
+    // ========================================
+    @PostMapping("/late-fee-rules")
+    public ResponseEntity<LateFeeRule> createLateFeeRule(
+            @RequestBody LateFeeRule lateFeeRule,
+            @RequestHeader(value = "X-User-Id", required = false) Long userId) {
+        LateFeeRule created = feeManagementService.createLateFeeRule(lateFeeRule, getPerformedBy(userId));
+        return new ResponseEntity<>(created, HttpStatus.CREATED);
+    }
+    
+    @GetMapping("/late-fee-rules")
+    public ResponseEntity<List<LateFeeRule>> getAllLateFeeRules() {
+        return ResponseEntity.ok(feeManagementService.getAllLateFeeRules());
+    }
+    
+    @GetMapping("/late-fee-rules/{id}")
+    public ResponseEntity<LateFeeRule> getLateFeeRuleById(@PathVariable Long id) {
+        return ResponseEntity.ok(feeManagementService.getLateFeeRuleById(id));
+    }
+    
+    @PutMapping("/late-fee-rules/{id}")
+    public ResponseEntity<LateFeeRule> updateLateFeeRule(
             @PathVariable Long id,
-            @RequestHeader("X-User-Id") Long userId,
-            @RequestHeader("X-Role") String role) {
-        FeeReceipt receipt = feeService.getReceiptById(id, userId, role);
-        return ResponseEntity.ok(receipt);
+            @RequestBody LateFeeRule lateFeeRule,
+            @RequestHeader(value = "X-User-Id", required = false) Long userId) {
+        LateFeeRule updated = feeManagementService.updateLateFeeRule(id, lateFeeRule, getPerformedBy(userId));
+        return ResponseEntity.ok(updated);
     }
     
-    // ========================================================================
-    // 10. AUDIT LOGS (Admin only, read-only)
-    // ========================================================================
-    @GetMapping("/audit")
-    public ResponseEntity<List<AuditLog>> getAuditLogs(
-            @RequestHeader("X-User-Id") Long userId,
-            @RequestHeader("X-Role") String role) {
-        List<AuditLog> auditLogs = feeService.getAuditLogs(userId, role);
-        return ResponseEntity.ok(auditLogs);
-    }
-    
-    @GetMapping("/audit/{id}")
-    public ResponseEntity<AuditLog> getAuditLogById(
+    @DeleteMapping("/late-fee-rules/{id}")
+    public ResponseEntity<Void> deleteLateFeeRule(
             @PathVariable Long id,
-            @RequestHeader("X-User-Id") Long userId,
-            @RequestHeader("X-Role") String role) {
-        AuditLog auditLog = feeService.getAuditLogById(id, userId, role);
-        return ResponseEntity.ok(auditLog);
+            @RequestHeader(value = "X-User-Id", required = false) Long userId) {
+        feeManagementService.deleteLateFeeRule(id, getPerformedBy(userId));
+        return ResponseEntity.noContent().build();
     }
     
-    // ========================================================================
-    // 11. OTHER ENTITIES - BASIC ENDPOINTS
-    // ========================================================================
-    
-    // Currency Rates
-    @PostMapping("/currency-rates")
-    public ResponseEntity<CurrencyRate> createCurrencyRate(
-            @RequestBody CurrencyRate rate,
-            @RequestHeader("X-User-Id") Long userId,
-            @RequestHeader("X-Role") String role) {
-        CurrencyRate created = feeService.createCurrencyRate(rate, userId, role);
-        return ResponseEntity.ok(created);
+    // ========================================
+    // REPORTING ENDPOINTS
+    // ========================================
+    @GetMapping("/reports/student/{userId}")
+    public ResponseEntity<Map<String, Object>> getStudentFeeReport(@PathVariable Long userId) {
+        return ResponseEntity.ok(feeManagementService.getStudentFeeReport(userId));
     }
     
-    @GetMapping("/currency-rates")
-    public ResponseEntity<List<CurrencyRate>> getCurrencyRates(
-            @RequestHeader("X-User-Id") Long userId,
-            @RequestHeader("X-Role") String role) {
-        List<CurrencyRate> rates = feeService.getCurrencyRates(userId, role);
-        return ResponseEntity.ok(rates);
+    @GetMapping("/reports/batch/{batchId}")
+    public ResponseEntity<Map<String, Object>> getBatchFeeReport(@PathVariable Long batchId) {
+        return ResponseEntity.ok(feeManagementService.getBatchFeeReport(batchId));
     }
     
-    // Notification Logs (Auto-generated)
-    @PostMapping("/notifications")
-    public ResponseEntity<NotificationLog> createNotificationLog(
-            @RequestBody NotificationLog log,
-            @RequestHeader("X-User-Id") Long userId,
-            @RequestHeader("X-Role") String role) {
-        NotificationLog created = feeService.createNotificationLog(log, userId, role);
-        return ResponseEntity.ok(created);
+    @GetMapping("/reports/course/{courseId}")
+    public ResponseEntity<Map<String, Object>> getCourseFeeReport(@PathVariable Long courseId) {
+        return ResponseEntity.ok(feeManagementService.getCourseFeeReport(courseId));
     }
     
-    // Attendance Penalties
-    @PostMapping("/attendance-penalties")
-    public ResponseEntity<AttendancePenalty> createAttendancePenalty(
-            @RequestBody AttendancePenalty penalty,
-            @RequestHeader("X-User-Id") Long userId,
-            @RequestHeader("X-Role") String role) {
-        AttendancePenalty created = feeService.createAttendancePenalty(penalty, userId, role);
-        return ResponseEntity.ok(created);
+    @GetMapping("/reports/revenue")
+    public ResponseEntity<Map<String, Object>> getRevenueReport(
+            @RequestParam @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate startDate,
+            @RequestParam @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate endDate) {
+        return ResponseEntity.ok(feeManagementService.getRevenueReport(startDate, endDate));
     }
     
-    // Certificate Blocks
-    @PostMapping("/certificate-blocks")
-    public ResponseEntity<CertificateBlock> createCertificateBlock(
-            @RequestBody CertificateBlock block,
-            @RequestHeader("X-User-Id") Long userId,
-            @RequestHeader("X-Role") String role) {
-        CertificateBlock created = feeService.createCertificateBlock(block, userId, role);
-        return ResponseEntity.ok(created);
+    @GetMapping("/reports/revenue/monthly")
+    public ResponseEntity<Map<String, Object>> getMonthlyRevenueReport(
+            @RequestParam int year,
+            @RequestParam int month) {
+        return ResponseEntity.ok(feeManagementService.getMonthlyRevenueReport(year, month));
     }
     
-    // Auto Debit Settings
-    @PostMapping("/auto-debit")
-    public ResponseEntity<AutoDebitSetting> createAutoDebitSetting(
-            @RequestBody AutoDebitSetting setting,
-            @RequestHeader("X-User-Id") Long userId,
-            @RequestHeader("X-Role") String role) {
-        AutoDebitSetting created = feeService.createAutoDebitSetting(setting, userId, role);
-        return ResponseEntity.ok(created);
+    @GetMapping("/reports/revenue/quarterly")
+    public ResponseEntity<Map<String, Object>> getQuarterlyRevenueReport(
+            @RequestParam int year,
+            @RequestParam int quarter) {
+        return ResponseEntity.ok(feeManagementService.getQuarterlyRevenueReport(year, quarter));
     }
     
-    // Fee Reports
-    @PostMapping("/reports")
-    public ResponseEntity<FeeReport> generateFeeReport(
-            @RequestBody FeeReport report,
-            @RequestHeader("X-User-Id") Long userId,
-            @RequestHeader("X-Role") String role) {
-        FeeReport generated = feeService.generateFeeReport(report, userId, role);
-        return ResponseEntity.ok(generated);
+    @GetMapping("/reports/revenue/yearly")
+    public ResponseEntity<Map<String, Object>> getYearlyRevenueReport(@RequestParam int year) {
+        return ResponseEntity.ok(feeManagementService.getYearlyRevenueReport(year));
     }
     
-    // ========================================================================
-    // HEALTH CHECK ENDPOINT
-    // ========================================================================
-    @GetMapping("/health")
-    public ResponseEntity<String> healthCheck() {
-        return ResponseEntity.ok("Fee Management API is running");
+    @GetMapping("/reports/pending")
+    public ResponseEntity<Map<String, Object>> getPendingFeesReport() {
+        return ResponseEntity.ok(feeManagementService.getPendingFeesReport());
     }
+    
+    @GetMapping("/reports/overdue")
+    public ResponseEntity<Map<String, Object>> getOverdueFeesReport() {
+        return ResponseEntity.ok(feeManagementService.getOverdueFeesReport());
+    }
+    
+    @GetMapping("/reports/students-pending")
+    public ResponseEntity<List<StudentFeeAllocation>> getStudentsWithPendingFees() {
+        return ResponseEntity.ok(feeManagementService.getStudentsWithPendingFees());
+    }
+    
+    @GetMapping("/reports/students-overdue")
+    public ResponseEntity<List<StudentFeeAllocation>> getStudentsWithOverdueFees() {
+        return ResponseEntity.ok(feeManagementService.getStudentsWithOverdueFees());
+    }
+    
+
+    
 }

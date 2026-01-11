@@ -8,15 +8,29 @@ import java.time.LocalDateTime;
 @Table(name = "stock_levels")
 @Data
 public class StockLevel {
+
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Long id;
 
-    @OneToOne
-    @JoinColumn(name = "inventory_id", nullable = false)
-    private InventoryItem item;
-
+    private Long inventoryId;
     private Integer availableQuantity;
     private Integer lowStockThreshold;
-    private LocalDateTime lastUpdated = LocalDateTime.now();
+
+    @Column(name="created_at", updatable = false)
+    private LocalDateTime createdAt;
+
+    @Column(name="updated_at")
+    private LocalDateTime updatedAt;
+
+    @PrePersist
+    public void onCreate() {
+        this.createdAt = LocalDateTime.now();
+    }
+
+    @PreUpdate
+    public void onUpdate() {
+        this.updatedAt = LocalDateTime.now();
+    }
+
 }

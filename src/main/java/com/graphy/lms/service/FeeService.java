@@ -1,86 +1,153 @@
 package com.graphy.lms.service;
 
 import com.graphy.lms.entity.*;
-import java.util.List;
+
 import java.math.BigDecimal;
+import java.time.LocalDate;
+import java.util.List;
+import java.util.Map;
+
 
 public interface FeeService {
     
-    // =============== FEE TYPES ===============
-    FeeType createFeeType(FeeType feeType, Long actorId, String role);
-    List<FeeType> getAllFeeTypes(Long actorId, String role);
+    // ========================================
+    // FEE TYPE OPERATIONS
+    // ========================================
+    FeeType createFeeType(FeeType feeType, Long performedBy);
+    List<FeeType> getAllFeeTypes();
     List<FeeType> getActiveFeeTypes();
-    FeeType getFeeTypeById(Long id, Long actorId, String role);
-    FeeType updateFeeType(Long id, FeeType feeType, Long actorId, String role);
-    void deleteFeeType(Long id, Long actorId, String role);
+    FeeType getFeeTypeById(Long id);
+    FeeType updateFeeType(Long id, FeeType feeType, Long performedBy);
+    void deleteFeeType(Long id, Long performedBy);
     
-    // =============== FEE STRUCTURES ===============
-    FeeStructure createFeeStructure(FeeStructure feeStructure, Long actorId, String role);
-    List<FeeStructure> getFeeStructures(Long actorId, String role, Long courseId, String academicYear);
-    FeeStructure getFeeStructureById(Long id, Long actorId, String role);
-    FeeStructure updateFeeStructure(Long id, FeeStructure feeStructure, Long actorId, String role);
-    void deleteFeeStructure(Long id, Long actorId, String role);
+    // ========================================
+    // FEE STRUCTURE OPERATIONS
+    // ========================================
+    FeeStructure createFeeStructure(FeeStructure feeStructure, Long performedBy);
+    List<FeeStructure> getAllFeeStructures();
+    FeeStructure getFeeStructureById(Long id);
+    List<FeeStructure> getFeeStructuresByCourseAndYear(Long courseId, String academicYear);
+    FeeStructure updateFeeStructure(Long id, FeeStructure feeStructure, Long performedBy);
+    void deleteFeeStructure(Long id, Long performedBy);
     
-    // =============== STUDENT FEE ALLOCATIONS ===============
-    StudentFeeAllocation allocateFee(StudentFeeAllocation allocation, Long actorId, String role);
-    List<StudentFeeAllocation> getAllocations(Long actorId, String role, Long userId);
-    StudentFeeAllocation getAllocationById(Long id, Long actorId, String role);
-    StudentFeeAllocation updateAllocation(Long id, StudentFeeAllocation allocation, Long actorId, String role);
+    // ========================================
+    // STUDENT FEE ALLOCATION OPERATIONS
+    // ========================================
+    StudentFeeAllocation createStudentFeeAllocation(StudentFeeAllocation allocation, Long performedBy);
+    List<StudentFeeAllocation> getAllStudentFeeAllocations();
+    StudentFeeAllocation getStudentFeeAllocationById(Long id);
+    List<StudentFeeAllocation> getStudentFeeAllocationsByUserId(Long userId);
+    StudentFeeAllocation updateStudentFeeAllocation(Long id, StudentFeeAllocation allocation, Long performedBy);
+    void deleteStudentFeeAllocation(Long id, Long performedBy);
     
-    // =============== PAYMENT ALTERNATIVES ===============
-    PaymentAlternative createPaymentAlternative(PaymentAlternative alternative, Long actorId, String role);
-    List<PaymentAlternative> getAllPaymentAlternatives(Long actorId, String role);
-    List<PaymentAlternative> getActivePaymentAlternatives();
-    PaymentAlternative getPaymentAlternativeById(Long id, Long actorId, String role);
-    PaymentAlternative updatePaymentAlternative(Long id, PaymentAlternative alternative, Long actorId, String role);
-    void deletePaymentAlternative(Long id, Long actorId, String role);
+    // Special allocation methods
+    StudentFeeAllocation allocateFeeToStudent(Long userId, Long feeStructureId, LocalDate dueDate, 
+                                              BigDecimal initialPayment, Integer numberOfInstallments, Long performedBy);
+    void applyDiscountToAllocation(Long allocationId, Long discountId, Long performedBy);
+    void adjustInstallmentPlan(Long allocationId, List<BigDecimal> newInstallmentAmounts, Long performedBy);
     
-    // =============== PAYMENT INSTALLMENTS ===============
-    PaymentInstallment createPaymentInstallment(PaymentInstallment installment, Long actorId, String role);
-    List<PaymentInstallment> getInstallmentsByAllocationId(Long allocationId, Long actorId, String role);
-    PaymentInstallment updateInstallment(Long id, PaymentInstallment installment, Long actorId, String role);
+    // ========================================
+    // FEE INSTALLMENT PLAN OPERATIONS
+    // ========================================
+    FeeInstallmentPlan createFeeInstallmentPlan(FeeInstallmentPlan installmentPlan, Long performedBy);
+    List<FeeInstallmentPlan> getAllFeeInstallmentPlans();
+    FeeInstallmentPlan getFeeInstallmentPlanById(Long id);
+    List<FeeInstallmentPlan> getInstallmentPlansByAllocationId(Long allocationId);
+    FeeInstallmentPlan updateFeeInstallmentPlan(Long id, FeeInstallmentPlan installmentPlan, Long performedBy);
+    void deleteFeeInstallmentPlan(Long id, Long performedBy);
     
-    // =============== STUDENT FEE PAYMENTS ===============
-    StudentFeePayment processPayment(StudentFeePayment payment, Long actorId, String role);
-    List<StudentFeePayment> getPayments(Long actorId, String role);
-    StudentFeePayment getPaymentById(Long id, Long actorId, String role);
+    // Special installment methods
+    void updateOverdueInstallments();
+    void calculateLateFees(Long allocationId);
     
-    // =============== FEE DISCOUNTS ===============
-    FeeDiscount applyDiscount(FeeDiscount discount, Long actorId, String role);
-    List<FeeDiscount> getDiscounts(Long actorId, String role);
-    FeeDiscount getDiscountById(Long id, Long actorId, String role);
-    FeeDiscount updateDiscount(Long id, FeeDiscount discount, Long actorId, String role);
-    void deleteDiscount(Long id, Long actorId, String role);
+    // ========================================
+    // STUDENT FEE PAYMENT OPERATIONS
+    // ========================================
+    StudentFeePayment createStudentFeePayment(StudentFeePayment payment, Long performedBy);
+    List<StudentFeePayment> getAllStudentFeePayments();
+    StudentFeePayment getStudentFeePaymentById(Long id);
+    List<StudentFeePayment> getPaymentsByAllocationId(Long allocationId);
+    StudentFeePayment updateStudentFeePayment(Long id, StudentFeePayment payment, Long performedBy);
+    void deleteStudentFeePayment(Long id, Long performedBy);
     
-    // =============== FEE REFUNDS ===============
-    FeeRefund processRefund(FeeRefund refund, Long actorId, String role);
-    List<FeeRefund> getRefunds(Long actorId, String role);
-    FeeRefund getRefundById(Long id, Long actorId, String role);
+    // Special payment methods
+    StudentFeePayment recordPayment(Long allocationId, BigDecimal amount, String paymentMode, 
+                                    String transactionRef, Long collectedBy);
+    StudentFeePayment recordInstallmentPayment(Long installmentPlanId, BigDecimal amount, 
+                                               String paymentMode, String transactionRef, Long collectedBy);
+    List<StudentFeePayment> getPaymentHistory(Long userId);
     
-    // =============== FEE RECEIPTS ===============
-    List<FeeReceipt> getReceipts(Long actorId, String role);
-    FeeReceipt getReceiptById(Long id, Long actorId, String role);
+    // ========================================
+    // FEE DISCOUNT OPERATIONS
+    // ========================================
+    FeeDiscount createFeeDiscount(FeeDiscount discount, Long performedBy);
+    List<FeeDiscount> getAllFeeDiscounts();
+    FeeDiscount getFeeDiscountById(Long id);
+    List<FeeDiscount> getDiscountsByUserId(Long userId);
+    FeeDiscount updateFeeDiscount(Long id, FeeDiscount discount, Long performedBy);
+    void deleteFeeDiscount(Long id, Long performedBy);
     
-    // =============== AUDIT LOGS ===============
-    List<AuditLog> getAuditLogs(Long actorId, String role);
-    AuditLog getAuditLogById(Long id, Long actorId, String role);
+    // Special discount methods
+    FeeDiscount approveDiscount(Long discountId, Long approvedBy);
+    FeeDiscount rejectDiscount(Long discountId, Long approvedBy, String reason);
+    BigDecimal calculateDiscountAmount(BigDecimal originalAmount, String discountType, BigDecimal discountValue);
     
-    // =============== OTHER ENTITIES ===============
-    CurrencyRate createCurrencyRate(CurrencyRate rate, Long actorId, String role);
-    List<CurrencyRate> getCurrencyRates(Long actorId, String role);
+    // ========================================
+    // FEE REFUND OPERATIONS
+    // ========================================
+    FeeRefund createFeeRefund(FeeRefund refund, Long performedBy);
+    List<FeeRefund> getAllFeeRefunds();
+    FeeRefund getFeeRefundById(Long id);
+    List<FeeRefund> getRefundsByUserId(Long userId);
+    FeeRefund updateFeeRefund(Long id, FeeRefund refund, Long performedBy);
+    void deleteFeeRefund(Long id, Long performedBy);
     
-    NotificationLog createNotificationLog(NotificationLog log, Long actorId, String role);
+    // Special refund methods
+    FeeRefund approveRefund(Long refundId, Long approvedBy);
+    FeeRefund rejectRefund(Long refundId, Long approvedBy, String reason);
+    FeeRefund processRefund(Long refundId, String transactionRef, Long performedBy);
     
-    AttendancePenalty createAttendancePenalty(AttendancePenalty penalty, Long actorId, String role);
+    // ========================================
+    // FEE RECEIPT OPERATIONS (READ-ONLY)
+    // ========================================
+    List<FeeReceipt> getAllFeeReceipts();
+    FeeReceipt getFeeReceiptById(Long id);
+    FeeReceipt getFeeReceiptByPaymentId(Long paymentId);
+    List<FeeReceipt> getReceiptsByStudentUserId(Long userId);
     
-    CertificateBlock createCertificateBlock(CertificateBlock block, Long actorId, String role);
+    // Special receipt methods (auto-generated)
+    FeeReceipt generateReceipt(Long paymentId);
+    void sendReceiptEmail(Long receiptId, String studentEmail);
     
-    AutoDebitSetting createAutoDebitSetting(AutoDebitSetting setting, Long actorId, String role);
+    // ========================================
+    // AUDIT LOG OPERATIONS (READ-ONLY)
+    // ========================================
+    List<AuditLog> getAllAuditLogs();
+    AuditLog getAuditLogById(Long id);
+    List<AuditLog> getAuditLogsByModule(String module);
+    List<AuditLog> getAuditLogsByEntity(String entityType, Long entityId);
     
-    FeeReport generateFeeReport(FeeReport report, Long actorId, String role);
+    // ========================================
+    // LATE FEE RULE OPERATIONS
+    // ========================================
+    LateFeeRule createLateFeeRule(LateFeeRule lateFeeRule, Long performedBy);
+    List<LateFeeRule> getAllLateFeeRules();
+    LateFeeRule getLateFeeRuleById(Long id);
+    LateFeeRule updateLateFeeRule(Long id, LateFeeRule lateFeeRule, Long performedBy);
+    void deleteLateFeeRule(Long id, Long performedBy);
     
-    // =============== NEW INSTALLMENT LOGIC ===============
-    StudentFeeAllocation setAdvancePayment(Long allocationId, BigDecimal advancePayment, Long actorId, String role);
-    StudentFeeAllocation selectPaymentPlan(Long allocationId, Long alternativeId, List<BigDecimal> customAmounts, Long actorId, String role);
-    void recalculateInstallments(Long allocationId, List<BigDecimal> newAmounts, Long actorId, String role);
+    // ========================================
+    // REPORTING & ANALYTICS
+    // ========================================
+    Map<String, Object> getStudentFeeReport(Long userId);
+    Map<String, Object> getBatchFeeReport(Long batchId);
+    Map<String, Object> getCourseFeeReport(Long courseId);
+    Map<String, Object> getRevenueReport(LocalDate startDate, LocalDate endDate);
+    Map<String, Object> getMonthlyRevenueReport(int year, int month);
+    Map<String, Object> getQuarterlyRevenueReport(int year, int quarter);
+    Map<String, Object> getYearlyRevenueReport(int year);
+    Map<String, Object> getPendingFeesReport();
+    Map<String, Object> getOverdueFeesReport();
+    List<StudentFeeAllocation> getStudentsWithPendingFees();
+    List<StudentFeeAllocation> getStudentsWithOverdueFees();
 }
