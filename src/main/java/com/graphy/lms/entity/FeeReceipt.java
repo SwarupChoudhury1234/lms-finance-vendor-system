@@ -1,17 +1,12 @@
 package com.graphy.lms.entity;
 
 import jakarta.persistence.*;
-import lombok.*;
-import java.math.BigDecimal;
-import java.time.LocalDate;
 import java.time.LocalDateTime;
 
 @Entity
 @Table(name = "fee_receipts")
-@Data
-@NoArgsConstructor
-@AllArgsConstructor
 public class FeeReceipt {
+    
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Long id;
@@ -22,26 +17,11 @@ public class FeeReceipt {
     @Column(name = "receipt_number", unique = true, nullable = false, length = 100)
     private String receiptNumber;
     
-    @Column(name = "student_name", length = 100)
-    private String studentName;
+    @Column(name = "user_id", nullable = false)
+    private Long userId;
     
-    @Column(name = "course_name", length = 100)
-    private String courseName;
-    
-    @Column(name = "amount_paid", precision = 10, scale = 2)
-    private BigDecimal amountPaid;
-    
-    @Column(name = "payment_mode", length = 50)
-    private String paymentMode;
-    
-    @Column(name = "pdf_path", length = 255)
-    private String pdfPath;
-    
-    @Column(name = "email_sent")
-    private Boolean emailSent = false;
-    
-    @Column(name = "email_sent_at")
-    private LocalDateTime emailSentAt;
+    @Column(name = "receipt_pdf_url", length = 500)
+    private String receiptPdfUrl;
     
     @Column(name = "generated_at", updatable = false)
     private LocalDateTime generatedAt;
@@ -49,5 +29,57 @@ public class FeeReceipt {
     @PrePersist
     protected void onCreate() {
         generatedAt = LocalDateTime.now();
+    }
+    
+    // Constructors
+    public FeeReceipt() {}
+    
+    // Getters and Setters
+    public Long getId() {
+        return id;
+    }
+    
+    public void setId(Long id) {
+        this.id = id;
+    }
+    
+    public Long getPaymentId() {
+        return paymentId;
+    }
+    
+    public void setPaymentId(Long paymentId) {
+        this.paymentId = paymentId;
+    }
+    
+    public String getReceiptNumber() {
+        return receiptNumber;
+    }
+    
+    public void setReceiptNumber(String receiptNumber) {
+        this.receiptNumber = receiptNumber;
+    }
+    
+    public Long getUserId() {
+        return userId;
+    }
+    
+    public void setUserId(Long userId) {
+        this.userId = userId;
+    }
+    
+    public String getReceiptPdfUrl() {
+        return receiptPdfUrl;
+    }
+    
+    public void setReceiptPdfUrl(String receiptPdfUrl) {
+        this.receiptPdfUrl = receiptPdfUrl;
+    }
+    
+    public LocalDateTime getGeneratedAt() {
+        return generatedAt;
+    }
+    
+    public void setGeneratedAt(LocalDateTime generatedAt) {
+        this.generatedAt = generatedAt;
     }
 }

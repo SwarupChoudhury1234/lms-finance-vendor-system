@@ -6,30 +6,19 @@ import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.repository.query.Param;
 import org.springframework.stereotype.Repository;
 
-import java.time.LocalDate;
+import java.math.BigDecimal;
 import java.util.List;
 import java.util.Optional;
-
-import org.springframework.data.jpa.repository.JpaRepository;
-import org.springframework.stereotype.Repository;
-import java.util.List;
 
 @Repository
 public interface StudentFeeAllocationRepository extends JpaRepository<StudentFeeAllocation, Long> {
     List<StudentFeeAllocation> findByUserId(Long userId);
-    List<StudentFeeAllocation> findByUserIdAndStatus(Long userId, String status);
-    List<StudentFeeAllocation> findByStatus(String status);
-    List<StudentFeeAllocation> findByDueDateBefore(LocalDate date);
+    List<StudentFeeAllocation> findByStatus(StudentFeeAllocation.AllocationStatus status);
+    Optional<StudentFeeAllocation> findByUserIdAndFeeStructureId(Long userId, Long feeStructureId);
     
-    @Query("SELECT sfa FROM StudentFeeAllocation sfa WHERE sfa.userId = :userId AND sfa.feeStructureId = :feeStructureId")
-    Optional<StudentFeeAllocation> findByUserIdAndFeeStructureId(
-        @Param("userId") Long userId,
-        @Param("feeStructureId") Long feeStructureId
-    );
+    @Query("SELECT SUM(s.payableAmount) FROM StudentFeeAllocation s WHERE s.userId = :userId")
+    BigDecimal getTotalPayableByUserId(@Param("userId") Long userId);
     
-    @Query("SELECT sfa FROM StudentFeeAllocation sfa JOIN FeeStructure fs ON sfa.feeStructureId = fs.id WHERE fs.courseId = :courseId")
-    List<StudentFeeAllocation> findByCourseId(@Param("courseId") Long courseId);
-    
-    @Query("SELECT sfa FROM StudentFeeAllocation sfa JOIN FeeStructure fs ON sfa.feeStructureId = fs.id WHERE fs.batchId = :batchId")
-    List<StudentFeeAllocation> findByBatchId(@Param("batchId") Long batchId);
+    @Query("SELECT SUM(s.remainingAmount) FROM StudentFeeAllocation s WHERE s.userId = :userId")
+    BigDecimal getTotalRemainingByUserId(@Param("userId") Long userId);
 }

@@ -1,17 +1,13 @@
 package com.graphy.lms.entity;
 
 import jakarta.persistence.*;
-import lombok.*;
 import java.math.BigDecimal;
-import java.time.LocalDate;
 import java.time.LocalDateTime;
 
 @Entity
 @Table(name = "student_fee_payments")
-@Data
-@NoArgsConstructor
-@AllArgsConstructor
 public class StudentFeePayment {
+    
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Long id;
@@ -19,38 +15,37 @@ public class StudentFeePayment {
     @Column(name = "student_fee_allocation_id", nullable = false)
     private Long studentFeeAllocationId;
     
-    @Column(name = "installment_plan_id")
-    private Long installmentPlanId;
+    @Column(name = "student_installment_plan_id")
+    private Long studentInstallmentPlanId;
     
-    @Column(name = "paid_amount", nullable = false, precision = 10, scale = 2)
+    @Column(name = "paid_amount", nullable = false, precision = 12, scale = 2)
     private BigDecimal paidAmount;
     
-    @Column(name = "late_fee_paid", precision = 10, scale = 2)
-    private BigDecimal lateFeePaid = BigDecimal.ZERO;
-    
-    @Column(name = "total_paid", nullable = false, precision = 10, scale = 2)
-    private BigDecimal totalPaid;
-    
     @Column(name = "payment_date", nullable = false)
-    private LocalDate paymentDate;
+    private LocalDateTime paymentDate;
     
-    @Column(name = "payment_mode", nullable = false, length = 50)
-    private String paymentMode; // CASH, CARD, BANK_TRANSFER, UPI, ONLINE
+    @Enumerated(EnumType.STRING)
+    @Column(name = "payment_mode", nullable = false)
+    private PaymentMode paymentMode;
+    
+    @Enumerated(EnumType.STRING)
+    @Column(name = "payment_status")
+    private PaymentStatus paymentStatus = PaymentStatus.PENDING;
     
     @Column(name = "transaction_reference", length = 100)
     private String transactionReference;
     
-    @Column(name = "payment_gateway", length = 50)
-    private String paymentGateway;
+    @Column(name = "gateway_response", columnDefinition = "TEXT")
+    private String gatewayResponse;
     
-    @Column(name = "payment_status", length = 20)
-    private String paymentStatus = "SUCCESS"; // SUCCESS, FAILED, PENDING
+    @Column(name = "screenshot_url", length = 500)
+    private String screenshotUrl;
     
-    @Column(name = "collected_by")
-    private Long collectedBy;
+    @Column(length = 10)
+    private String currency = "INR";
     
-    @Column(length = 255)
-    private String remarks;
+    @Column(name = "recorded_by")
+    private Long recordedBy;
     
     @Column(name = "created_at", updatable = false)
     private LocalDateTime createdAt;
@@ -58,14 +53,137 @@ public class StudentFeePayment {
     @Column(name = "updated_at")
     private LocalDateTime updatedAt;
     
+    public enum PaymentMode {
+        CASH, CARD, UPI, NET_BANKING, BANK_TRANSFER, AUTO_DEBIT
+    }
+    
+    public enum PaymentStatus {
+        PENDING, SUCCESS, FAILED, REFUNDED
+    }
+    
     @PrePersist
     protected void onCreate() {
         createdAt = LocalDateTime.now();
-        totalPaid = paidAmount.add(lateFeePaid != null ? lateFeePaid : BigDecimal.ZERO);
     }
     
     @PreUpdate
     protected void onUpdate() {
         updatedAt = LocalDateTime.now();
+    }
+    
+    // Constructors
+    public StudentFeePayment() {}
+    
+    // Getters and Setters
+    public Long getId() {
+        return id;
+    }
+    
+    public void setId(Long id) {
+        this.id = id;
+    }
+    
+    public Long getStudentFeeAllocationId() {
+        return studentFeeAllocationId;
+    }
+    
+    public void setStudentFeeAllocationId(Long studentFeeAllocationId) {
+        this.studentFeeAllocationId = studentFeeAllocationId;
+    }
+    
+    public Long getStudentInstallmentPlanId() {
+        return studentInstallmentPlanId;
+    }
+    
+    public void setStudentInstallmentPlanId(Long studentInstallmentPlanId) {
+        this.studentInstallmentPlanId = studentInstallmentPlanId;
+    }
+    
+    public BigDecimal getPaidAmount() {
+        return paidAmount;
+    }
+    
+    public void setPaidAmount(BigDecimal paidAmount) {
+        this.paidAmount = paidAmount;
+    }
+    
+    public LocalDateTime getPaymentDate() {
+        return paymentDate;
+    }
+    
+    public void setPaymentDate(LocalDateTime paymentDate) {
+        this.paymentDate = paymentDate;
+    }
+    
+    public PaymentMode getPaymentMode() {
+        return paymentMode;
+    }
+    
+    public void setPaymentMode(PaymentMode paymentMode) {
+        this.paymentMode = paymentMode;
+    }
+    
+    public PaymentStatus getPaymentStatus() {
+        return paymentStatus;
+    }
+    
+    public void setPaymentStatus(PaymentStatus paymentStatus) {
+        this.paymentStatus = paymentStatus;
+    }
+    
+    public String getTransactionReference() {
+        return transactionReference;
+    }
+    
+    public void setTransactionReference(String transactionReference) {
+        this.transactionReference = transactionReference;
+    }
+    
+    public String getGatewayResponse() {
+        return gatewayResponse;
+    }
+    
+    public void setGatewayResponse(String gatewayResponse) {
+        this.gatewayResponse = gatewayResponse;
+    }
+    
+    public String getScreenshotUrl() {
+        return screenshotUrl;
+    }
+    
+    public void setScreenshotUrl(String screenshotUrl) {
+        this.screenshotUrl = screenshotUrl;
+    }
+    
+    public String getCurrency() {
+        return currency;
+    }
+    
+    public void setCurrency(String currency) {
+        this.currency = currency;
+    }
+    
+    public Long getRecordedBy() {
+        return recordedBy;
+    }
+    
+    public void setRecordedBy(Long recordedBy) {
+        this.recordedBy = recordedBy;
+    }
+    
+    public LocalDateTime getCreatedAt() {
+        return createdAt;
+    }
+    
+    public void setCreatedAt(LocalDateTime createdAt) {
+        this.createdAt = createdAt;
+    }
+    
+    public LocalDateTime getUpdatedAt() {
+        return updatedAt;
+    }
+    
+    public void setUpdatedAt(LocalDateTime updatedAt) {
+        this.updatedAt = updatedAt;
     }
 }

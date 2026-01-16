@@ -4,150 +4,285 @@ import com.graphy.lms.entity.*;
 
 import java.math.BigDecimal;
 import java.time.LocalDate;
+import java.time.LocalDateTime;
 import java.util.List;
 import java.util.Map;
 
-
 public interface FeeService {
     
-    // ========================================
-    // FEE TYPE OPERATIONS
-    // ========================================
-    FeeType createFeeType(FeeType feeType, Long performedBy);
+    // ============================================
+    // 1. FEE TYPES CRUD
+    // ============================================
+    FeeType createFeeType(FeeType feeType);
+    FeeType getFeeTypeById(Long id);
     List<FeeType> getAllFeeTypes();
     List<FeeType> getActiveFeeTypes();
-    FeeType getFeeTypeById(Long id);
-    FeeType updateFeeType(Long id, FeeType feeType, Long performedBy);
-    void deleteFeeType(Long id, Long performedBy);
+    FeeType updateFeeType(Long id, FeeType feeType);
+    void deleteFeeType(Long id);
     
-    // ========================================
-    // FEE STRUCTURE OPERATIONS
-    // ========================================
-    FeeStructure createFeeStructure(FeeStructure feeStructure, Long performedBy);
-    List<FeeStructure> getAllFeeStructures();
+    // ============================================
+    // 2. FEE STRUCTURES CRUD
+    // ============================================
+    FeeStructure createFeeStructure(FeeStructure feeStructure);
     FeeStructure getFeeStructureById(Long id);
-    List<FeeStructure> getFeeStructuresByCourseAndYear(Long courseId, String academicYear);
-    FeeStructure updateFeeStructure(Long id, FeeStructure feeStructure, Long performedBy);
-    void deleteFeeStructure(Long id, Long performedBy);
+    List<FeeStructure> getAllFeeStructures();
+    List<FeeStructure> getFeeStructuresByCourse(Long courseId);
+    List<FeeStructure> getFeeStructuresByAcademicYear(String academicYear);
+    List<FeeStructure> getFeeStructuresByBatch(Long batchId);
+    FeeStructure updateFeeStructure(Long id, FeeStructure feeStructure);
+    void deleteFeeStructure(Long id);
     
-    // ========================================
-    // STUDENT FEE ALLOCATION OPERATIONS
-    // ========================================
-    StudentFeeAllocation createStudentFeeAllocation(StudentFeeAllocation allocation, Long performedBy);
-    List<StudentFeeAllocation> getAllStudentFeeAllocations();
-    StudentFeeAllocation getStudentFeeAllocationById(Long id);
-    List<StudentFeeAllocation> getStudentFeeAllocationsByUserId(Long userId);
-    StudentFeeAllocation updateStudentFeeAllocation(Long id, StudentFeeAllocation allocation, Long performedBy);
-    void deleteStudentFeeAllocation(Long id, Long performedBy);
-    
-    // Special allocation methods
-    StudentFeeAllocation allocateFeeToStudent(Long userId, Long feeStructureId, LocalDate dueDate, 
-                                              BigDecimal initialPayment, Integer numberOfInstallments, Long performedBy);
-    void applyDiscountToAllocation(Long allocationId, Long discountId, Long performedBy);
-    void adjustInstallmentPlan(Long allocationId, List<BigDecimal> newInstallmentAmounts, Long performedBy);
-    
-    // ========================================
-    // FEE INSTALLMENT PLAN OPERATIONS
-    // ========================================
-    FeeInstallmentPlan createFeeInstallmentPlan(FeeInstallmentPlan installmentPlan, Long performedBy);
-    List<FeeInstallmentPlan> getAllFeeInstallmentPlans();
-    FeeInstallmentPlan getFeeInstallmentPlanById(Long id);
-    List<FeeInstallmentPlan> getInstallmentPlansByAllocationId(Long allocationId);
-    FeeInstallmentPlan updateFeeInstallmentPlan(Long id, FeeInstallmentPlan installmentPlan, Long performedBy);
-    void deleteFeeInstallmentPlan(Long id, Long performedBy);
-    
-    // Special installment methods
-    void updateOverdueInstallments();
-    void calculateLateFees(Long allocationId);
-    
-    // ========================================
-    // STUDENT FEE PAYMENT OPERATIONS
-    // ========================================
-    StudentFeePayment createStudentFeePayment(StudentFeePayment payment, Long performedBy);
-    List<StudentFeePayment> getAllStudentFeePayments();
-    StudentFeePayment getStudentFeePaymentById(Long id);
-    List<StudentFeePayment> getPaymentsByAllocationId(Long allocationId);
-    StudentFeePayment updateStudentFeePayment(Long id, StudentFeePayment payment, Long performedBy);
-    void deleteStudentFeePayment(Long id, Long performedBy);
-    
-    // Special payment methods
-    StudentFeePayment recordPayment(Long allocationId, BigDecimal amount, String paymentMode, 
-                                    String transactionRef, Long collectedBy);
-    StudentFeePayment recordInstallmentPayment(Long installmentPlanId, BigDecimal amount, 
-                                               String paymentMode, String transactionRef, Long collectedBy);
-    List<StudentFeePayment> getPaymentHistory(Long userId);
-    
-    // ========================================
-    // FEE DISCOUNT OPERATIONS
-    // ========================================
-    FeeDiscount createFeeDiscount(FeeDiscount discount, Long performedBy);
-    List<FeeDiscount> getAllFeeDiscounts();
+    // ============================================
+    // 3. FEE DISCOUNTS CRUD
+    // ============================================
+    FeeDiscount createFeeDiscount(FeeDiscount feeDiscount);
     FeeDiscount getFeeDiscountById(Long id);
-    List<FeeDiscount> getDiscountsByUserId(Long userId);
-    FeeDiscount updateFeeDiscount(Long id, FeeDiscount discount, Long performedBy);
-    void deleteFeeDiscount(Long id, Long performedBy);
+    List<FeeDiscount> getAllFeeDiscounts();
+    List<FeeDiscount> getFeeDiscountsByUserId(Long userId);
+    FeeDiscount updateFeeDiscount(Long id, FeeDiscount feeDiscount);
+    void deleteFeeDiscount(Long id);
     
-    // Special discount methods
-    FeeDiscount approveDiscount(Long discountId, Long approvedBy);
-    FeeDiscount rejectDiscount(Long discountId, Long approvedBy, String reason);
-    BigDecimal calculateDiscountAmount(BigDecimal originalAmount, String discountType, BigDecimal discountValue);
+    // ============================================
+    // 4. STUDENT FEE ALLOCATIONS CRUD + BUSINESS LOGIC
+    // ============================================
+    StudentFeeAllocation createStudentFeeAllocation(StudentFeeAllocation allocation);
+    StudentFeeAllocation getFeeAllocationById(Long id);
+    List<StudentFeeAllocation> getAllFeeAllocations();
+    List<StudentFeeAllocation> getFeeAllocationsByUserId(Long userId);
+    StudentFeeAllocation updateFeeAllocation(Long id, StudentFeeAllocation allocation);
+    void deleteFeeAllocation(Long id);
     
-    // ========================================
-    // FEE REFUND OPERATIONS
-    // ========================================
-    FeeRefund createFeeRefund(FeeRefund refund, Long performedBy);
-    List<FeeRefund> getAllFeeRefunds();
-    FeeRefund getFeeRefundById(Long id);
+    // Calculate payable amount after discounts
+    BigDecimal calculatePayableAmount(Long userId, Long feeStructureId);
+    
+    // ============================================
+    // 5. PAYMENT ALTERNATIVES CRUD
+    // ============================================
+    PaymentAlternative createPaymentAlternative(PaymentAlternative alternative);
+    PaymentAlternative getPaymentAlternativeById(Long id);
+    List<PaymentAlternative> getAllPaymentAlternatives();
+    List<PaymentAlternative> getActivePaymentAlternatives();
+    PaymentAlternative updatePaymentAlternative(Long id, PaymentAlternative alternative);
+    void deletePaymentAlternative(Long id);
+    
+    // ============================================
+    // 6. STUDENT INSTALLMENT PLANS CRUD + BUSINESS LOGIC
+    // ============================================
+    StudentInstallmentPlan createInstallmentPlan(StudentInstallmentPlan plan);
+    StudentInstallmentPlan getInstallmentPlanById(Long id);
+    List<StudentInstallmentPlan> getAllInstallmentPlans();
+    List<StudentInstallmentPlan> getInstallmentPlansByAllocationId(Long allocationId);
+    StudentInstallmentPlan updateInstallmentPlan(Long id, StudentInstallmentPlan plan);
+    void deleteInstallmentPlan(Long id);
+    
+    // Create multiple installments for a student
+    List<StudentInstallmentPlan> createInstallmentsForStudent(Long allocationId, Long alternativeId, 
+                                                               List<Map<String, Object>> installmentDetails);
+    
+    // Reset installments
+    List<StudentInstallmentPlan> resetInstallments(Long allocationId, Long alternativeId, 
+                                                    List<Map<String, Object>> newInstallmentDetails);
+    
+    // Get overdue installments
+    List<StudentInstallmentPlan> getOverdueInstallments();
+    
+    // ============================================
+    // 7. STUDENT FEE PAYMENTS CRUD + BUSINESS LOGIC
+    // ============================================
+    StudentFeePayment createPayment(StudentFeePayment payment);
+    StudentFeePayment getPaymentById(Long id);
+    List<StudentFeePayment> getAllPayments();
+    List<StudentFeePayment> getPaymentsByAllocationId(Long allocationId);
+    StudentFeePayment updatePayment(Long id, StudentFeePayment payment);
+    void deletePayment(Long id);
+    
+    // Process online payment
+    StudentFeePayment processOnlinePayment(Long allocationId, Long installmentPlanId, 
+                                           BigDecimal amount, String paymentMode, 
+                                           String transactionRef, String gatewayResponse);
+    
+    // Record manual payment
+    StudentFeePayment recordManualPayment(Long allocationId, Long installmentPlanId, 
+                                         BigDecimal amount, String paymentMode, 
+                                         String transactionRef, Long recordedBy);
+    
+    // Update payment status after installment payment
+    void updateInstallmentStatus(Long installmentPlanId, BigDecimal paidAmount);
+    
+    // ============================================
+    // 8. LATE FEE CONFIG CRUD
+    // ============================================
+    LateFeeConfig createLateFeeConfig(LateFeeConfig config);
+    LateFeeConfig getLateFeeConfigById(Long id);
+    List<LateFeeConfig> getAllLateFeeConfigs();
+    List<LateFeeConfig> getActiveLateFeeConfigs();
+    LateFeeConfig updateLateFeeConfig(Long id, LateFeeConfig config);
+    void deleteLateFeeConfig(Long id);
+    
+    // ============================================
+    // 9. LATE FEE PENALTIES CRUD + AUTO CALCULATION
+    // ============================================
+    LateFeePenalty createLateFeePenalty(LateFeePenalty penalty);
+    LateFeePenalty getLateFeePenaltyById(Long id);
+    List<LateFeePenalty> getAllLateFeePenalties();
+    List<LateFeePenalty> getLateFeePenaltiesByInstallmentId(Long installmentId);
+    LateFeePenalty updateLateFeePenalty(Long id, LateFeePenalty penalty);
+    void deleteLateFeePenalty(Long id);
+    
+    // Auto-apply late fees for overdue installments
+    void applyLateFees();
+    
+    // Waive late fee
+    LateFeePenalty waiveLateFee(Long penaltyId, Long waivedBy);
+    
+    // ============================================
+    // 10. ATTENDANCE PENALTIES CRUD + AUTO APPLICATION
+    // ============================================
+    AttendancePenalty createAttendancePenalty(AttendancePenalty penalty);
+    AttendancePenalty getAttendancePenaltyById(Long id);
+    List<AttendancePenalty> getAllAttendancePenalties();
+    List<AttendancePenalty> getAttendancePenaltiesByUserId(Long userId);
+    AttendancePenalty updateAttendancePenalty(Long id, AttendancePenalty penalty);
+    void deleteAttendancePenalty(Long id);
+    
+    // Auto-apply attendance penalty when student is marked absent
+    AttendancePenalty applyAttendancePenalty(Long userId, Long allocationId, 
+                                             LocalDate absenceDate, BigDecimal penaltyAmount, 
+                                             String reason, Long appliedBy);
+    
+    // ============================================
+    // 11. EXAM FEE LINKAGE CRUD + AUTO LINKING
+    // ============================================
+    ExamFeeLinkage createExamFeeLinkage(ExamFeeLinkage linkage);
+    ExamFeeLinkage getExamFeeLinkageById(Long id);
+    List<ExamFeeLinkage> getAllExamFeeLinkages();
+    List<ExamFeeLinkage> getExamFeeLinkagesByUserId(Long userId);
+    ExamFeeLinkage updateExamFeeLinkage(Long id, ExamFeeLinkage linkage);
+    void deleteExamFeeLinkage(Long id);
+    
+    // Auto-link exam fee when exam is scheduled
+    ExamFeeLinkage linkExamFeeToStudent(Long examId, Long userId, Long allocationId, 
+                                        BigDecimal examFeeAmount);
+    
+    // ============================================
+    // 12. FEE REFUNDS CRUD + WORKFLOW
+    // ============================================
+    FeeRefund createRefundRequest(FeeRefund refund);
+    FeeRefund getRefundById(Long id);
+    List<FeeRefund> getAllRefunds();
     List<FeeRefund> getRefundsByUserId(Long userId);
-    FeeRefund updateFeeRefund(Long id, FeeRefund refund, Long performedBy);
-    void deleteFeeRefund(Long id, Long performedBy);
+    List<FeeRefund> getRefundsByStatus(FeeRefund.RefundStatus status);
+    FeeRefund updateRefund(Long id, FeeRefund refund);
+    void deleteRefund(Long id);
     
-    // Special refund methods
+    // Refund workflow
     FeeRefund approveRefund(Long refundId, Long approvedBy);
-    FeeRefund rejectRefund(Long refundId, Long approvedBy, String reason);
-    FeeRefund processRefund(Long refundId, String transactionRef, Long performedBy);
+    FeeRefund processRefund(Long refundId, String refundMode, String transactionRef);
+    FeeRefund rejectRefund(Long refundId, Long rejectedBy, String reason);
     
-    // ========================================
-    // FEE RECEIPT OPERATIONS (READ-ONLY)
-    // ========================================
-    List<FeeReceipt> getAllFeeReceipts();
-    FeeReceipt getFeeReceiptById(Long id);
-    FeeReceipt getFeeReceiptByPaymentId(Long paymentId);
-    List<FeeReceipt> getReceiptsByStudentUserId(Long userId);
+    // ============================================
+    // 13. FEE RECEIPTS (AUTO-GENERATED - READ ONLY)
+    // ============================================
+    FeeReceipt getReceiptById(Long id);
+    List<FeeReceipt> getAllReceipts();
+    List<FeeReceipt> getReceiptsByUserId(Long userId);
+    FeeReceipt getReceiptByPaymentId(Long paymentId);
     
-    // Special receipt methods (auto-generated)
+    // Auto-generate receipt after successful payment
     FeeReceipt generateReceipt(Long paymentId);
-    void sendReceiptEmail(Long receiptId, String studentEmail);
     
-    // ========================================
-    // AUDIT LOG OPERATIONS (READ-ONLY)
-    // ========================================
-    List<AuditLog> getAllAuditLogs();
+    // ============================================
+    // 14. PAYMENT NOTIFICATIONS CRUD
+    // ============================================
+    PaymentNotification createNotification(PaymentNotification notification);
+    PaymentNotification getNotificationById(Long id);
+    List<PaymentNotification> getAllNotifications();
+    List<PaymentNotification> getNotificationsByUserId(Long userId);
+    PaymentNotification updateNotification(Long id, PaymentNotification notification);
+    void deleteNotification(Long id);
+    
+    // Send notifications
+    void sendPaymentSuccessNotification(Long userId, Long paymentId, String email);
+    void sendPaymentFailedNotification(Long userId, String email, String reason);
+    void sendDueReminderNotification(Long userId, Long installmentPlanId, String email);
+    void sendOverdueWarningNotification(Long userId, Long installmentPlanId, String email);
+    
+    // ============================================
+    // 15. AUTO DEBIT CONFIG CRUD
+    // ============================================
+    AutoDebitConfig createAutoDebitConfig(AutoDebitConfig config);
+    AutoDebitConfig getAutoDebitConfigById(Long id);
+    List<AutoDebitConfig> getAllAutoDebitConfigs();
+    List<AutoDebitConfig> getAutoDebitConfigsByUserId(Long userId);
+    AutoDebitConfig updateAutoDebitConfig(Long id, AutoDebitConfig config);
+    void deleteAutoDebitConfig(Long id);
+    
+    // Process auto-debit
+    void processAutoDebit();
+    
+    // ============================================
+    // 16. CURRENCY RATES CRUD
+    // ============================================
+    CurrencyRate createCurrencyRate(CurrencyRate rate);
+    CurrencyRate getCurrencyRateById(Long id);
+    List<CurrencyRate> getAllCurrencyRates();
+    CurrencyRate updateCurrencyRate(Long id, CurrencyRate rate);
+    void deleteCurrencyRate(Long id);
+    
+    // Convert currency
+    BigDecimal convertCurrency(BigDecimal amount, String fromCurrency, String toCurrency, LocalDate date);
+    
+    // ============================================
+    // 17. AUDIT LOGS (AUTO-GENERATED - READ ONLY)
+    // ============================================
     AuditLog getAuditLogById(Long id);
+    List<AuditLog> getAllAuditLogs();
     List<AuditLog> getAuditLogsByModule(String module);
-    List<AuditLog> getAuditLogsByEntity(String entityType, Long entityId);
+    List<AuditLog> getAuditLogsByEntity(String entityName, Long entityId);
     
-    // ========================================
-    // LATE FEE RULE OPERATIONS
-    // ========================================
-    LateFeeRule createLateFeeRule(LateFeeRule lateFeeRule, Long performedBy);
-    List<LateFeeRule> getAllLateFeeRules();
-    LateFeeRule getLateFeeRuleById(Long id);
-    LateFeeRule updateLateFeeRule(Long id, LateFeeRule lateFeeRule, Long performedBy);
-    void deleteLateFeeRule(Long id, Long performedBy);
+    // ============================================
+    // 18. CERTIFICATE BLOCK LIST CRUD
+    // ============================================
+    CertificateBlockList createCertificateBlock(CertificateBlockList block);
+    CertificateBlockList getCertificateBlockById(Long id);
+    List<CertificateBlockList> getAllCertificateBlocks();
+    CertificateBlockList updateCertificateBlock(Long id, CertificateBlockList block);
+    void deleteCertificateBlock(Long id);
     
-    // ========================================
-    // REPORTING & ANALYTICS
-    // ========================================
+    // Check if student can receive certificate
+    boolean canIssueCertificate(Long userId);
+    
+    // Block certificate if fees unpaid
+    CertificateBlockList blockCertificate(Long userId, BigDecimal pendingAmount, String reason, Long blockedBy);
+    
+    // Unblock certificate after payment
+    void unblockCertificate(Long userId);
+    
+    // ============================================
+    // REPORTS & ANALYTICS
+    // ============================================
+    
+    // Student-wise report
     Map<String, Object> getStudentFeeReport(Long userId);
+    
+    // Batch-wise report
     Map<String, Object> getBatchFeeReport(Long batchId);
+    
+    // Course-wise report
     Map<String, Object> getCourseFeeReport(Long courseId);
-    Map<String, Object> getRevenueReport(LocalDate startDate, LocalDate endDate);
+    
+    // Monthly revenue report
     Map<String, Object> getMonthlyRevenueReport(int year, int month);
+    
+    // Quarterly revenue report
     Map<String, Object> getQuarterlyRevenueReport(int year, int quarter);
+    
+    // Yearly revenue report
     Map<String, Object> getYearlyRevenueReport(int year);
-    Map<String, Object> getPendingFeesReport();
-    Map<String, Object> getOverdueFeesReport();
-    List<StudentFeeAllocation> getStudentsWithPendingFees();
-    List<StudentFeeAllocation> getStudentsWithOverdueFees();
+    
+    // Overall collection and pending
+    Map<String, Object> getOverallFinancialSummary();
+    
+    // Payment history per student
+    List<StudentFeePayment> getPaymentHistory(Long userId);
 }

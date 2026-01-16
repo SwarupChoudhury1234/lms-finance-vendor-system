@@ -6,28 +6,21 @@ import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.repository.query.Param;
 import org.springframework.stereotype.Repository;
 
-import java.time.LocalDate;
+import java.math.BigDecimal;
+import java.time.LocalDateTime;
 import java.util.List;
-import java.util.Optional;
 
 @Repository
 public interface StudentFeePaymentRepository extends JpaRepository<StudentFeePayment, Long> {
     List<StudentFeePayment> findByStudentFeeAllocationId(Long studentFeeAllocationId);
-    List<StudentFeePayment> findByInstallmentPlanId(Long installmentPlanId);
-    List<StudentFeePayment> findByPaymentDateBetween(LocalDate startDate, LocalDate endDate);
-    List<StudentFeePayment> findByPaymentMode(String paymentMode);
-    List<StudentFeePayment> findByPaymentStatus(String paymentStatus);
-    List<StudentFeePayment> findByCollectedBy(Long collectedBy);
+    List<StudentFeePayment> findByPaymentStatus(StudentFeePayment.PaymentStatus paymentStatus);
+    List<StudentFeePayment> findByPaymentDateBetween(LocalDateTime startDate, LocalDateTime endDate);
+    List<StudentFeePayment> findByStudentInstallmentPlanId(Long studentInstallmentPlanId);
     
-    @Query("SELECT sfp FROM StudentFeePayment sfp WHERE sfp.studentFeeAllocationId = :allocationId ORDER BY sfp.paymentDate DESC")
-    List<StudentFeePayment> findPaymentHistory(@Param("allocationId") Long allocationId);
+    @Query("SELECT SUM(p.paidAmount) FROM StudentFeePayment p WHERE p.studentFeeAllocationId = :allocationId AND p.paymentStatus = 'SUCCESS'")
+    BigDecimal getTotalPaidByAllocationId(@Param("allocationId") Long allocationId);
     
-    @Query("SELECT SUM(sfp.paidAmount) FROM StudentFeePayment sfp WHERE sfp.studentFeeAllocationId = :allocationId AND sfp.paymentStatus = 'SUCCESS'")
-    Optional<java.math.BigDecimal> getTotalPaidAmount(@Param("allocationId") Long allocationId);
-    
-    @Query("SELECT sfp FROM StudentFeePayment sfp JOIN StudentFeeAllocation sfa ON sfp.studentFeeAllocationId = sfa.id JOIN FeeStructure fs ON sfa.feeStructureId = fs.id WHERE fs.courseId = :courseId")
-    List<StudentFeePayment> findByCourseId(@Param("courseId") Long courseId);
-    
-    @Query("SELECT sfp FROM StudentFeePayment sfp JOIN StudentFeeAllocation sfa ON sfp.studentFeeAllocationId = sfa.id JOIN FeeStructure fs ON sfa.feeStructureId = fs.id WHERE fs.batchId = :batchId")
-    List<StudentFeePayment> findByBatchId(@Param("batchId") Long batchId);
+    @Query("SELECT p FROM StudentFeePayment p WHERE p.paymentStatus = 'SUCCESS' AND p.paymentDate BETWEEN :startDate AND :endDate")
+    List<StudentFeePayment> findSuccessfulPaymentsBetween(@Param("startDate") LocalDateTime startDate, 
+                                                           @Param("endDate") LocalDateTime endDate);
 }

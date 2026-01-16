@@ -1,10 +1,11 @@
 package com.graphy.lms.service.impl;
 
 import com.graphy.lms.entity.*;
+import com.graphy.lms.service.*;
 import com.graphy.lms.repository.*;
-import com.graphy.lms.service.FeeService;
-import com.fasterxml.jackson.databind.ObjectMapper;
-import lombok.RequiredArgsConstructor;
+import org.springframework.beans.factory.annotation.Autowired;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -12,1114 +13,1819 @@ import java.math.BigDecimal;
 import java.math.RoundingMode;
 import java.time.LocalDate;
 import java.time.LocalDateTime;
+import java.time.temporal.ChronoUnit;
 import java.util.*;
+import java.util.stream.Collectors;
 
 @Service
-@RequiredArgsConstructor
 @Transactional
 public class FeeServiceImpl implements FeeService {
+	private static final Logger logger = LoggerFactory.getLogger(FeeServiceImpl.class);
+
+    // ============================================
+    // REPOSITORY INJECTIONS
+    // ============================================
     
-    private final FeeTypeRepository feeTypeRepository;
-    private final FeeStructureRepository feeStructureRepository;
-    private final StudentFeeAllocationRepository studentFeeAllocationRepository;
-    private final FeeInstallmentPlanRepository feeInstallmentPlanRepository;
-    private final StudentFeePaymentRepository studentFeePaymentRepository;
-    private final FeeDiscountRepository feeDiscountRepository;
-    private final FeeRefundRepository feeRefundRepository;
-    private final FeeReceiptRepository feeReceiptRepository;
-    private final AuditLogRepository auditLogRepository;
-    private final LateFeeRuleRepository lateFeeRuleRepository;
+    @Autowired private FeeTypeRepository feeTypeRepository;
+    @Autowired private FeeStructureRepository feeStructureRepository;
+    @Autowired private FeeDiscountRepository feeDiscountRepository;
+    @Autowired private StudentFeeAllocationRepository studentFeeAllocationRepository;
+    @Autowired private PaymentAlternativeRepository paymentAlternativeRepository;
+    @Autowired private StudentInstallmentPlanRepository studentInstallmentPlanRepository;
+    @Autowired private StudentFeePaymentRepository studentFeePaymentRepository;
+    @Autowired private LateFeeConfigRepository lateFeeConfigRepository;
+    @Autowired private LateFeePenaltyRepository lateFeePenaltyRepository;
+    @Autowired private AttendancePenaltyRepository attendancePenaltyRepository;
+    @Autowired private ExamFeeLinkageRepository examFeeLinkageRepository;
+    @Autowired private FeeRefundRepository feeRefundRepository;
+    @Autowired private FeeReceiptRepository feeReceiptRepository;
+    @Autowired private PaymentNotificationRepository paymentNotificationRepository;
+    @Autowired private AutoDebitConfigRepository autoDebitConfigRepository;
+    @Autowired private CurrencyRateRepository currencyRateRepository;
+    @Autowired private AuditLogRepository auditLogRepository;
+    @Autowired private CertificateBlockListRepository certificateBlockListRepository;
+
+    // ============================================
+    // 1. FEE TYPES CRUD
+    // ============================================
     
-    private final ObjectMapper objectMapper = new ObjectMapper();
-    
-    // ========================================
-    // AUDIT HELPER METHOD
-    // ========================================
-    private void createAuditLog(String module, String entityType, Long entityId, String action, 
-                                Object oldValue, Object newValue, Long performedBy) {
-        try {
-            AuditLog auditLog = new AuditLog();
-            auditLog.setModule(module);
-            auditLog.setEntityType(entityType);
-            auditLog.setEntityId(entityId);
-            auditLog.setAction(action);
-            
-            if (oldValue != null) {
-                auditLog.setOldValue(objectMapper.writeValueAsString(oldValue));
-            }
-            if (newValue != null) {
-                auditLog.setNewValue(objectMapper.writeValueAsString(newValue));
-            }
-            
-            auditLog.setPerformedBy(performedBy);
-            auditLogRepository.save(auditLog);
-        } catch (Exception e) {
-            // Log the error but don't fail the transaction
-            System.err.println("Failed to create audit log: " + e.getMessage());
-        }
-    }
-    
-    // ========================================
-    // FEE TYPE OPERATIONS
-    // ========================================
     @Override
-    public FeeType createFeeType(FeeType feeType, Long performedBy) {
+    public FeeType createFeeType(FeeType feeType) {
+        logger.debug("Creating new fee type: {}", feeType.getName());
+        
         FeeType saved = feeTypeRepository.save(feeType);
-        createAuditLog("FEE_MANAGEMENT", "FeeType", saved.getId(), "CREATE", null, saved, performedBy);
+        createAuditLog("FEE_MANAGEMENT", "FeeType", saved.getId(), 
+                      AuditLog.Action.CREATE, null, feeType.toString(), null);
+        
+        logger.info("Fee type created successfully with ID: {}", saved.getId());
         return saved;
     }
+
     
+
+    @Override
+    public FeeType getFeeTypeById(Long id) {
+        return feeTypeRepository.findById(id)
+                .orElseThrow(() -> new RuntimeException("FeeType not found with id: " + id));
+    }
+
     @Override
     public List<FeeType> getAllFeeTypes() {
         return feeTypeRepository.findAll();
     }
-    
+
     @Override
     public List<FeeType> getActiveFeeTypes() {
-        return feeTypeRepository.findByIsActiveTrue();
+        return feeTypeRepository.findByIsActive(true);
     }
-    
+
     @Override
-    public FeeType getFeeTypeById(Long id) {
-        return feeTypeRepository.findById(id)
-            .orElseThrow(() -> new RuntimeException("FeeType not found with id: " + id));
-    }
-    
-    @Override
-    public FeeType updateFeeType(Long id, FeeType feeType, Long performedBy) {
+    public FeeType updateFeeType(Long id, FeeType feeType) {
         FeeType existing = getFeeTypeById(id);
+        String oldValue = existing.toString();
         
-        // Update only non-null fields
+        // Update only provided fields
         if (feeType.getName() != null) existing.setName(feeType.getName());
         if (feeType.getDescription() != null) existing.setDescription(feeType.getDescription());
         if (feeType.getIsActive() != null) existing.setIsActive(feeType.getIsActive());
         
         FeeType updated = feeTypeRepository.save(existing);
-        createAuditLog("FEE_MANAGEMENT", "FeeType", id, "UPDATE", existing, updated, performedBy);
+        createAuditLog("FEE_MANAGEMENT", "FeeType", id, 
+                      AuditLog.Action.UPDATE, oldValue, updated.toString(), null);
         return updated;
     }
-    
+
     @Override
-    public void deleteFeeType(Long id, Long performedBy) {
+    public void deleteFeeType(Long id) {
         FeeType existing = getFeeTypeById(id);
-        createAuditLog("FEE_MANAGEMENT", "FeeType", id, "DELETE", existing, null, performedBy);
         feeTypeRepository.deleteById(id);
+        createAuditLog("FEE_MANAGEMENT", "FeeType", id, 
+                      AuditLog.Action.DELETE, existing.toString(), null, null);
     }
+
+    // ============================================
+    // 2. FEE STRUCTURES CRUD
+    // ============================================
     
-    // ========================================
-    // FEE STRUCTURE OPERATIONS
-    // ========================================
     @Override
-    public FeeStructure createFeeStructure(FeeStructure feeStructure, Long performedBy) {
+    public FeeStructure createFeeStructure(FeeStructure feeStructure) {
         FeeStructure saved = feeStructureRepository.save(feeStructure);
-        createAuditLog("FEE_MANAGEMENT", "FeeStructure", saved.getId(), "CREATE", null, saved, performedBy);
+        createAuditLog("FEE_MANAGEMENT", "FeeStructure", saved.getId(), 
+                      AuditLog.Action.CREATE, null, feeStructure.toString(), null);
         return saved;
     }
-    
+
+    @Override
+    public FeeStructure getFeeStructureById(Long id) {
+        return feeStructureRepository.findById(id)
+                .orElseThrow(() -> new RuntimeException("FeeStructure not found with id: " + id));
+    }
+
     @Override
     public List<FeeStructure> getAllFeeStructures() {
         return feeStructureRepository.findAll();
     }
-    
+
     @Override
-    public FeeStructure getFeeStructureById(Long id) {
-        return feeStructureRepository.findById(id)
-            .orElseThrow(() -> new RuntimeException("FeeStructure not found with id: " + id));
+    public List<FeeStructure> getFeeStructuresByCourse(Long courseId) {
+        return feeStructureRepository.findByCourseId(courseId);
     }
-    
+
     @Override
-    public List<FeeStructure> getFeeStructuresByCourseAndYear(Long courseId, String academicYear) {
-        return feeStructureRepository.findByCourseIdAndAcademicYear(courseId, academicYear);
+    public List<FeeStructure> getFeeStructuresByAcademicYear(String academicYear) {
+        return feeStructureRepository.findByAcademicYear(academicYear);
     }
-    
+
     @Override
-    public FeeStructure updateFeeStructure(Long id, FeeStructure feeStructure, Long performedBy) {
+    public List<FeeStructure> getFeeStructuresByBatch(Long batchId) {
+        return feeStructureRepository.findByBatchId(batchId);
+    }
+
+    @Override
+    public FeeStructure updateFeeStructure(Long id, FeeStructure feeStructure) {
         FeeStructure existing = getFeeStructureById(id);
+        String oldValue = existing.toString();
         
         if (feeStructure.getFeeTypeId() != null) existing.setFeeTypeId(feeStructure.getFeeTypeId());
         if (feeStructure.getAcademicYear() != null) existing.setAcademicYear(feeStructure.getAcademicYear());
         if (feeStructure.getCourseId() != null) existing.setCourseId(feeStructure.getCourseId());
         if (feeStructure.getBatchId() != null) existing.setBatchId(feeStructure.getBatchId());
-        if (feeStructure.getStudentCategory() != null) existing.setStudentCategory(feeStructure.getStudentCategory());
         if (feeStructure.getTotalAmount() != null) existing.setTotalAmount(feeStructure.getTotalAmount());
         if (feeStructure.getCurrency() != null) existing.setCurrency(feeStructure.getCurrency());
-        if (feeStructure.getPaymentSchedule() != null) existing.setPaymentSchedule(feeStructure.getPaymentSchedule());
         if (feeStructure.getIsActive() != null) existing.setIsActive(feeStructure.getIsActive());
         
         FeeStructure updated = feeStructureRepository.save(existing);
-        createAuditLog("FEE_MANAGEMENT", "FeeStructure", id, "UPDATE", existing, updated, performedBy);
+        createAuditLog("FEE_MANAGEMENT", "FeeStructure", id, 
+                      AuditLog.Action.UPDATE, oldValue, updated.toString(), null);
         return updated;
     }
-    
+
     @Override
-    public void deleteFeeStructure(Long id, Long performedBy) {
+    public void deleteFeeStructure(Long id) {
         FeeStructure existing = getFeeStructureById(id);
-        createAuditLog("FEE_MANAGEMENT", "FeeStructure", id, "DELETE", existing, null, performedBy);
         feeStructureRepository.deleteById(id);
+        createAuditLog("FEE_MANAGEMENT", "FeeStructure", id, 
+                      AuditLog.Action.DELETE, existing.toString(), null, null);
     }
+
+    // ============================================
+    // 3. FEE DISCOUNTS CRUD
+    // ============================================
     
-    // ========================================
-    // STUDENT FEE ALLOCATION OPERATIONS
-    // ========================================
     @Override
-    public StudentFeeAllocation createStudentFeeAllocation(StudentFeeAllocation allocation, Long performedBy) {
-        StudentFeeAllocation saved = studentFeeAllocationRepository.save(allocation);
-        createAuditLog("FEE_MANAGEMENT", "StudentFeeAllocation", saved.getId(), "CREATE", null, saved, performedBy);
+    public FeeDiscount createFeeDiscount(FeeDiscount feeDiscount) {
+        FeeDiscount saved = feeDiscountRepository.save(feeDiscount);
+        createAuditLog("FEE_MANAGEMENT", "FeeDiscount", saved.getId(), 
+                      AuditLog.Action.CREATE, null, feeDiscount.toString(), null);
         return saved;
     }
+
+    @Override
+    public FeeDiscount getFeeDiscountById(Long id) {
+        return feeDiscountRepository.findById(id)
+                .orElseThrow(() -> new RuntimeException("FeeDiscount not found with id: " + id));
+    }
+
+    @Override
+    public List<FeeDiscount> getAllFeeDiscounts() {
+        return feeDiscountRepository.findAll();
+    }
+
+    @Override
+    public List<FeeDiscount> getFeeDiscountsByUserId(Long userId) {
+        return feeDiscountRepository.findByUserId(userId);
+    }
+
+    @Override
+    public FeeDiscount updateFeeDiscount(Long id, FeeDiscount feeDiscount) {
+        FeeDiscount existing = getFeeDiscountById(id);
+        String oldValue = existing.toString();
+        
+        if (feeDiscount.getUserId() != null) existing.setUserId(feeDiscount.getUserId());
+        if (feeDiscount.getFeeStructureId() != null) existing.setFeeStructureId(feeDiscount.getFeeStructureId());
+        if (feeDiscount.getDiscountName() != null) existing.setDiscountName(feeDiscount.getDiscountName());
+        if (feeDiscount.getDiscountType() != null) existing.setDiscountType(feeDiscount.getDiscountType());
+        if (feeDiscount.getDiscountValue() != null) existing.setDiscountValue(feeDiscount.getDiscountValue());
+        if (feeDiscount.getReason() != null) existing.setReason(feeDiscount.getReason());
+        if (feeDiscount.getApprovedBy() != null) existing.setApprovedBy(feeDiscount.getApprovedBy());
+        if (feeDiscount.getApprovedDate() != null) existing.setApprovedDate(feeDiscount.getApprovedDate());
+        if (feeDiscount.getIsActive() != null) existing.setIsActive(feeDiscount.getIsActive());
+        
+        FeeDiscount updated = feeDiscountRepository.save(existing);
+        createAuditLog("FEE_MANAGEMENT", "FeeDiscount", id, 
+                      AuditLog.Action.UPDATE, oldValue, updated.toString(), null);
+        return updated;
+    }
+
+    @Override
+    public void deleteFeeDiscount(Long id) {
+        FeeDiscount existing = getFeeDiscountById(id);
+        feeDiscountRepository.deleteById(id);
+        createAuditLog("FEE_MANAGEMENT", "FeeDiscount", id, 
+                      AuditLog.Action.DELETE, existing.toString(), null, null);
+    }
+
+    // ============================================
+    // 4. STUDENT FEE ALLOCATIONS CRUD + BUSINESS LOGIC
+    // ============================================
     
     @Override
-    public List<StudentFeeAllocation> getAllStudentFeeAllocations() {
+    public StudentFeeAllocation createStudentFeeAllocation(StudentFeeAllocation allocation) {
+        // Auto-calculate payable amount if discounts exist
+        if (allocation.getFeeStructureId() != null && allocation.getUserId() != null) {
+            BigDecimal payableAmount = calculatePayableAmount(allocation.getUserId(), allocation.getFeeStructureId());
+            allocation.setPayableAmount(payableAmount);
+            
+            // Calculate remaining amount after advance payment
+            BigDecimal advancePayment = allocation.getAdvancePayment() != null ? 
+                                       allocation.getAdvancePayment() : BigDecimal.ZERO;
+            allocation.setRemainingAmount(payableAmount.subtract(advancePayment));
+        }
+        
+        StudentFeeAllocation saved = studentFeeAllocationRepository.save(allocation);
+        createAuditLog("FEE_MANAGEMENT", "StudentFeeAllocation", saved.getId(), 
+                      AuditLog.Action.CREATE, null, allocation.toString(), null);
+        return saved;
+    }
+
+    @Override
+    public StudentFeeAllocation getFeeAllocationById(Long id) {
+        return studentFeeAllocationRepository.findById(id)
+                .orElseThrow(() -> new RuntimeException("StudentFeeAllocation not found with id: " + id));
+    }
+
+    @Override
+    public List<StudentFeeAllocation> getAllFeeAllocations() {
         return studentFeeAllocationRepository.findAll();
     }
-    
+
     @Override
-    public StudentFeeAllocation getStudentFeeAllocationById(Long id) {
-        return studentFeeAllocationRepository.findById(id)
-            .orElseThrow(() -> new RuntimeException("StudentFeeAllocation not found with id: " + id));
-    }
-    
-    @Override
-    public List<StudentFeeAllocation> getStudentFeeAllocationsByUserId(Long userId) {
+    public List<StudentFeeAllocation> getFeeAllocationsByUserId(Long userId) {
         return studentFeeAllocationRepository.findByUserId(userId);
     }
-    
+
     @Override
-    public StudentFeeAllocation updateStudentFeeAllocation(Long id, StudentFeeAllocation allocation, Long performedBy) {
-        StudentFeeAllocation existing = getStudentFeeAllocationById(id);
+    public StudentFeeAllocation updateFeeAllocation(Long id, StudentFeeAllocation allocation) {
+        StudentFeeAllocation existing = getFeeAllocationById(id);
+        String oldValue = existing.toString();
         
         if (allocation.getUserId() != null) existing.setUserId(allocation.getUserId());
         if (allocation.getFeeStructureId() != null) existing.setFeeStructureId(allocation.getFeeStructureId());
         if (allocation.getOriginalAmount() != null) existing.setOriginalAmount(allocation.getOriginalAmount());
-        if (allocation.getDiscountAmount() != null) existing.setDiscountAmount(allocation.getDiscountAmount());
-        if (allocation.getFinalAmount() != null) existing.setFinalAmount(allocation.getFinalAmount());
-        if (allocation.getInitialPayment() != null) existing.setInitialPayment(allocation.getInitialPayment());
+        if (allocation.getTotalDiscount() != null) existing.setTotalDiscount(allocation.getTotalDiscount());
+        if (allocation.getPayableAmount() != null) existing.setPayableAmount(allocation.getPayableAmount());
+        if (allocation.getAdvancePayment() != null) existing.setAdvancePayment(allocation.getAdvancePayment());
         if (allocation.getRemainingAmount() != null) existing.setRemainingAmount(allocation.getRemainingAmount());
-        if (allocation.getNumberOfInstallments() != null) existing.setNumberOfInstallments(allocation.getNumberOfInstallments());
-        if (allocation.getDueDate() != null) existing.setDueDate(allocation.getDueDate());
+        if (allocation.getCurrency() != null) existing.setCurrency(allocation.getCurrency());
+        if (allocation.getAllocationDate() != null) existing.setAllocationDate(allocation.getAllocationDate());
         if (allocation.getStatus() != null) existing.setStatus(allocation.getStatus());
         
         StudentFeeAllocation updated = studentFeeAllocationRepository.save(existing);
-        createAuditLog("FEE_MANAGEMENT", "StudentFeeAllocation", id, "UPDATE", existing, updated, performedBy);
+        createAuditLog("FEE_MANAGEMENT", "StudentFeeAllocation", id, 
+                      AuditLog.Action.UPDATE, oldValue, updated.toString(), null);
         return updated;
     }
-    
-    @Override
-    public void deleteStudentFeeAllocation(Long id, Long performedBy) {
-        StudentFeeAllocation existing = getStudentFeeAllocationById(id);
-        createAuditLog("FEE_MANAGEMENT", "StudentFeeAllocation", id, "DELETE", existing, null, performedBy);
-        studentFeeAllocationRepository.deleteById(id);
-    }
-    
-    // ========================================
-    // FEE INSTALLMENT PLAN OPERATIONS
-    // ========================================
-    @Override
-    public FeeInstallmentPlan createFeeInstallmentPlan(FeeInstallmentPlan installmentPlan, Long performedBy) {
-        FeeInstallmentPlan saved = feeInstallmentPlanRepository.save(installmentPlan);
-        createAuditLog("FEE_MANAGEMENT", "FeeInstallmentPlan", saved.getId(), "CREATE", null, saved, performedBy);
-        return saved;
-    }
-    
-    @Override
-    public List<FeeInstallmentPlan> getAllFeeInstallmentPlans() {
-        return feeInstallmentPlanRepository.findAll();
-    }
-    
-    @Override
-    public FeeInstallmentPlan getFeeInstallmentPlanById(Long id) {
-        return feeInstallmentPlanRepository.findById(id)
-            .orElseThrow(() -> new RuntimeException("FeeInstallmentPlan not found with id: " + id));
-    }
-    
-    @Override
-    public List<FeeInstallmentPlan> getInstallmentPlansByAllocationId(Long allocationId) {
-        return feeInstallmentPlanRepository.findByStudentFeeAllocationIdOrderByInstallmentNumberAsc(allocationId);
-    }
-    
-    @Override
-    public FeeInstallmentPlan updateFeeInstallmentPlan(Long id, FeeInstallmentPlan installmentPlan, Long performedBy) {
-        FeeInstallmentPlan existing = getFeeInstallmentPlanById(id);
-        
-        if (installmentPlan.getStudentFeeAllocationId() != null) existing.setStudentFeeAllocationId(installmentPlan.getStudentFeeAllocationId());
-        if (installmentPlan.getInstallmentNumber() != null) existing.setInstallmentNumber(installmentPlan.getInstallmentNumber());
-        if (installmentPlan.getDueDate() != null) existing.setDueDate(installmentPlan.getDueDate());
-        if (installmentPlan.getDueAmount() != null) existing.setDueAmount(installmentPlan.getDueAmount());
-        if (installmentPlan.getPaidAmount() != null) existing.setPaidAmount(installmentPlan.getPaidAmount());
-        if (installmentPlan.getStatus() != null) existing.setStatus(installmentPlan.getStatus());
-        if (installmentPlan.getLateFee() != null) existing.setLateFee(installmentPlan.getLateFee());
-        
-        FeeInstallmentPlan updated = feeInstallmentPlanRepository.save(existing);
-        createAuditLog("FEE_MANAGEMENT", "FeeInstallmentPlan", id, "UPDATE", existing, updated, performedBy);
-        return updated;
-    }
-    
-    @Override
-    public void deleteFeeInstallmentPlan(Long id, Long performedBy) {
-        FeeInstallmentPlan existing = getFeeInstallmentPlanById(id);
-        createAuditLog("FEE_MANAGEMENT", "FeeInstallmentPlan", id, "DELETE", existing, null, performedBy);
-        feeInstallmentPlanRepository.deleteById(id);
-    }
- // Continue from Part 1...
 
-    // ========================================
-    // STUDENT FEE PAYMENT OPERATIONS
-    // ========================================
     @Override
-    public StudentFeePayment createStudentFeePayment(StudentFeePayment payment, Long performedBy) {
-        // Calculate total paid
-        payment.setTotalPaid(payment.getPaidAmount().add(
-            payment.getLateFeePaid() != null ? payment.getLateFeePaid() : BigDecimal.ZERO
-        ));
+    public void deleteFeeAllocation(Long id) {
+        StudentFeeAllocation existing = getFeeAllocationById(id);
+        studentFeeAllocationRepository.deleteById(id);
+        createAuditLog("FEE_MANAGEMENT", "StudentFeeAllocation", id, 
+                      AuditLog.Action.DELETE, existing.toString(), null, null);
+    }
+
+    @Override
+    public BigDecimal calculatePayableAmount(Long userId, Long feeStructureId) {
+        // Get original fee structure amount
+        FeeStructure feeStructure = getFeeStructureById(feeStructureId);
+        BigDecimal originalAmount = feeStructure.getTotalAmount();
         
-        StudentFeePayment saved = studentFeePaymentRepository.save(payment);
+        // Get all active discounts for this user and fee structure
+        List<FeeDiscount> discounts = feeDiscountRepository.findByUserIdAndFeeStructureId(userId, feeStructureId)
+                .stream()
+                .filter(d -> d.getIsActive() != null && d.getIsActive())
+                .collect(Collectors.toList());
         
-        // Update allocation status
-        updateAllocationStatus(saved.getStudentFeeAllocationId());
+        BigDecimal totalDiscount = BigDecimal.ZERO;
         
-        // Update installment if linked
-        if (saved.getInstallmentPlanId() != null) {
-            updateInstallmentAfterPayment(saved.getInstallmentPlanId(), saved.getPaidAmount());
+        for (FeeDiscount discount : discounts) {
+            if (discount.getDiscountType() == FeeDiscount.DiscountType.PERCENTAGE) {
+                // Percentage discount
+                BigDecimal discountAmount = originalAmount.multiply(discount.getDiscountValue())
+                        .divide(BigDecimal.valueOf(100), 2, RoundingMode.HALF_UP);
+                totalDiscount = totalDiscount.add(discountAmount);
+            } else {
+                // Flat discount
+                totalDiscount = totalDiscount.add(discount.getDiscountValue());
+            }
         }
         
-        // Auto-generate receipt
-        generateReceipt(saved.getId());
+        BigDecimal payableAmount = originalAmount.subtract(totalDiscount);
         
-        createAuditLog("FEE_MANAGEMENT", "StudentFeePayment", saved.getId(), "CREATE", null, saved, performedBy);
+        // Ensure payable amount is not negative
+        return payableAmount.compareTo(BigDecimal.ZERO) < 0 ? BigDecimal.ZERO : payableAmount;
+    }
+ // ============================================
+    // 5. PAYMENT ALTERNATIVES CRUD
+    // ============================================
+    
+    @Override
+    public PaymentAlternative createPaymentAlternative(PaymentAlternative alternative) {
+        PaymentAlternative saved = paymentAlternativeRepository.save(alternative);
+        createAuditLog("FEE_MANAGEMENT", "PaymentAlternative", saved.getId(), 
+                      AuditLog.Action.CREATE, null, alternative.toString(), null);
         return saved;
     }
+
+    @Override
+    public PaymentAlternative getPaymentAlternativeById(Long id) {
+        return paymentAlternativeRepository.findById(id)
+                .orElseThrow(() -> new RuntimeException("PaymentAlternative not found with id: " + id));
+    }
+
+    @Override
+    public List<PaymentAlternative> getAllPaymentAlternatives() {
+        return paymentAlternativeRepository.findAll();
+    }
+
+    @Override
+    public List<PaymentAlternative> getActivePaymentAlternatives() {
+        return paymentAlternativeRepository.findByIsActive(true);
+    }
+
+    @Override
+    public PaymentAlternative updatePaymentAlternative(Long id, PaymentAlternative alternative) {
+        PaymentAlternative existing = getPaymentAlternativeById(id);
+        String oldValue = existing.toString();
+        
+        if (alternative.getAlternativeName() != null) existing.setAlternativeName(alternative.getAlternativeName());
+        if (alternative.getNumberOfInstallments() != null) existing.setNumberOfInstallments(alternative.getNumberOfInstallments());
+        if (alternative.getDescription() != null) existing.setDescription(alternative.getDescription());
+        if (alternative.getIsActive() != null) existing.setIsActive(alternative.getIsActive());
+        if (alternative.getCreatedBy() != null) existing.setCreatedBy(alternative.getCreatedBy());
+        
+        PaymentAlternative updated = paymentAlternativeRepository.save(existing);
+        createAuditLog("FEE_MANAGEMENT", "PaymentAlternative", id, 
+                      AuditLog.Action.UPDATE, oldValue, updated.toString(), null);
+        return updated;
+    }
+
+    @Override
+    public void deletePaymentAlternative(Long id) {
+        PaymentAlternative existing = getPaymentAlternativeById(id);
+        paymentAlternativeRepository.deleteById(id);
+        createAuditLog("FEE_MANAGEMENT", "PaymentAlternative", id, 
+                      AuditLog.Action.DELETE, existing.toString(), null, null);
+    }
+
+    // ============================================
+    // 6. STUDENT INSTALLMENT PLANS CRUD + BUSINESS LOGIC
+    // ============================================
     
     @Override
-    public List<StudentFeePayment> getAllStudentFeePayments() {
+    public StudentInstallmentPlan createInstallmentPlan(StudentInstallmentPlan plan) {
+        StudentInstallmentPlan saved = studentInstallmentPlanRepository.save(plan);
+        createAuditLog("FEE_MANAGEMENT", "StudentInstallmentPlan", saved.getId(), 
+                      AuditLog.Action.CREATE, null, plan.toString(), null);
+        return saved;
+    }
+
+    @Override
+    public StudentInstallmentPlan getInstallmentPlanById(Long id) {
+        return studentInstallmentPlanRepository.findById(id)
+                .orElseThrow(() -> new RuntimeException("StudentInstallmentPlan not found with id: " + id));
+    }
+
+    @Override
+    public List<StudentInstallmentPlan> getAllInstallmentPlans() {
+        return studentInstallmentPlanRepository.findAll();
+    }
+
+    @Override
+    public List<StudentInstallmentPlan> getInstallmentPlansByAllocationId(Long allocationId) {
+        return studentInstallmentPlanRepository.findByStudentFeeAllocationId(allocationId);
+    }
+
+    @Override
+    public StudentInstallmentPlan updateInstallmentPlan(Long id, StudentInstallmentPlan plan) {
+        StudentInstallmentPlan existing = getInstallmentPlanById(id);
+        String oldValue = existing.toString();
+        
+        if (plan.getStudentFeeAllocationId() != null) existing.setStudentFeeAllocationId(plan.getStudentFeeAllocationId());
+        if (plan.getPaymentAlternativeId() != null) existing.setPaymentAlternativeId(plan.getPaymentAlternativeId());
+        if (plan.getInstallmentNumber() != null) existing.setInstallmentNumber(plan.getInstallmentNumber());
+        if (plan.getInstallmentAmount() != null) existing.setInstallmentAmount(plan.getInstallmentAmount());
+        if (plan.getDueDate() != null) existing.setDueDate(plan.getDueDate());
+        if (plan.getPaidAmount() != null) existing.setPaidAmount(plan.getPaidAmount());
+        if (plan.getStatus() != null) existing.setStatus(plan.getStatus());
+        
+        StudentInstallmentPlan updated = studentInstallmentPlanRepository.save(existing);
+        createAuditLog("FEE_MANAGEMENT", "StudentInstallmentPlan", id, 
+                      AuditLog.Action.UPDATE, oldValue, updated.toString(), null);
+        return updated;
+    }
+
+    @Override
+    public void deleteInstallmentPlan(Long id) {
+        StudentInstallmentPlan existing = getInstallmentPlanById(id);
+        studentInstallmentPlanRepository.deleteById(id);
+        createAuditLog("FEE_MANAGEMENT", "StudentInstallmentPlan", id, 
+                      AuditLog.Action.DELETE, existing.toString(), null, null);
+    }
+
+    @Override
+    public List<StudentInstallmentPlan> createInstallmentsForStudent(Long allocationId, Long alternativeId, 
+                                                                      List<Map<String, Object>> installmentDetails) {
+        StudentFeeAllocation allocation = getFeeAllocationById(allocationId);
+        PaymentAlternative alternative = getPaymentAlternativeById(alternativeId);
+        
+        // Validate: Number of installments must match alternative
+        if (installmentDetails.size() != alternative.getNumberOfInstallments()) {
+            throw new RuntimeException("Number of installments must be " + alternative.getNumberOfInstallments());
+        }
+        
+        // Validate: Sum of installment amounts must equal remaining amount
+        BigDecimal totalInstallmentAmount = installmentDetails.stream()
+                .map(detail -> new BigDecimal(detail.get("amount").toString()))
+                .reduce(BigDecimal.ZERO, BigDecimal::add);
+        
+        if (totalInstallmentAmount.compareTo(allocation.getRemainingAmount()) != 0) {
+            throw new RuntimeException("Sum of installment amounts must equal remaining amount: " + 
+                                      allocation.getRemainingAmount());
+        }
+        
+        List<StudentInstallmentPlan> installments = new ArrayList<>();
+        
+        for (int i = 0; i < installmentDetails.size(); i++) {
+            Map<String, Object> detail = installmentDetails.get(i);
+            
+            StudentInstallmentPlan installment = new StudentInstallmentPlan();
+            installment.setStudentFeeAllocationId(allocationId);
+            installment.setPaymentAlternativeId(alternativeId);
+            installment.setInstallmentNumber(i + 1);
+            installment.setInstallmentAmount(new BigDecimal(detail.get("amount").toString()));
+            installment.setDueDate(LocalDate.parse(detail.get("dueDate").toString()));
+            installment.setStatus(StudentInstallmentPlan.InstallmentStatus.PENDING);
+            
+            installments.add(studentInstallmentPlanRepository.save(installment));
+        }
+        
+        return installments;
+    }
+
+    @Override
+    public List<StudentInstallmentPlan> resetInstallments(Long allocationId, Long alternativeId, 
+                                                          List<Map<String, Object>> newInstallmentDetails) {
+        // Delete existing installments
+        List<StudentInstallmentPlan> existingInstallments = getInstallmentPlansByAllocationId(allocationId);
+        for (StudentInstallmentPlan installment : existingInstallments) {
+            studentInstallmentPlanRepository.deleteById(installment.getId());
+        }
+        
+        // Create new installments
+        return createInstallmentsForStudent(allocationId, alternativeId, newInstallmentDetails);
+    }
+
+    @Override
+    public List<StudentInstallmentPlan> getOverdueInstallments() {
+        return studentInstallmentPlanRepository.findOverdueInstallments(LocalDate.now());
+    }
+ // ============================================
+    // 7. STUDENT FEE PAYMENTS CRUD + BUSINESS LOGIC
+    // ============================================
+    
+    @Override
+    public StudentFeePayment createPayment(StudentFeePayment payment) {
+        StudentFeePayment saved = studentFeePaymentRepository.save(payment);
+        createAuditLog("FEE_MANAGEMENT", "StudentFeePayment", saved.getId(), 
+                      AuditLog.Action.CREATE, null, payment.toString(), null);
+        
+        // Update installment status if linked
+        if (saved.getStudentInstallmentPlanId() != null) {
+            updateInstallmentStatus(saved.getStudentInstallmentPlanId(), saved.getPaidAmount());
+        }
+        
+        // Auto-generate receipt if payment is successful
+        if (saved.getPaymentStatus() == StudentFeePayment.PaymentStatus.SUCCESS) {
+            generateReceipt(saved.getId());
+        }
+        
+        return saved;
+    }
+
+    @Override
+    public StudentFeePayment getPaymentById(Long id) {
+        return studentFeePaymentRepository.findById(id)
+                .orElseThrow(() -> new RuntimeException("StudentFeePayment not found with id: " + id));
+    }
+
+    @Override
+    public List<StudentFeePayment> getAllPayments() {
         return studentFeePaymentRepository.findAll();
     }
-    
-    @Override
-    public StudentFeePayment getStudentFeePaymentById(Long id) {
-        return studentFeePaymentRepository.findById(id)
-            .orElseThrow(() -> new RuntimeException("StudentFeePayment not found with id: " + id));
-    }
-    
+
     @Override
     public List<StudentFeePayment> getPaymentsByAllocationId(Long allocationId) {
         return studentFeePaymentRepository.findByStudentFeeAllocationId(allocationId);
     }
-    
+
     @Override
-    public StudentFeePayment updateStudentFeePayment(Long id, StudentFeePayment payment, Long performedBy) {
-        StudentFeePayment existing = getStudentFeePaymentById(id);
+    public StudentFeePayment updatePayment(Long id, StudentFeePayment payment) {
+        StudentFeePayment existing = getPaymentById(id);
+        String oldValue = existing.toString();
         
         if (payment.getStudentFeeAllocationId() != null) existing.setStudentFeeAllocationId(payment.getStudentFeeAllocationId());
-        if (payment.getInstallmentPlanId() != null) existing.setInstallmentPlanId(payment.getInstallmentPlanId());
+        if (payment.getStudentInstallmentPlanId() != null) existing.setStudentInstallmentPlanId(payment.getStudentInstallmentPlanId());
         if (payment.getPaidAmount() != null) existing.setPaidAmount(payment.getPaidAmount());
-        if (payment.getLateFeePaid() != null) existing.setLateFeePaid(payment.getLateFeePaid());
         if (payment.getPaymentDate() != null) existing.setPaymentDate(payment.getPaymentDate());
         if (payment.getPaymentMode() != null) existing.setPaymentMode(payment.getPaymentMode());
-        if (payment.getTransactionReference() != null) existing.setTransactionReference(payment.getTransactionReference());
-        if (payment.getPaymentGateway() != null) existing.setPaymentGateway(payment.getPaymentGateway());
         if (payment.getPaymentStatus() != null) existing.setPaymentStatus(payment.getPaymentStatus());
-        if (payment.getCollectedBy() != null) existing.setCollectedBy(payment.getCollectedBy());
-        if (payment.getRemarks() != null) existing.setRemarks(payment.getRemarks());
-        
-        // Recalculate total
-        existing.setTotalPaid(existing.getPaidAmount().add(
-            existing.getLateFeePaid() != null ? existing.getLateFeePaid() : BigDecimal.ZERO
-        ));
+        if (payment.getTransactionReference() != null) existing.setTransactionReference(payment.getTransactionReference());
+        if (payment.getGatewayResponse() != null) existing.setGatewayResponse(payment.getGatewayResponse());
+        if (payment.getScreenshotUrl() != null) existing.setScreenshotUrl(payment.getScreenshotUrl());
+        if (payment.getCurrency() != null) existing.setCurrency(payment.getCurrency());
+        if (payment.getRecordedBy() != null) existing.setRecordedBy(payment.getRecordedBy());
         
         StudentFeePayment updated = studentFeePaymentRepository.save(existing);
-        createAuditLog("FEE_MANAGEMENT", "StudentFeePayment", id, "UPDATE", existing, updated, performedBy);
+        createAuditLog("FEE_MANAGEMENT", "StudentFeePayment", id, 
+                      AuditLog.Action.UPDATE, oldValue, updated.toString(), null);
         return updated;
     }
-    
+
     @Override
-    public void deleteStudentFeePayment(Long id, Long performedBy) {
-        StudentFeePayment existing = getStudentFeePaymentById(id);
-        createAuditLog("FEE_MANAGEMENT", "StudentFeePayment", id, "DELETE", existing, null, performedBy);
+    public void deletePayment(Long id) {
+        StudentFeePayment existing = getPaymentById(id);
         studentFeePaymentRepository.deleteById(id);
+        createAuditLog("FEE_MANAGEMENT", "StudentFeePayment", id, 
+                      AuditLog.Action.DELETE, existing.toString(), null, null);
     }
-    
-    // ========================================
-    // SPECIAL ALLOCATION METHODS
-    // ========================================
+
     @Override
-    public StudentFeeAllocation allocateFeeToStudent(Long userId, Long feeStructureId, LocalDate dueDate,
-                                                     BigDecimal initialPayment, Integer numberOfInstallments, Long performedBy) {
-        FeeStructure feeStructure = getFeeStructureById(feeStructureId);
+    public StudentFeePayment processOnlinePayment(Long allocationId, Long installmentPlanId, 
+                                                   BigDecimal amount, String paymentMode, 
+                                                   String transactionRef, String gatewayResponse) {
+        logger.info("Processing online payment - Allocation ID: {}, Amount: {}", allocationId, amount);
         
-        // Check for existing discounts
-        Optional<FeeDiscount> discountOpt = feeDiscountRepository.findApprovedDiscount(userId, feeStructureId);
-        
-        BigDecimal originalAmount = feeStructure.getTotalAmount();
-        BigDecimal discountAmount = BigDecimal.ZERO;
-        
-        if (discountOpt.isPresent()) {
-            discountAmount = discountOpt.get().getCalculatedAmount();
+        try {
+            StudentFeePayment payment = new StudentFeePayment();
+            payment.setStudentFeeAllocationId(allocationId);
+            payment.setStudentInstallmentPlanId(installmentPlanId);
+            payment.setPaidAmount(amount);
+            payment.setPaymentDate(LocalDateTime.now());
+            payment.setPaymentMode(StudentFeePayment.PaymentMode.valueOf(paymentMode));
+            payment.setPaymentStatus(StudentFeePayment.PaymentStatus.SUCCESS);
+            payment.setTransactionReference(transactionRef);
+            payment.setGatewayResponse(gatewayResponse);
+            
+            StudentFeePayment saved = createPayment(payment);
+            
+            logger.info("Online payment processed successfully - Payment ID: {}", saved.getId());
+            return saved;
+            
+        } catch (Exception e) {
+            logger.error("Failed to process online payment for allocation {}: {}", allocationId, e.getMessage());
+            throw e;
         }
+    }
+
+    @Override
+    public StudentFeePayment recordManualPayment(Long allocationId, Long installmentPlanId, 
+                                                 BigDecimal amount, String paymentMode, 
+                                                 String transactionRef, Long recordedBy) {
+        StudentFeePayment payment = new StudentFeePayment();
+        payment.setStudentFeeAllocationId(allocationId);
+        payment.setStudentInstallmentPlanId(installmentPlanId);
+        payment.setPaidAmount(amount);
+        payment.setPaymentDate(LocalDateTime.now());
+        payment.setPaymentMode(StudentFeePayment.PaymentMode.valueOf(paymentMode));
+        payment.setPaymentStatus(StudentFeePayment.PaymentStatus.SUCCESS);
+        payment.setTransactionReference(transactionRef);
+        payment.setRecordedBy(recordedBy);
         
-        BigDecimal finalAmount = originalAmount.subtract(discountAmount);
-        BigDecimal remainingAmount = finalAmount.subtract(initialPayment);
+        StudentFeePayment saved = createPayment(payment);
         
-        // Create allocation
-        StudentFeeAllocation allocation = new StudentFeeAllocation();
-        allocation.setUserId(userId);
-        allocation.setFeeStructureId(feeStructureId);
-        allocation.setOriginalAmount(originalAmount);
-        allocation.setDiscountAmount(discountAmount);
-        allocation.setFinalAmount(finalAmount);
-        allocation.setInitialPayment(initialPayment);
-        allocation.setRemainingAmount(remainingAmount);
-        allocation.setNumberOfInstallments(numberOfInstallments);
-        allocation.setDueDate(dueDate);
-        allocation.setStatus("PENDING");
+        // Update allocation remaining amount
+        StudentFeeAllocation allocation = getFeeAllocationById(allocationId);
+        BigDecimal newRemaining = allocation.getRemainingAmount().subtract(amount);
+        allocation.setRemainingAmount(newRemaining);
         
-        StudentFeeAllocation saved = studentFeeAllocationRepository.save(allocation);
-        
-        // Create installment plan
-        createInstallmentPlanForAllocation(saved.getId(), remainingAmount, numberOfInstallments, dueDate);
-        
-        createAuditLog("FEE_MANAGEMENT", "StudentFeeAllocation", saved.getId(), "ALLOCATE", null, saved, performedBy);
+        // Update status if fully paid
+        if (newRemaining.compareTo(BigDecimal.ZERO) <= 0) {
+            allocation.setStatus(StudentFeeAllocation.AllocationStatus.COMPLETED);
+            unblockCertificate(allocation.getUserId());
+        }
+        studentFeeAllocationRepository.save(allocation);
         
         return saved;
     }
-    
-    private void createInstallmentPlanForAllocation(Long allocationId, BigDecimal remainingAmount, 
-                                                    Integer numberOfInstallments, LocalDate startDate) {
-        BigDecimal installmentAmount = remainingAmount.divide(
-            BigDecimal.valueOf(numberOfInstallments), 2, RoundingMode.HALF_UP
-        );
+
+    @Override
+    public void updateInstallmentStatus(Long installmentPlanId, BigDecimal paidAmount) {
+        StudentInstallmentPlan installment = getInstallmentPlanById(installmentPlanId);
         
-        for (int i = 1; i <= numberOfInstallments; i++) {
-            FeeInstallmentPlan installment = new FeeInstallmentPlan();
-            installment.setStudentFeeAllocationId(allocationId);
-            installment.setInstallmentNumber(i);
-            installment.setDueDate(startDate.plusMonths(i));
-            installment.setDueAmount(installmentAmount);
-            installment.setPaidAmount(BigDecimal.ZERO);
-            installment.setStatus("PENDING");
-            installment.setLateFee(BigDecimal.ZERO);
-            
-            feeInstallmentPlanRepository.save(installment);
+        // Update paid amount
+        BigDecimal currentPaid = installment.getPaidAmount() != null ? installment.getPaidAmount() : BigDecimal.ZERO;
+        BigDecimal newPaid = currentPaid.add(paidAmount);
+        installment.setPaidAmount(newPaid);
+        
+        // Update status
+        if (newPaid.compareTo(installment.getInstallmentAmount()) >= 0) {
+            installment.setStatus(StudentInstallmentPlan.InstallmentStatus.PAID);
+        } else if (newPaid.compareTo(BigDecimal.ZERO) > 0) {
+            installment.setStatus(StudentInstallmentPlan.InstallmentStatus.PARTIALLY_PAID);
         }
+        
+        studentInstallmentPlanRepository.save(installment);
     }
+
+    // ============================================
+    // 8. LATE FEE CONFIG CRUD
+    // ============================================
     
     @Override
-    public void applyDiscountToAllocation(Long allocationId, Long discountId, Long performedBy) {
-        StudentFeeAllocation allocation = getStudentFeeAllocationById(allocationId);
-        FeeDiscount discount = getFeeDiscountById(discountId);
+    public LateFeeConfig createLateFeeConfig(LateFeeConfig config) {
+        LateFeeConfig saved = lateFeeConfigRepository.save(config);
+        createAuditLog("FEE_MANAGEMENT", "LateFeeConfig", saved.getId(), 
+                      AuditLog.Action.CREATE, null, config.toString(), null);
+        return saved;
+    }
+
+    @Override
+    public LateFeeConfig getLateFeeConfigById(Long id) {
+        return lateFeeConfigRepository.findById(id)
+                .orElseThrow(() -> new RuntimeException("LateFeeConfig not found with id: " + id));
+    }
+
+    @Override
+    public List<LateFeeConfig> getAllLateFeeConfigs() {
+        return lateFeeConfigRepository.findAll();
+    }
+
+    @Override
+    public List<LateFeeConfig> getActiveLateFeeConfigs() {
+        return lateFeeConfigRepository.findByIsActive(true);
+    }
+
+    @Override
+    public LateFeeConfig updateLateFeeConfig(Long id, LateFeeConfig config) {
+        LateFeeConfig existing = getLateFeeConfigById(id);
+        String oldValue = existing.toString();
         
-        if (!"APPROVED".equals(discount.getStatus())) {
-            throw new RuntimeException("Discount is not approved");
+        if (config.getPaymentSchedule() != null) existing.setPaymentSchedule(config.getPaymentSchedule());
+        if (config.getPeriodCount() != null) existing.setPeriodCount(config.getPeriodCount());
+        if (config.getPenaltyAmount() != null) existing.setPenaltyAmount(config.getPenaltyAmount());
+        if (config.getIsActive() != null) existing.setIsActive(config.getIsActive());
+        if (config.getEffectiveFrom() != null) existing.setEffectiveFrom(config.getEffectiveFrom());
+        if (config.getEffectiveTo() != null) existing.setEffectiveTo(config.getEffectiveTo());
+        if (config.getCreatedBy() != null) existing.setCreatedBy(config.getCreatedBy());
+        
+        LateFeeConfig updated = lateFeeConfigRepository.save(existing);
+        createAuditLog("FEE_MANAGEMENT", "LateFeeConfig", id, 
+                      AuditLog.Action.UPDATE, oldValue, updated.toString(), null);
+        return updated;
+    }
+
+    @Override
+    public void deleteLateFeeConfig(Long id) {
+        LateFeeConfig existing = getLateFeeConfigById(id);
+        lateFeeConfigRepository.deleteById(id);
+        createAuditLog("FEE_MANAGEMENT", "LateFeeConfig", id, 
+                      AuditLog.Action.DELETE, existing.toString(), null, null);
+    }
+
+    // ============================================
+    // 9. LATE FEE PENALTIES CRUD + AUTO CALCULATION
+    // ============================================
+    
+    @Override
+    public LateFeePenalty createLateFeePenalty(LateFeePenalty penalty) {
+        LateFeePenalty saved = lateFeePenaltyRepository.save(penalty);
+        createAuditLog("FEE_MANAGEMENT", "LateFeePenalty", saved.getId(), 
+                      AuditLog.Action.CREATE, null, penalty.toString(), null);
+        return saved;
+    }
+
+    @Override
+    public LateFeePenalty getLateFeePenaltyById(Long id) {
+        return lateFeePenaltyRepository.findById(id)
+                .orElseThrow(() -> new RuntimeException("LateFeePenalty not found with id: " + id));
+    }
+
+    @Override
+    public List<LateFeePenalty> getAllLateFeePenalties() {
+        return lateFeePenaltyRepository.findAll();
+    }
+
+    @Override
+    public List<LateFeePenalty> getLateFeePenaltiesByInstallmentId(Long installmentId) {
+        return lateFeePenaltyRepository.findByStudentInstallmentPlanId(installmentId);
+    }
+
+    @Override
+    public LateFeePenalty updateLateFeePenalty(Long id, LateFeePenalty penalty) {
+        LateFeePenalty existing = getLateFeePenaltyById(id);
+        String oldValue = existing.toString();
+        
+        if (penalty.getStudentInstallmentPlanId() != null) existing.setStudentInstallmentPlanId(penalty.getStudentInstallmentPlanId());
+        if (penalty.getPenaltyAmount() != null) existing.setPenaltyAmount(penalty.getPenaltyAmount());
+        if (penalty.getPenaltyDate() != null) existing.setPenaltyDate(penalty.getPenaltyDate());
+        if (penalty.getReason() != null) existing.setReason(penalty.getReason());
+        if (penalty.getIsWaived() != null) existing.setIsWaived(penalty.getIsWaived());
+        if (penalty.getWaivedBy() != null) existing.setWaivedBy(penalty.getWaivedBy());
+        if (penalty.getWaivedDate() != null) existing.setWaivedDate(penalty.getWaivedDate());
+        
+        LateFeePenalty updated = lateFeePenaltyRepository.save(existing);
+        createAuditLog("FEE_MANAGEMENT", "LateFeePenalty", id, 
+                      AuditLog.Action.UPDATE, oldValue, updated.toString(), null);
+        return updated;
+    }
+
+    @Override
+    public void deleteLateFeePenalty(Long id) {
+        LateFeePenalty existing = getLateFeePenaltyById(id);
+        lateFeePenaltyRepository.deleteById(id);
+        createAuditLog("FEE_MANAGEMENT", "LateFeePenalty", id, 
+                      AuditLog.Action.DELETE, existing.toString(), null, null);
+    }
+
+    @Override
+    public void applyLateFees() {
+        LocalDate today = LocalDate.now();
+        List<StudentInstallmentPlan> overdueInstallments = getOverdueInstallments();
+        
+        // Get active late fee configs
+        List<LateFeeConfig> configs = lateFeeConfigRepository.findActiveConfigsForDate(today);
+        
+        for (StudentInstallmentPlan installment : overdueInstallments) {
+            // Skip if already fully paid
+            if (installment.getStatus() == StudentInstallmentPlan.InstallmentStatus.PAID) {
+                continue;
+            }
+            
+            LocalDate dueDate = installment.getDueDate();
+            long daysPastDue = ChronoUnit.DAYS.between(dueDate, today);
+            
+            for (LateFeeConfig config : configs) {
+                int periodDays = 0;
+                
+                // Calculate period in days based on schedule type
+                switch (config.getPaymentSchedule()) {
+                    case MONTHLY:
+                        periodDays = 30 * config.getPeriodCount();
+                        break;
+                    case QUARTERLY:
+                        periodDays = 90 * config.getPeriodCount();
+                        break;
+                    case YEARLY:
+                        periodDays = 365 * config.getPeriodCount();
+                        break;
+                }
+                
+                // Apply penalty if overdue period matches
+                if (daysPastDue >= periodDays && daysPastDue < periodDays + 30) {
+                    // Check if penalty already applied for this period
+                    List<LateFeePenalty> existingPenalties = 
+                        lateFeePenaltyRepository.findByStudentInstallmentPlanId(installment.getId());
+                    
+                    boolean alreadyApplied = existingPenalties.stream()
+                        .anyMatch(p -> p.getPenaltyDate().equals(today));
+                    
+                    if (!alreadyApplied) {
+                        LateFeePenalty penalty = new LateFeePenalty();
+                        penalty.setStudentInstallmentPlanId(installment.getId());
+                        penalty.setPenaltyAmount(config.getPenaltyAmount());
+                        penalty.setPenaltyDate(today);
+                        penalty.setReason("Overdue by " + daysPastDue + " days");
+                        
+                        createLateFeePenalty(penalty);
+                        
+                        // Update installment status to OVERDUE
+                        installment.setStatus(StudentInstallmentPlan.InstallmentStatus.OVERDUE);
+                        studentInstallmentPlanRepository.save(installment);
+                        
+                        // Get student allocation and send warning
+                        StudentFeeAllocation allocation = getFeeAllocationById(installment.getStudentFeeAllocationId());
+                        sendOverdueWarningNotification(allocation.getUserId(), installment.getId(), "student@example.com");
+                    }
+                }
+            }
         }
+    }
+
+    @Override
+    public LateFeePenalty waiveLateFee(Long penaltyId, Long waivedBy) {
+        LateFeePenalty penalty = getLateFeePenaltyById(penaltyId);
+        penalty.setIsWaived(true);
+        penalty.setWaivedBy(waivedBy);
+        penalty.setWaivedDate(LocalDate.now());
         
-        BigDecimal discountAmount = discount.getCalculatedAmount();
-        allocation.setDiscountAmount(discountAmount);
-        allocation.setFinalAmount(allocation.getOriginalAmount().subtract(discountAmount));
-        allocation.setRemainingAmount(allocation.getFinalAmount().subtract(allocation.getInitialPayment()));
+        return lateFeePenaltyRepository.save(penalty);
+    }
+
+    // ============================================
+    // 10. ATTENDANCE PENALTIES CRUD + AUTO APPLICATION
+    // ============================================
+    
+    @Override
+    public AttendancePenalty createAttendancePenalty(AttendancePenalty penalty) {
+        AttendancePenalty saved = attendancePenaltyRepository.save(penalty);
+        createAuditLog("FEE_MANAGEMENT", "AttendancePenalty", saved.getId(), 
+                      AuditLog.Action.CREATE, null, penalty.toString(), null);
         
+        // Update student allocation remaining amount
+        StudentFeeAllocation allocation = getFeeAllocationById(penalty.getStudentFeeAllocationId());
+        BigDecimal newRemaining = allocation.getRemainingAmount().add(penalty.getPenaltyAmount());
+        allocation.setRemainingAmount(newRemaining);
         studentFeeAllocationRepository.save(allocation);
         
-        // Recalculate installments
-        List<FeeInstallmentPlan> installments = getInstallmentPlansByAllocationId(allocationId);
-        recalculateInstallments(installments, allocation.getRemainingAmount());
-        
-        createAuditLog("FEE_MANAGEMENT", "StudentFeeAllocation", allocationId, "APPLY_DISCOUNT", null, allocation, performedBy);
+        return saved;
     }
+
+    @Override
+    public AttendancePenalty getAttendancePenaltyById(Long id) {
+        return attendancePenaltyRepository.findById(id)
+                .orElseThrow(() -> new RuntimeException("AttendancePenalty not found with id: " + id));
+    }
+
+    @Override
+    public List<AttendancePenalty> getAllAttendancePenalties() {
+        return attendancePenaltyRepository.findAll();
+    }
+
+    @Override
+    public List<AttendancePenalty> getAttendancePenaltiesByUserId(Long userId) {
+        return attendancePenaltyRepository.findByUserId(userId);
+    }
+
+    @Override
+    public AttendancePenalty updateAttendancePenalty(Long id, AttendancePenalty penalty) {
+        AttendancePenalty existing = getAttendancePenaltyById(id);
+        String oldValue = existing.toString();
+        
+        if (penalty.getUserId() != null) existing.setUserId(penalty.getUserId());
+        if (penalty.getStudentFeeAllocationId() != null) existing.setStudentFeeAllocationId(penalty.getStudentFeeAllocationId());
+        if (penalty.getAbsenceDate() != null) existing.setAbsenceDate(penalty.getAbsenceDate());
+        if (penalty.getPenaltyAmount() != null) existing.setPenaltyAmount(penalty.getPenaltyAmount());
+        if (penalty.getReason() != null) existing.setReason(penalty.getReason());
+        if (penalty.getAppliedBy() != null) existing.setAppliedBy(penalty.getAppliedBy());
+        if (penalty.getIsActive() != null) existing.setIsActive(penalty.getIsActive());
+        
+        AttendancePenalty updated = attendancePenaltyRepository.save(existing);
+        createAuditLog("FEE_MANAGEMENT", "AttendancePenalty", id, 
+                      AuditLog.Action.UPDATE, oldValue, updated.toString(), null);
+        return updated;
+    }
+
+    @Override
+    public void deleteAttendancePenalty(Long id) {
+        AttendancePenalty existing = getAttendancePenaltyById(id);
+        attendancePenaltyRepository.deleteById(id);
+        createAuditLog("FEE_MANAGEMENT", "AttendancePenalty", id, 
+                      AuditLog.Action.DELETE, existing.toString(), null, null);
+    }
+
+    @Override
+    public AttendancePenalty applyAttendancePenalty(Long userId, Long allocationId, 
+                                                    LocalDate absenceDate, BigDecimal penaltyAmount, 
+                                                    String reason, Long appliedBy) {
+        AttendancePenalty penalty = new AttendancePenalty();
+        penalty.setUserId(userId);
+        penalty.setStudentFeeAllocationId(allocationId);
+        penalty.setAbsenceDate(absenceDate);
+        penalty.setPenaltyAmount(penaltyAmount);
+        penalty.setReason(reason);
+        penalty.setAppliedBy(appliedBy);
+        penalty.setIsActive(true);
+        
+        return createAttendancePenalty(penalty);
+    }
+ // ============================================
+    // 11. EXAM FEE LINKAGE CRUD + AUTO LINKING
+    // ============================================
     
     @Override
-    public void adjustInstallmentPlan(Long allocationId, List<BigDecimal> newInstallmentAmounts, Long performedBy) {
-        StudentFeeAllocation allocation = getStudentFeeAllocationById(allocationId);
+    public ExamFeeLinkage createExamFeeLinkage(ExamFeeLinkage linkage) {
+        ExamFeeLinkage saved = examFeeLinkageRepository.save(linkage);
+        createAuditLog("FEE_MANAGEMENT", "ExamFeeLinkage", saved.getId(), 
+                      AuditLog.Action.CREATE, null, linkage.toString(), null);
         
-        // Validate total equals remaining amount
-        BigDecimal total = newInstallmentAmounts.stream()
-            .reduce(BigDecimal.ZERO, BigDecimal::add);
-        
-        if (total.compareTo(allocation.getRemainingAmount()) > 0) {
-            throw new RuntimeException("Total installment amount exceeds remaining amount");
-        }
-        
-        // Delete existing installments
-        List<FeeInstallmentPlan> existing = getInstallmentPlansByAllocationId(allocationId);
-        existing.forEach(inst -> feeInstallmentPlanRepository.delete(inst));
-        
-        // Create new installments
-        LocalDate baseDate = LocalDate.now();
-        for (int i = 0; i < newInstallmentAmounts.size(); i++) {
-            FeeInstallmentPlan installment = new FeeInstallmentPlan();
-            installment.setStudentFeeAllocationId(allocationId);
-            installment.setInstallmentNumber(i + 1);
-            installment.setDueDate(baseDate.plusMonths(i + 1));
-            installment.setDueAmount(newInstallmentAmounts.get(i));
-            installment.setPaidAmount(BigDecimal.ZERO);
-            installment.setStatus("PENDING");
-            
-            feeInstallmentPlanRepository.save(installment);
-        }
-        
-        allocation.setNumberOfInstallments(newInstallmentAmounts.size());
+        // Update student allocation remaining amount
+        StudentFeeAllocation allocation = getFeeAllocationById(linkage.getStudentFeeAllocationId());
+        BigDecimal newRemaining = allocation.getRemainingAmount().add(linkage.getExamFeeAmount());
+        allocation.setRemainingAmount(newRemaining);
         studentFeeAllocationRepository.save(allocation);
         
-        createAuditLog("FEE_MANAGEMENT", "StudentFeeAllocation", allocationId, "ADJUST_INSTALLMENTS", existing, newInstallmentAmounts, performedBy);
+        return saved;
     }
-    
-    private void recalculateInstallments(List<FeeInstallmentPlan> installments, BigDecimal newTotal) {
-        int count = installments.size();
-        BigDecimal perInstallment = newTotal.divide(BigDecimal.valueOf(count), 2, RoundingMode.HALF_UP);
+
+    @Override
+    public ExamFeeLinkage getExamFeeLinkageById(Long id) {
+        return examFeeLinkageRepository.findById(id)
+                .orElseThrow(() -> new RuntimeException("ExamFeeLinkage not found with id: " + id));
+    }
+
+    @Override
+    public List<ExamFeeLinkage> getAllExamFeeLinkages() {
+        return examFeeLinkageRepository.findAll();
+    }
+
+    @Override
+    public List<ExamFeeLinkage> getExamFeeLinkagesByUserId(Long userId) {
+        return examFeeLinkageRepository.findByUserId(userId);
+    }
+
+    @Override
+    public ExamFeeLinkage updateExamFeeLinkage(Long id, ExamFeeLinkage linkage) {
+        ExamFeeLinkage existing = getExamFeeLinkageById(id);
+        String oldValue = existing.toString();
         
-        for (FeeInstallmentPlan inst : installments) {
-            inst.setDueAmount(perInstallment);
-            feeInstallmentPlanRepository.save(inst);
+        if (linkage.getExamId() != null) existing.setExamId(linkage.getExamId());
+        if (linkage.getUserId() != null) existing.setUserId(linkage.getUserId());
+        if (linkage.getStudentFeeAllocationId() != null) existing.setStudentFeeAllocationId(linkage.getStudentFeeAllocationId());
+        if (linkage.getExamFeeAmount() != null) existing.setExamFeeAmount(linkage.getExamFeeAmount());
+        if (linkage.getCurrency() != null) existing.setCurrency(linkage.getCurrency());
+        if (linkage.getAppliedDate() != null) existing.setAppliedDate(linkage.getAppliedDate());
+        
+        ExamFeeLinkage updated = examFeeLinkageRepository.save(existing);
+        createAuditLog("FEE_MANAGEMENT", "ExamFeeLinkage", id, 
+                      AuditLog.Action.UPDATE, oldValue, updated.toString(), null);
+        return updated;
+    }
+
+    @Override
+    public void deleteExamFeeLinkage(Long id) {
+        ExamFeeLinkage existing = getExamFeeLinkageById(id);
+        examFeeLinkageRepository.deleteById(id);
+        createAuditLog("FEE_MANAGEMENT", "ExamFeeLinkage", id, 
+                      AuditLog.Action.DELETE, existing.toString(), null, null);
+    }
+
+    @Override
+    public ExamFeeLinkage linkExamFeeToStudent(Long examId, Long userId, Long allocationId, 
+                                               BigDecimal examFeeAmount) {
+        ExamFeeLinkage linkage = new ExamFeeLinkage();
+        linkage.setExamId(examId);
+        linkage.setUserId(userId);
+        linkage.setStudentFeeAllocationId(allocationId);
+        linkage.setExamFeeAmount(examFeeAmount);
+        linkage.setAppliedDate(LocalDate.now());
+        
+        return createExamFeeLinkage(linkage);
+    }
+
+    // ============================================
+    // 12. FEE REFUNDS CRUD + WORKFLOW
+    // ============================================
+    
+    @Override
+    public FeeRefund createRefundRequest(FeeRefund refund) {
+        refund.setRefundStatus(FeeRefund.RefundStatus.PENDING);
+        refund.setRequestedDate(LocalDate.now());
+        
+        FeeRefund saved = feeRefundRepository.save(refund);
+        createAuditLog("FEE_MANAGEMENT", "FeeRefund", saved.getId(), 
+                      AuditLog.Action.CREATE, null, refund.toString(), null);
+        return saved;
+    }
+
+    @Override
+    public FeeRefund getRefundById(Long id) {
+        return feeRefundRepository.findById(id)
+                .orElseThrow(() -> new RuntimeException("FeeRefund not found with id: " + id));
+    }
+
+    @Override
+    public List<FeeRefund> getAllRefunds() {
+        return feeRefundRepository.findAll();
+    }
+
+    @Override
+    public List<FeeRefund> getRefundsByUserId(Long userId) {
+        return feeRefundRepository.findByUserId(userId);
+    }
+
+    @Override
+    public List<FeeRefund> getRefundsByStatus(FeeRefund.RefundStatus status) {
+        return feeRefundRepository.findByRefundStatus(status);
+    }
+
+    @Override
+    public FeeRefund updateRefund(Long id, FeeRefund refund) {
+        FeeRefund existing = getRefundById(id);
+        String oldValue = existing.toString();
+        
+        if (refund.getStudentFeePaymentId() != null) existing.setStudentFeePaymentId(refund.getStudentFeePaymentId());
+        if (refund.getStudentFeeAllocationId() != null) existing.setStudentFeeAllocationId(refund.getStudentFeeAllocationId());
+        if (refund.getUserId() != null) existing.setUserId(refund.getUserId());
+        if (refund.getRefundAmount() != null) existing.setRefundAmount(refund.getRefundAmount());
+        if (refund.getRefundReason() != null) existing.setRefundReason(refund.getRefundReason());
+        if (refund.getRefundStatus() != null) existing.setRefundStatus(refund.getRefundStatus());
+        if (refund.getRequestedDate() != null) existing.setRequestedDate(refund.getRequestedDate());
+        if (refund.getApprovedBy() != null) existing.setApprovedBy(refund.getApprovedBy());
+        if (refund.getApprovedDate() != null) existing.setApprovedDate(refund.getApprovedDate());
+        if (refund.getProcessedDate() != null) existing.setProcessedDate(refund.getProcessedDate());
+        if (refund.getRefundMode() != null) existing.setRefundMode(refund.getRefundMode());
+        if (refund.getTransactionReference() != null) existing.setTransactionReference(refund.getTransactionReference());
+        
+        FeeRefund updated = feeRefundRepository.save(existing);
+        createAuditLog("FEE_MANAGEMENT", "FeeRefund", id, 
+                      AuditLog.Action.UPDATE, oldValue, updated.toString(), null);
+        return updated;
+    }
+
+    @Override
+    public void deleteRefund(Long id) {
+        FeeRefund existing = getRefundById(id);
+        feeRefundRepository.deleteById(id);
+        createAuditLog("FEE_MANAGEMENT", "FeeRefund", id, 
+                      AuditLog.Action.DELETE, existing.toString(), null, null);
+    }
+
+    @Override
+    public FeeRefund approveRefund(Long refundId, Long approvedBy) {
+        FeeRefund refund = getRefundById(refundId);
+        refund.setRefundStatus(FeeRefund.RefundStatus.APPROVED);
+        refund.setApprovedBy(approvedBy);
+        refund.setApprovedDate(LocalDate.now());
+        
+        return feeRefundRepository.save(refund);
+    }
+
+    @Override
+    public FeeRefund processRefund(Long refundId, String refundMode, String transactionRef) {
+        FeeRefund refund = getRefundById(refundId);
+        
+        if (refund.getRefundStatus() != FeeRefund.RefundStatus.APPROVED) {
+            throw new RuntimeException("Refund must be approved before processing");
+        }
+        
+        refund.setRefundStatus(FeeRefund.RefundStatus.PROCESSED);
+        refund.setProcessedDate(LocalDate.now());
+        refund.setRefundMode(refundMode);
+        refund.setTransactionReference(transactionRef);
+        
+        // Update allocation status
+        StudentFeeAllocation allocation = getFeeAllocationById(refund.getStudentFeeAllocationId());
+        allocation.setStatus(StudentFeeAllocation.AllocationStatus.REFUNDED);
+        studentFeeAllocationRepository.save(allocation);
+        
+        // Update payment status
+        StudentFeePayment payment = getPaymentById(refund.getStudentFeePaymentId());
+        payment.setPaymentStatus(StudentFeePayment.PaymentStatus.REFUNDED);
+        studentFeePaymentRepository.save(payment);
+        
+        return feeRefundRepository.save(refund);
+    }
+
+    @Override
+    public FeeRefund rejectRefund(Long refundId, Long rejectedBy, String reason) {
+        FeeRefund refund = getRefundById(refundId);
+        refund.setRefundStatus(FeeRefund.RefundStatus.REJECTED);
+        refund.setApprovedBy(rejectedBy);
+        refund.setApprovedDate(LocalDate.now());
+        refund.setRefundReason(refund.getRefundReason() + " | Rejection Reason: " + reason);
+        
+        return feeRefundRepository.save(refund);
+    }
+
+    // ============================================
+    // 13. FEE RECEIPTS (AUTO-GENERATED - READ ONLY)
+    // ============================================
+    
+    @Override
+    public FeeReceipt getReceiptById(Long id) {
+        return feeReceiptRepository.findById(id)
+                .orElseThrow(() -> new RuntimeException("FeeReceipt not found with id: " + id));
+    }
+
+    @Override
+    public List<FeeReceipt> getAllReceipts() {
+        return feeReceiptRepository.findAll();
+    }
+
+    @Override
+    public List<FeeReceipt> getReceiptsByUserId(Long userId) {
+        return feeReceiptRepository.findByUserId(userId);
+    }
+
+    @Override
+    public FeeReceipt getReceiptByPaymentId(Long paymentId) {
+        return feeReceiptRepository.findByPaymentId(paymentId)
+                .orElse(null);
+    }
+
+    @Override
+    public FeeReceipt generateReceipt(Long paymentId) {
+        // Check if receipt already exists
+        FeeReceipt existingReceipt = getReceiptByPaymentId(paymentId);
+        if (existingReceipt != null) {
+            return existingReceipt;
+        }
+        
+        StudentFeePayment payment = getPaymentById(paymentId);
+        StudentFeeAllocation allocation = getFeeAllocationById(payment.getStudentFeeAllocationId());
+        
+        // Generate unique receipt number
+        String receiptNumber = "REC-" + LocalDate.now().getYear() + "-" + 
+                              String.format("%06d", paymentId);
+        
+        FeeReceipt receipt = new FeeReceipt();
+        receipt.setPaymentId(paymentId);
+        receipt.setReceiptNumber(receiptNumber);
+        receipt.setUserId(allocation.getUserId());
+        receipt.setReceiptPdfUrl("/receipts/" + receiptNumber + ".pdf");
+        
+        FeeReceipt saved = feeReceiptRepository.save(receipt);
+        
+        // Send receipt via email
+        sendPaymentSuccessNotification(allocation.getUserId(), paymentId, "student@example.com");
+        
+        return saved;
+    }
+
+    // ============================================
+    // 14. PAYMENT NOTIFICATIONS CRUD
+    // ============================================
+    
+    @Override
+    public PaymentNotification createNotification(PaymentNotification notification) {
+        PaymentNotification saved = paymentNotificationRepository.save(notification);
+        createAuditLog("FEE_MANAGEMENT", "PaymentNotification", saved.getId(), 
+                      AuditLog.Action.CREATE, null, notification.toString(), null);
+        return saved;
+    }
+
+    @Override
+    public PaymentNotification getNotificationById(Long id) {
+        return paymentNotificationRepository.findById(id)
+                .orElseThrow(() -> new RuntimeException("PaymentNotification not found with id: " + id));
+    }
+
+    @Override
+    public List<PaymentNotification> getAllNotifications() {
+        return paymentNotificationRepository.findAll();
+    }
+
+    @Override
+    public List<PaymentNotification> getNotificationsByUserId(Long userId) {
+        return paymentNotificationRepository.findByUserId(userId);
+    }
+
+    @Override
+    public PaymentNotification updateNotification(Long id, PaymentNotification notification) {
+        PaymentNotification existing = getNotificationById(id);
+        String oldValue = existing.toString();
+        
+        if (notification.getUserId() != null) existing.setUserId(notification.getUserId());
+        if (notification.getNotificationType() != null) existing.setNotificationType(notification.getNotificationType());
+        if (notification.getMessage() != null) existing.setMessage(notification.getMessage());
+        if (notification.getEmail() != null) existing.setEmail(notification.getEmail());
+        if (notification.getPhone() != null) existing.setPhone(notification.getPhone());
+        if (notification.getSentAt() != null) existing.setSentAt(notification.getSentAt());
+        if (notification.getDeliveryStatus() != null) existing.setDeliveryStatus(notification.getDeliveryStatus());
+        
+        PaymentNotification updated = paymentNotificationRepository.save(existing);
+        createAuditLog("FEE_MANAGEMENT", "PaymentNotification", id, 
+                      AuditLog.Action.UPDATE, oldValue, updated.toString(), null);
+        return updated;
+    }
+
+    @Override
+    public void deleteNotification(Long id) {
+        PaymentNotification existing = getNotificationById(id);
+        paymentNotificationRepository.deleteById(id);
+        createAuditLog("FEE_MANAGEMENT", "PaymentNotification", id, 
+                      AuditLog.Action.DELETE, existing.toString(), null, null);
+    }
+
+    @Override
+    public void sendPaymentSuccessNotification(Long userId, Long paymentId, String email) {
+        StudentFeePayment payment = getPaymentById(paymentId);
+        FeeReceipt receipt = getReceiptByPaymentId(paymentId);
+        
+        String message = "Payment of " + payment.getPaidAmount() + " " + payment.getCurrency() + 
+                        " received successfully. Receipt Number: " + 
+                        (receipt != null ? receipt.getReceiptNumber() : "N/A");
+        
+        PaymentNotification notification = new PaymentNotification();
+        notification.setUserId(userId);
+        notification.setNotificationType(PaymentNotification.NotificationType.PAYMENT_SUCCESS);
+        notification.setMessage(message);
+        notification.setEmail(email);
+        notification.setSentAt(LocalDateTime.now());
+        notification.setDeliveryStatus(PaymentNotification.DeliveryStatus.SENT);
+        
+        createNotification(notification);
+        
+        // TODO: Actual email sending logic would go here
+        System.out.println("Email sent to: " + email + " - " + message);
+    }
+
+    @Override
+    public void sendPaymentFailedNotification(Long userId, String email, String reason) {
+        String message = "Payment failed. Reason: " + reason + ". Please retry.";
+        
+        PaymentNotification notification = new PaymentNotification();
+        notification.setUserId(userId);
+        notification.setNotificationType(PaymentNotification.NotificationType.PAYMENT_FAILED);
+        notification.setMessage(message);
+        notification.setEmail(email);
+        notification.setSentAt(LocalDateTime.now());
+        notification.setDeliveryStatus(PaymentNotification.DeliveryStatus.SENT);
+        
+        createNotification(notification);
+        
+        System.out.println("Email sent to: " + email + " - " + message);
+    }
+
+    @Override
+    public void sendDueReminderNotification(Long userId, Long installmentPlanId, String email) {
+        StudentInstallmentPlan installment = getInstallmentPlanById(installmentPlanId);
+        
+        String message = "Reminder: Your installment of " + installment.getInstallmentAmount() + 
+                        " is due on " + installment.getDueDate();
+        
+        PaymentNotification notification = new PaymentNotification();
+        notification.setUserId(userId);
+        notification.setNotificationType(PaymentNotification.NotificationType.DUE_REMINDER);
+        notification.setMessage(message);
+        notification.setEmail(email);
+        notification.setSentAt(LocalDateTime.now());
+        notification.setDeliveryStatus(PaymentNotification.DeliveryStatus.SENT);
+        
+        createNotification(notification);
+        
+        System.out.println("Email sent to: " + email + " - " + message);
+    }
+
+    @Override
+    public void sendOverdueWarningNotification(Long userId, Long installmentPlanId, String email) {
+        StudentInstallmentPlan installment = getInstallmentPlanById(installmentPlanId);
+        
+        // Calculate total penalties
+        BigDecimal totalPenalty = lateFeePenaltyRepository.getTotalPenaltyByInstallmentPlanId(installmentPlanId);
+        if (totalPenalty == null) totalPenalty = BigDecimal.ZERO;
+        
+        String message = "OVERDUE PAYMENT WARNING: Your installment of " + installment.getInstallmentAmount() + 
+                        " was due on " + installment.getDueDate() + 
+                        ". Late fee of " + totalPenalty + " has been applied. Please pay immediately.";
+        
+        PaymentNotification notification = new PaymentNotification();
+        notification.setUserId(userId);
+        notification.setNotificationType(PaymentNotification.NotificationType.OVERDUE_WARNING);
+        notification.setMessage(message);
+        notification.setEmail(email);
+        notification.setSentAt(LocalDateTime.now());
+        notification.setDeliveryStatus(PaymentNotification.DeliveryStatus.SENT);
+        
+        createNotification(notification);
+        
+        System.out.println("Email sent to: " + email + " - " + message);
+    }
+ // ============================================
+    // 15. AUTO DEBIT CONFIG CRUD
+    // ============================================
+    
+    @Override
+    public AutoDebitConfig createAutoDebitConfig(AutoDebitConfig config) {
+        AutoDebitConfig saved = autoDebitConfigRepository.save(config);
+        createAuditLog("FEE_MANAGEMENT", "AutoDebitConfig", saved.getId(), 
+                      AuditLog.Action.CREATE, null, config.toString(), null);
+        return saved;
+    }
+
+    @Override
+    public AutoDebitConfig getAutoDebitConfigById(Long id) {
+        return autoDebitConfigRepository.findById(id)
+                .orElseThrow(() -> new RuntimeException("AutoDebitConfig not found with id: " + id));
+    }
+
+    @Override
+    public List<AutoDebitConfig> getAllAutoDebitConfigs() {
+        return autoDebitConfigRepository.findAll();
+    }
+
+    @Override
+    public List<AutoDebitConfig> getAutoDebitConfigsByUserId(Long userId) {
+        return autoDebitConfigRepository.findByUserId(userId);
+    }
+
+    @Override
+    public AutoDebitConfig updateAutoDebitConfig(Long id, AutoDebitConfig config) {
+        AutoDebitConfig existing = getAutoDebitConfigById(id);
+        String oldValue = existing.toString();
+        
+        if (config.getUserId() != null) existing.setUserId(config.getUserId());
+        if (config.getStudentFeeAllocationId() != null) existing.setStudentFeeAllocationId(config.getStudentFeeAllocationId());
+        if (config.getBankAccountNumber() != null) existing.setBankAccountNumber(config.getBankAccountNumber());
+        if (config.getCardToken() != null) existing.setCardToken(config.getCardToken());
+        if (config.getPaymentGateway() != null) existing.setPaymentGateway(config.getPaymentGateway());
+        if (config.getAutoDebitDay() != null) existing.setAutoDebitDay(config.getAutoDebitDay());
+        if (config.getIsActive() != null) existing.setIsActive(config.getIsActive());
+        if (config.getConsentGiven() != null) existing.setConsentGiven(config.getConsentGiven());
+        if (config.getConsentDate() != null) existing.setConsentDate(config.getConsentDate());
+        
+        AutoDebitConfig updated = autoDebitConfigRepository.save(existing);
+        createAuditLog("FEE_MANAGEMENT", "AutoDebitConfig", id, 
+                      AuditLog.Action.UPDATE, oldValue, updated.toString(), null);
+        return updated;
+    }
+
+    @Override
+    public void deleteAutoDebitConfig(Long id) {
+        AutoDebitConfig existing = getAutoDebitConfigById(id);
+        autoDebitConfigRepository.deleteById(id);
+        createAuditLog("FEE_MANAGEMENT", "AutoDebitConfig", id, 
+                      AuditLog.Action.DELETE, existing.toString(), null, null);
+    }
+
+    @Override
+    public void processAutoDebit() {
+        LocalDate today = LocalDate.now();
+        int currentDay = today.getDayOfMonth();
+        
+        // Get all active auto-debit configs with consent
+        List<AutoDebitConfig> activeConfigs = autoDebitConfigRepository
+                .findByIsActiveAndConsentGiven(true, true);
+        
+        for (AutoDebitConfig config : activeConfigs) {
+            // Check if today is the auto-debit day
+            if (config.getAutoDebitDay() != null && config.getAutoDebitDay() == currentDay) {
+                
+                // Get pending installments for this student
+                List<StudentInstallmentPlan> installments = studentInstallmentPlanRepository
+                        .findByStudentFeeAllocationId(config.getStudentFeeAllocationId())
+                        .stream()
+                        .filter(i -> i.getStatus() == StudentInstallmentPlan.InstallmentStatus.PENDING ||
+                                    i.getStatus() == StudentInstallmentPlan.InstallmentStatus.PARTIALLY_PAID)
+                        .sorted(Comparator.comparing(StudentInstallmentPlan::getDueDate))
+                        .collect(Collectors.toList());
+                
+                if (!installments.isEmpty()) {
+                    StudentInstallmentPlan nextInstallment = installments.get(0);
+                    BigDecimal amountToDebit = nextInstallment.getInstallmentAmount()
+                            .subtract(nextInstallment.getPaidAmount() != null ? 
+                                     nextInstallment.getPaidAmount() : BigDecimal.ZERO);
+                    
+                    try {
+                        // TODO: Integrate with actual payment gateway
+                        // For now, simulate successful auto-debit
+                        String transactionRef = "AUTO-" + System.currentTimeMillis();
+                        
+                        processOnlinePayment(
+                            config.getStudentFeeAllocationId(),
+                            nextInstallment.getId(),
+                            amountToDebit,
+                            "AUTO_DEBIT",
+                            transactionRef,
+                            "Auto-debit successful via " + config.getPaymentGateway()
+                        );
+                        
+                        System.out.println("Auto-debit successful for user: " + config.getUserId() + 
+                                         ", Amount: " + amountToDebit);
+                        
+                    } catch (Exception e) {
+                        // Log auto-debit failure
+                        StudentFeeAllocation allocation = getFeeAllocationById(config.getStudentFeeAllocationId());
+                        sendPaymentFailedNotification(allocation.getUserId(), 
+                                                     "student@example.com", 
+                                                     "Auto-debit failed: " + e.getMessage());
+                        
+                        System.err.println("Auto-debit failed for user: " + config.getUserId() + 
+                                         ", Error: " + e.getMessage());
+                    }
+                }
+            }
         }
     }
+
+    // ============================================
+    // 16. CURRENCY RATES CRUD
+    // ============================================
     
-    // ========================================
-    // SPECIAL PAYMENT METHODS
-    // ========================================
     @Override
-    public StudentFeePayment recordPayment(Long allocationId, BigDecimal amount, String paymentMode,
-                                           String transactionRef, Long collectedBy) {
-        StudentFeePayment payment = new StudentFeePayment();
-        payment.setStudentFeeAllocationId(allocationId);
-        payment.setPaidAmount(amount);
-        payment.setLateFeePaid(BigDecimal.ZERO);
-        payment.setPaymentDate(LocalDate.now());
-        payment.setPaymentMode(paymentMode);
-        payment.setTransactionReference(transactionRef);
-        payment.setPaymentStatus("SUCCESS");
-        payment.setCollectedBy(collectedBy);
-        
-        return createStudentFeePayment(payment, collectedBy);
+    public CurrencyRate createCurrencyRate(CurrencyRate rate) {
+        CurrencyRate saved = currencyRateRepository.save(rate);
+        createAuditLog("FEE_MANAGEMENT", "CurrencyRate", saved.getId(), 
+                      AuditLog.Action.CREATE, null, rate.toString(), null);
+        return saved;
     }
-    
+
     @Override
-    public StudentFeePayment recordInstallmentPayment(Long installmentPlanId, BigDecimal amount,
-                                                      String paymentMode, String transactionRef, Long collectedBy) {
-        FeeInstallmentPlan installment = getFeeInstallmentPlanById(installmentPlanId);
+    public CurrencyRate getCurrencyRateById(Long id) {
+        return currencyRateRepository.findById(id)
+                .orElseThrow(() -> new RuntimeException("CurrencyRate not found with id: " + id));
+    }
+
+    @Override
+    public List<CurrencyRate> getAllCurrencyRates() {
+        return currencyRateRepository.findAll();
+    }
+
+    @Override
+    public CurrencyRate updateCurrencyRate(Long id, CurrencyRate rate) {
+        CurrencyRate existing = getCurrencyRateById(id);
+        String oldValue = existing.toString();
         
-        // Calculate late fee if overdue
-        BigDecimal lateFee = BigDecimal.ZERO;
-        if (LocalDate.now().isAfter(installment.getDueDate())) {
-            lateFee = calculateLateFeeForInstallment(installment);
+        if (rate.getFromCurrency() != null) existing.setFromCurrency(rate.getFromCurrency());
+        if (rate.getToCurrency() != null) existing.setToCurrency(rate.getToCurrency());
+        if (rate.getExchangeRate() != null) existing.setExchangeRate(rate.getExchangeRate());
+        if (rate.getEffectiveDate() != null) existing.setEffectiveDate(rate.getEffectiveDate());
+        
+        CurrencyRate updated = currencyRateRepository.save(existing);
+        createAuditLog("FEE_MANAGEMENT", "CurrencyRate", id, 
+                      AuditLog.Action.UPDATE, oldValue, updated.toString(), null);
+        return updated;
+    }
+
+    @Override
+    public void deleteCurrencyRate(Long id) {
+        CurrencyRate existing = getCurrencyRateById(id);
+        currencyRateRepository.deleteById(id);
+        createAuditLog("FEE_MANAGEMENT", "CurrencyRate", id, 
+                      AuditLog.Action.DELETE, existing.toString(), null, null);
+    }
+
+    @Override
+    public BigDecimal convertCurrency(BigDecimal amount, String fromCurrency, String toCurrency, LocalDate date) {
+        if (fromCurrency.equals(toCurrency)) {
+            return amount;
         }
         
-        StudentFeePayment payment = new StudentFeePayment();
-        payment.setStudentFeeAllocationId(installment.getStudentFeeAllocationId());
-        payment.setInstallmentPlanId(installmentPlanId);
-        payment.setPaidAmount(amount);
-        payment.setLateFeePaid(lateFee);
-        payment.setPaymentDate(LocalDate.now());
-        payment.setPaymentMode(paymentMode);
-        payment.setTransactionReference(transactionRef);
-        payment.setPaymentStatus("SUCCESS");
-        payment.setCollectedBy(collectedBy);
+        CurrencyRate rate = currencyRateRepository.findLatestRate(fromCurrency, toCurrency, date)
+                .orElseThrow(() -> new RuntimeException("Currency rate not found for " + 
+                                                        fromCurrency + " to " + toCurrency));
         
-        return createStudentFeePayment(payment, collectedBy);
+        return amount.multiply(rate.getExchangeRate()).setScale(2, RoundingMode.HALF_UP);
     }
+
+    // ============================================
+    // 17. AUDIT LOGS (AUTO-GENERATED - READ ONLY)
+    // ============================================
     
+    @Override
+    public AuditLog getAuditLogById(Long id) {
+        return auditLogRepository.findById(id)
+                .orElseThrow(() -> new RuntimeException("AuditLog not found with id: " + id));
+    }
+
+    @Override
+    public List<AuditLog> getAllAuditLogs() {
+        return auditLogRepository.findAll();
+    }
+
+    @Override
+    public List<AuditLog> getAuditLogsByModule(String module) {
+        return auditLogRepository.findByModule(module);
+    }
+
+    @Override
+    public List<AuditLog> getAuditLogsByEntity(String entityName, Long entityId) {
+        return auditLogRepository.findByEntityNameAndEntityId(entityName, entityId);
+    }
+
+    // Helper method to create audit logs
+    private void createAuditLog(String module, String entityName, Long entityId, 
+                               AuditLog.Action action, String oldValue, String newValue, Long performedBy) {
+        AuditLog log = new AuditLog();
+        log.setModule(module);
+        log.setEntityName(entityName);
+        log.setEntityId(entityId);
+        log.setAction(action);
+        log.setOldValue(oldValue);
+        log.setNewValue(newValue);
+        log.setPerformedBy(performedBy);
+        log.setIpAddress("127.0.0.1"); // TODO: Get actual IP from request
+        
+        auditLogRepository.save(log);
+    }
+
+    // ============================================
+    // 18. CERTIFICATE BLOCK LIST CRUD
+    // ============================================
+    
+    @Override
+    public CertificateBlockList createCertificateBlock(CertificateBlockList block) {
+        CertificateBlockList saved = certificateBlockListRepository.save(block);
+        createAuditLog("FEE_MANAGEMENT", "CertificateBlockList", saved.getId(), 
+                      AuditLog.Action.CREATE, null, block.toString(), null);
+        return saved;
+    }
+
+    @Override
+    public CertificateBlockList getCertificateBlockById(Long id) {
+        return certificateBlockListRepository.findById(id)
+                .orElseThrow(() -> new RuntimeException("CertificateBlockList not found with id: " + id));
+    }
+
+    @Override
+    public List<CertificateBlockList> getAllCertificateBlocks() {
+        return certificateBlockListRepository.findAll();
+    }
+
+    @Override
+    public CertificateBlockList updateCertificateBlock(Long id, CertificateBlockList block) {
+        CertificateBlockList existing = getCertificateBlockById(id);
+        String oldValue = existing.toString();
+        
+        if (block.getUserId() != null) existing.setUserId(block.getUserId());
+        if (block.getBlockedReason() != null) existing.setBlockedReason(block.getBlockedReason());
+        if (block.getPendingAmount() != null) existing.setPendingAmount(block.getPendingAmount());
+        if (block.getBlockedBy() != null) existing.setBlockedBy(block.getBlockedBy());
+        if (block.getBlockedDate() != null) existing.setBlockedDate(block.getBlockedDate());
+        if (block.getIsActive() != null) existing.setIsActive(block.getIsActive());
+        
+        CertificateBlockList updated = certificateBlockListRepository.save(existing);
+        createAuditLog("FEE_MANAGEMENT", "CertificateBlockList", id, 
+                      AuditLog.Action.UPDATE, oldValue, updated.toString(), null);
+        return updated;
+    }
+
+    @Override
+    public void deleteCertificateBlock(Long id) {
+        CertificateBlockList existing = getCertificateBlockById(id);
+        certificateBlockListRepository.deleteById(id);
+        createAuditLog("FEE_MANAGEMENT", "CertificateBlockList", id, 
+                      AuditLog.Action.DELETE, existing.toString(), null, null);
+    }
+
+    @Override
+    public boolean canIssueCertificate(Long userId) {
+        return !certificateBlockListRepository.existsByUserIdAndIsActive(userId, true);
+    }
+
+    @Override
+    public CertificateBlockList blockCertificate(Long userId, BigDecimal pendingAmount, 
+                                                 String reason, Long blockedBy) {
+        // Check if already blocked
+        if (!canIssueCertificate(userId)) {
+            throw new RuntimeException("Certificate already blocked for user: " + userId);
+        }
+        
+        CertificateBlockList block = new CertificateBlockList();
+        block.setUserId(userId);
+        block.setPendingAmount(pendingAmount);
+        block.setBlockedReason(reason);
+        block.setBlockedBy(blockedBy);
+        block.setBlockedDate(LocalDate.now());
+        block.setIsActive(true);
+        
+        return createCertificateBlock(block);
+    }
+
+    @Override
+    public void unblockCertificate(Long userId) {
+        certificateBlockListRepository.findByUserIdAndIsActive(userId, true)
+                .ifPresent(block -> {
+                    block.setIsActive(false);
+                    certificateBlockListRepository.save(block);
+                });
+    }
+
+    // ============================================
+    // REPORTS & ANALYTICS
+    // ============================================
+    
+    @Override
+    public Map<String, Object> getStudentFeeReport(Long userId) {
+        Map<String, Object> report = new HashMap<>();
+        
+        List<StudentFeeAllocation> allocations = getFeeAllocationsByUserId(userId);
+        
+        BigDecimal totalFee = allocations.stream()
+                .map(StudentFeeAllocation::getOriginalAmount)
+                .reduce(BigDecimal.ZERO, BigDecimal::add);
+        
+        BigDecimal totalDiscount = allocations.stream()
+                .map(StudentFeeAllocation::getTotalDiscount)
+                .reduce(BigDecimal.ZERO, BigDecimal::add);
+        
+        BigDecimal totalPayable = allocations.stream()
+                .map(StudentFeeAllocation::getPayableAmount)
+                .reduce(BigDecimal.ZERO, BigDecimal::add);
+        
+        BigDecimal totalPaid = BigDecimal.ZERO;
+        BigDecimal totalPending = BigDecimal.ZERO;
+        
+        for (StudentFeeAllocation allocation : allocations) {
+            BigDecimal paid = studentFeePaymentRepository.getTotalPaidByAllocationId(allocation.getId());
+            totalPaid = totalPaid.add(paid != null ? paid : BigDecimal.ZERO);
+            totalPending = totalPending.add(allocation.getRemainingAmount());
+        }
+        
+        // Get late fees
+        BigDecimal totalLateFee = BigDecimal.ZERO;
+        for (StudentFeeAllocation allocation : allocations) {
+            List<StudentInstallmentPlan> installments = getInstallmentPlansByAllocationId(allocation.getId());
+            for (StudentInstallmentPlan installment : installments) {
+                BigDecimal penalty = lateFeePenaltyRepository.getTotalPenaltyByInstallmentPlanId(installment.getId());
+                totalLateFee = totalLateFee.add(penalty != null ? penalty : BigDecimal.ZERO);
+            }
+        }
+        
+        // Get attendance penalties
+        BigDecimal totalAttendancePenalty = BigDecimal.ZERO;
+        for (StudentFeeAllocation allocation : allocations) {
+            BigDecimal penalty = attendancePenaltyRepository.getTotalPenaltyByAllocationId(allocation.getId());
+            totalAttendancePenalty = totalAttendancePenalty.add(penalty != null ? penalty : BigDecimal.ZERO);
+        }
+        
+        report.put("userId", userId);
+        report.put("totalFee", totalFee);
+        report.put("totalDiscount", totalDiscount);
+        report.put("totalPayable", totalPayable);
+        report.put("totalPaid", totalPaid);
+        report.put("totalPending", totalPending);
+        report.put("totalLateFee", totalLateFee);
+        report.put("totalAttendancePenalty", totalAttendancePenalty);
+        report.put("paymentStatus", totalPending.compareTo(BigDecimal.ZERO) == 0 ? "PAID" : 
+                                   totalPaid.compareTo(BigDecimal.ZERO) > 0 ? "PARTIAL" : "DUE");
+        report.put("allocations", allocations);
+        
+        return report;
+    }
+
+    @Override
+    public Map<String, Object> getBatchFeeReport(Long batchId) {
+        Map<String, Object> report = new HashMap<>();
+        
+        List<FeeStructure> structures = getFeeStructuresByBatch(batchId);
+        
+        BigDecimal totalExpected = BigDecimal.ZERO;
+        BigDecimal totalCollected = BigDecimal.ZERO;
+        BigDecimal totalPending = BigDecimal.ZERO;
+        int totalStudents = 0;
+        
+        for (FeeStructure structure : structures) {
+            List<StudentFeeAllocation> allocations = studentFeeAllocationRepository.findAll().stream()
+                    .filter(a -> a.getFeeStructureId().equals(structure.getId()))
+                    .collect(Collectors.toList());
+            
+            totalStudents += allocations.size();
+            
+            for (StudentFeeAllocation allocation : allocations) {
+                totalExpected = totalExpected.add(allocation.getPayableAmount());
+                BigDecimal paid = studentFeePaymentRepository.getTotalPaidByAllocationId(allocation.getId());
+                totalCollected = totalCollected.add(paid != null ? paid : BigDecimal.ZERO);
+                totalPending = totalPending.add(allocation.getRemainingAmount());
+            }
+        }
+        
+        report.put("batchId", batchId);
+        report.put("totalStudents", totalStudents);
+        report.put("totalExpected", totalExpected);
+        report.put("totalCollected", totalCollected);
+        report.put("totalPending", totalPending);
+        report.put("collectionPercentage", totalExpected.compareTo(BigDecimal.ZERO) > 0 ? 
+                   totalCollected.multiply(BigDecimal.valueOf(100)).divide(totalExpected, 2, RoundingMode.HALF_UP) : 
+                   BigDecimal.ZERO);
+        
+        return report;
+    }
+
+    @Override
+    public Map<String, Object> getCourseFeeReport(Long courseId) {
+        Map<String, Object> report = new HashMap<>();
+        
+        List<FeeStructure> structures = getFeeStructuresByCourse(courseId);
+        
+        BigDecimal totalExpected = BigDecimal.ZERO;
+        BigDecimal totalCollected = BigDecimal.ZERO;
+        BigDecimal totalPending = BigDecimal.ZERO;
+        int totalStudents = 0;
+        
+        for (FeeStructure structure : structures) {
+            List<StudentFeeAllocation> allocations = studentFeeAllocationRepository.findAll().stream()
+                    .filter(a -> a.getFeeStructureId().equals(structure.getId()))
+                    .collect(Collectors.toList());
+            
+            totalStudents += allocations.size();
+            
+            for (StudentFeeAllocation allocation : allocations) {
+                totalExpected = totalExpected.add(allocation.getPayableAmount());
+                BigDecimal paid = studentFeePaymentRepository.getTotalPaidByAllocationId(allocation.getId());
+                totalCollected = totalCollected.add(paid != null ? paid : BigDecimal.ZERO);
+                totalPending = totalPending.add(allocation.getRemainingAmount());
+            }
+        }
+        
+        report.put("courseId", courseId);
+        report.put("totalStudents", totalStudents);
+        report.put("totalExpected", totalExpected);
+        report.put("totalCollected", totalCollected);
+        report.put("totalPending", totalPending);
+        report.put("collectionPercentage", totalExpected.compareTo(BigDecimal.ZERO) > 0 ? 
+                   totalCollected.multiply(BigDecimal.valueOf(100)).divide(totalExpected, 2, RoundingMode.HALF_UP) : 
+                   BigDecimal.ZERO);
+        
+        return report;
+    }
+
+    @Override
+    public Map<String, Object> getMonthlyRevenueReport(int year, int month) {
+        LocalDateTime startDate = LocalDateTime.of(year, month, 1, 0, 0);
+        LocalDateTime endDate = startDate.plusMonths(1).minusSeconds(1);
+        
+        List<StudentFeePayment> payments = studentFeePaymentRepository
+                .findSuccessfulPaymentsBetween(startDate, endDate);
+        
+        BigDecimal totalCollected = payments.stream()
+                .map(StudentFeePayment::getPaidAmount)
+                .reduce(BigDecimal.ZERO, BigDecimal::add);
+        
+        Map<String, Object> report = new HashMap<>();
+        report.put("year", year);
+        report.put("month", month);
+        report.put("totalCollected", totalCollected);
+        report.put("totalTransactions", payments.size());
+        report.put("payments", payments);
+        
+        return report;
+    }
+
+    @Override
+    public Map<String, Object> getQuarterlyRevenueReport(int year, int quarter) {
+        int startMonth = (quarter - 1) * 3 + 1;
+        LocalDateTime startDate = LocalDateTime.of(year, startMonth, 1, 0, 0);
+        LocalDateTime endDate = startDate.plusMonths(3).minusSeconds(1);
+        
+        List<StudentFeePayment> payments = studentFeePaymentRepository
+                .findSuccessfulPaymentsBetween(startDate, endDate);
+        
+        BigDecimal totalCollected = payments.stream()
+                .map(StudentFeePayment::getPaidAmount)
+                .reduce(BigDecimal.ZERO, BigDecimal::add);
+        
+        Map<String, Object> report = new HashMap<>();
+        report.put("year", year);
+        report.put("quarter", quarter);
+        report.put("totalCollected", totalCollected);
+        report.put("totalTransactions", payments.size());
+        
+        return report;
+    }
+
+    @Override
+    public Map<String, Object> getYearlyRevenueReport(int year) {
+        LocalDateTime startDate = LocalDateTime.of(year, 1, 1, 0, 0);
+        LocalDateTime endDate = LocalDateTime.of(year, 12, 31, 23, 59, 59);
+        
+        List<StudentFeePayment> payments = studentFeePaymentRepository
+                .findSuccessfulPaymentsBetween(startDate, endDate);
+        
+        BigDecimal totalCollected = payments.stream()
+                .map(StudentFeePayment::getPaidAmount)
+                .reduce(BigDecimal.ZERO, BigDecimal::add);
+        
+        Map<String, Object> report = new HashMap<>();
+        report.put("year", year);
+        report.put("totalCollected", totalCollected);
+        report.put("totalTransactions", payments.size());
+        
+        return report;
+    }
+
+    @Override
+    public Map<String, Object> getOverallFinancialSummary() {
+        List<StudentFeeAllocation> allAllocations = getAllFeeAllocations();
+        
+        BigDecimal totalExpected = allAllocations.stream()
+                .map(StudentFeeAllocation::getPayableAmount)
+                .reduce(BigDecimal.ZERO, BigDecimal::add);
+        
+        BigDecimal totalCollected = BigDecimal.ZERO;
+        BigDecimal totalPending = BigDecimal.ZERO;
+        
+        for (StudentFeeAllocation allocation : allAllocations) {
+            BigDecimal paid = studentFeePaymentRepository.getTotalPaidByAllocationId(allocation.getId());
+            totalCollected = totalCollected.add(paid != null ? paid : BigDecimal.ZERO);
+            totalPending = totalPending.add(allocation.getRemainingAmount());
+        }
+        
+        Map<String, Object> summary = new HashMap<>();
+        summary.put("totalExpected", totalExpected);
+        summary.put("totalCollected", totalCollected);
+        summary.put("totalPending", totalPending);
+        summary.put("collectionPercentage", totalExpected.compareTo(BigDecimal.ZERO) > 0 ? 
+                   totalCollected.multiply(BigDecimal.valueOf(100)).divide(totalExpected, 2, RoundingMode.HALF_UP) : 
+                   BigDecimal.ZERO);
+        summary.put("totalStudents", allAllocations.size());
+        
+        return summary;
+    }
+
     @Override
     public List<StudentFeePayment> getPaymentHistory(Long userId) {
-        List<StudentFeeAllocation> allocations = getStudentFeeAllocationsByUserId(userId);
+        List<StudentFeeAllocation> allocations = getFeeAllocationsByUserId(userId);
         List<StudentFeePayment> allPayments = new ArrayList<>();
         
         for (StudentFeeAllocation allocation : allocations) {
             allPayments.addAll(getPaymentsByAllocationId(allocation.getId()));
         }
         
-        allPayments.sort((p1, p2) -> p2.getPaymentDate().compareTo(p1.getPaymentDate()));
+        // Sort by payment date descending
+        allPayments.sort(Comparator.comparing(StudentFeePayment::getPaymentDate).reversed());
+        
         return allPayments;
     }
-    
-    private void updateAllocationStatus(Long allocationId) {
-        StudentFeeAllocation allocation = getStudentFeeAllocationById(allocationId);
-        
-        BigDecimal totalPaid = studentFeePaymentRepository.getTotalPaidAmount(allocationId)
-            .orElse(BigDecimal.ZERO);
-        totalPaid = totalPaid.add(allocation.getInitialPayment());
-        
-        if (totalPaid.compareTo(allocation.getFinalAmount()) >= 0) {
-            allocation.setStatus("PAID");
-        } else if (totalPaid.compareTo(BigDecimal.ZERO) > 0) {
-            allocation.setStatus("PARTIALLY_PAID");
-        } else if (LocalDate.now().isAfter(allocation.getDueDate())) {
-            allocation.setStatus("OVERDUE");
-        }
-        
-        studentFeeAllocationRepository.save(allocation);
-    }
-    
-    private void updateInstallmentAfterPayment(Long installmentId, BigDecimal paidAmount) {
-        FeeInstallmentPlan installment = getFeeInstallmentPlanById(installmentId);
-        
-        BigDecimal currentPaid = installment.getPaidAmount().add(paidAmount);
-        installment.setPaidAmount(currentPaid);
-        
-        if (currentPaid.compareTo(installment.getDueAmount()) >= 0) {
-            installment.setStatus("PAID");
-        } else {
-            installment.setStatus("PARTIALLY_PAID");
-        }
-        
-        feeInstallmentPlanRepository.save(installment);
-    }
-    
-    // ========================================
-    // LATE FEE CALCULATION
-    // ========================================
-    @Override
-    public void updateOverdueInstallments() {
-        List<FeeInstallmentPlan> overdueInstallments = feeInstallmentPlanRepository
-            .findOverdueInstallments(LocalDate.now());
-        
-        for (FeeInstallmentPlan installment : overdueInstallments) {
-            installment.setStatus("OVERDUE");
-            BigDecimal lateFee = calculateLateFeeForInstallment(installment);
-            installment.setLateFee(lateFee);
-            feeInstallmentPlanRepository.save(installment);
-        }
-    }
-    
-    @Override
-    public void calculateLateFees(Long allocationId) {
-        List<FeeInstallmentPlan> installments = getInstallmentPlansByAllocationId(allocationId);
-        
-        for (FeeInstallmentPlan installment : installments) {
-            if (LocalDate.now().isAfter(installment.getDueDate()) && 
-                !"PAID".equals(installment.getStatus())) {
-                BigDecimal lateFee = calculateLateFeeForInstallment(installment);
-                installment.setLateFee(lateFee);
-                installment.setStatus("OVERDUE");
-                feeInstallmentPlanRepository.save(installment);
-            }
-        }
-    }
-    
-    private BigDecimal calculateLateFeeForInstallment(FeeInstallmentPlan installment) {
-        StudentFeeAllocation allocation = getStudentFeeAllocationById(installment.getStudentFeeAllocationId());
-        FeeStructure feeStructure = getFeeStructureById(allocation.getFeeStructureId());
-        
-        Optional<LateFeeRule> ruleOpt = lateFeeRuleRepository.findByFeeTypeIdAndIsActiveTrue(feeStructure.getFeeTypeId());
-        if (!ruleOpt.isPresent()) {
-            ruleOpt = lateFeeRuleRepository.findDefaultLateFeeRule();
-        }
-        
-        if (!ruleOpt.isPresent()) {
-            return BigDecimal.ZERO;
-        }
-        
-        LateFeeRule rule = ruleOpt.get();
-        long daysOverdue = java.time.temporal.ChronoUnit.DAYS.between(installment.getDueDate(), LocalDate.now());
-        
-        if (daysOverdue <= rule.getGracePeriodDays()) {
-            return BigDecimal.ZERO;
-        }
-        
-        BigDecimal lateFee = BigDecimal.ZERO;
-        BigDecimal pendingAmount = installment.getDueAmount().subtract(installment.getPaidAmount());
-        
-        switch (rule.getCalculationType()) {
-            case "FIXED":
-                lateFee = rule.getAmount();
-                break;
-            case "PERCENTAGE":
-                lateFee = pendingAmount.multiply(rule.getAmount()).divide(BigDecimal.valueOf(100), 2, RoundingMode.HALF_UP);
-                break;
-            case "PER_DAY":
-                lateFee = rule.getAmount().multiply(BigDecimal.valueOf(daysOverdue - rule.getGracePeriodDays()));
-                break;
-        }
-        
-        if (rule.getMaxLateFee() != null && lateFee.compareTo(rule.getMaxLateFee()) > 0) {
-            lateFee = rule.getMaxLateFee();
-        }
-        
-        return lateFee;
-    }
- // Continue from Part 2...
-
-    // ========================================
-    // FEE DISCOUNT OPERATIONS
-    // ========================================
-    @Override
-    public FeeDiscount createFeeDiscount(FeeDiscount discount, Long performedBy) {
-        // Calculate actual discount amount
-        FeeStructure feeStructure = getFeeStructureById(discount.getFeeStructureId());
-        BigDecimal calculatedAmount = calculateDiscountAmount(
-            feeStructure.getTotalAmount(),
-            discount.getDiscountType(),
-            discount.getDiscountValue()
-        );
-        discount.setCalculatedAmount(calculatedAmount);
-        
-        FeeDiscount saved = feeDiscountRepository.save(discount);
-        createAuditLog("FEE_MANAGEMENT", "FeeDiscount", saved.getId(), "CREATE", null, saved, performedBy);
-        return saved;
-    }
-    
-    @Override
-    public List<FeeDiscount> getAllFeeDiscounts() {
-        return feeDiscountRepository.findAll();
-    }
-    
-    @Override
-    public FeeDiscount getFeeDiscountById(Long id) {
-        return feeDiscountRepository.findById(id)
-            .orElseThrow(() -> new RuntimeException("FeeDiscount not found with id: " + id));
-    }
-    
-    @Override
-    public List<FeeDiscount> getDiscountsByUserId(Long userId) {
-        return feeDiscountRepository.findByUserId(userId);
-    }
-    
-    @Override
-    public FeeDiscount updateFeeDiscount(Long id, FeeDiscount discount, Long performedBy) {
-        FeeDiscount existing = getFeeDiscountById(id);
-        
-        if (discount.getUserId() != null) existing.setUserId(discount.getUserId());
-        if (discount.getFeeStructureId() != null) existing.setFeeStructureId(discount.getFeeStructureId());
-        if (discount.getDiscountType() != null) existing.setDiscountType(discount.getDiscountType());
-        if (discount.getDiscountValue() != null) existing.setDiscountValue(discount.getDiscountValue());
-        if (discount.getCalculatedAmount() != null) existing.setCalculatedAmount(discount.getCalculatedAmount());
-        if (discount.getReason() != null) existing.setReason(discount.getReason());
-        if (discount.getApprovedBy() != null) existing.setApprovedBy(discount.getApprovedBy());
-        if (discount.getApprovedDate() != null) existing.setApprovedDate(discount.getApprovedDate());
-        if (discount.getStatus() != null) existing.setStatus(discount.getStatus());
-        if (discount.getValidFrom() != null) existing.setValidFrom(discount.getValidFrom());
-        if (discount.getValidTo() != null) existing.setValidTo(discount.getValidTo());
-        
-        FeeDiscount updated = feeDiscountRepository.save(existing);
-        createAuditLog("FEE_MANAGEMENT", "FeeDiscount", id, "UPDATE", existing, updated, performedBy);
-        return updated;
-    }
-    
-    @Override
-    public void deleteFeeDiscount(Long id, Long performedBy) {
-        FeeDiscount existing = getFeeDiscountById(id);
-        createAuditLog("FEE_MANAGEMENT", "FeeDiscount", id, "DELETE", existing, null, performedBy);
-        feeDiscountRepository.deleteById(id);
-    }
-    
-    @Override
-    public FeeDiscount approveDiscount(Long discountId, Long approvedBy) {
-        FeeDiscount discount = getFeeDiscountById(discountId);
-        discount.setStatus("APPROVED");
-        discount.setApprovedBy(approvedBy);
-        discount.setApprovedDate(LocalDate.now());
-        
-        FeeDiscount updated = feeDiscountRepository.save(discount);
-        createAuditLog("FEE_MANAGEMENT", "FeeDiscount", discountId, "APPROVE", discount, updated, approvedBy);
-        return updated;
-    }
-    
-    @Override
-    public FeeDiscount rejectDiscount(Long discountId, Long approvedBy, String reason) {
-        FeeDiscount discount = getFeeDiscountById(discountId);
-        discount.setStatus("REJECTED");
-        discount.setApprovedBy(approvedBy);
-        discount.setApprovedDate(LocalDate.now());
-        discount.setReason(reason);
-        
-        FeeDiscount updated = feeDiscountRepository.save(discount);
-        createAuditLog("FEE_MANAGEMENT", "FeeDiscount", discountId, "REJECT", discount, updated, approvedBy);
-        return updated;
-    }
-    
-    @Override
-    public BigDecimal calculateDiscountAmount(BigDecimal originalAmount, String discountType, BigDecimal discountValue) {
-        if ("PERCENTAGE".equals(discountType)) {
-            return originalAmount.multiply(discountValue).divide(BigDecimal.valueOf(100), 2, RoundingMode.HALF_UP);
-        } else {
-            return discountValue;
-        }
-    }
-    
-    // ========================================
-    // FEE REFUND OPERATIONS
-    // ========================================
-    @Override
-    public FeeRefund createFeeRefund(FeeRefund refund, Long performedBy) {
-        refund.setRequestedBy(performedBy);
-        FeeRefund saved = feeRefundRepository.save(refund);
-        createAuditLog("FEE_MANAGEMENT", "FeeRefund", saved.getId(), "CREATE", null, saved, performedBy);
-        return saved;
-    }
-    
-    @Override
-    public List<FeeRefund> getAllFeeRefunds() {
-        return feeRefundRepository.findAll();
-    }
-    
-    @Override
-    public FeeRefund getFeeRefundById(Long id) {
-        return feeRefundRepository.findById(id)
-            .orElseThrow(() -> new RuntimeException("FeeRefund not found with id: " + id));
-    }
-    
-    @Override
-    public List<FeeRefund> getRefundsByUserId(Long userId) {
-        return feeRefundRepository.findByUserId(userId);
-    }
-    
-    @Override
-    public FeeRefund updateFeeRefund(Long id, FeeRefund refund, Long performedBy) {
-        FeeRefund existing = getFeeRefundById(id);
-        
-        if (refund.getStudentFeePaymentId() != null) existing.setStudentFeePaymentId(refund.getStudentFeePaymentId());
-        if (refund.getUserId() != null) existing.setUserId(refund.getUserId());
-        if (refund.getRefundAmount() != null) existing.setRefundAmount(refund.getRefundAmount());
-        if (refund.getRefundDate() != null) existing.setRefundDate(refund.getRefundDate());
-        if (refund.getRefundMode() != null) existing.setRefundMode(refund.getRefundMode());
-        if (refund.getReason() != null) existing.setReason(refund.getReason());
-        if (refund.getRequestedBy() != null) existing.setRequestedBy(refund.getRequestedBy());
-        if (refund.getApprovedBy() != null) existing.setApprovedBy(refund.getApprovedBy());
-        if (refund.getApprovalDate() != null) existing.setApprovalDate(refund.getApprovalDate());
-        if (refund.getStatus() != null) existing.setStatus(refund.getStatus());
-        if (refund.getTransactionReference() != null) existing.setTransactionReference(refund.getTransactionReference());
-        
-        FeeRefund updated = feeRefundRepository.save(existing);
-        createAuditLog("FEE_MANAGEMENT", "FeeRefund", id, "UPDATE", existing, updated, performedBy);
-        return updated;
-    }
-    
-    @Override
-    public void deleteFeeRefund(Long id, Long performedBy) {
-        FeeRefund existing = getFeeRefundById(id);
-        createAuditLog("FEE_MANAGEMENT", "FeeRefund", id, "DELETE", existing, null, performedBy);
-        feeRefundRepository.deleteById(id);
-    }
-    
-    @Override
-    public FeeRefund approveRefund(Long refundId, Long approvedBy) {
-        FeeRefund refund = getFeeRefundById(refundId);
-        refund.setStatus("APPROVED");
-        refund.setApprovedBy(approvedBy);
-        refund.setApprovalDate(LocalDate.now());
-        
-        FeeRefund updated = feeRefundRepository.save(refund);
-        createAuditLog("FEE_MANAGEMENT", "FeeRefund", refundId, "APPROVE", refund, updated, approvedBy);
-        return updated;
-    }
-    
-    @Override
-    public FeeRefund rejectRefund(Long refundId, Long approvedBy, String reason) {
-        FeeRefund refund = getFeeRefundById(refundId);
-        refund.setStatus("REJECTED");
-        refund.setApprovedBy(approvedBy);
-        refund.setApprovalDate(LocalDate.now());
-        refund.setReason(reason);
-        
-        FeeRefund updated = feeRefundRepository.save(refund);
-        createAuditLog("FEE_MANAGEMENT", "FeeRefund", refundId, "REJECT", refund, updated, approvedBy);
-        return updated;
-    }
-    
-    @Override
-    public FeeRefund processRefund(Long refundId, String transactionRef, Long performedBy) {
-        FeeRefund refund = getFeeRefundById(refundId);
-        
-        if (!"APPROVED".equals(refund.getStatus())) {
-            throw new RuntimeException("Refund must be approved before processing");
-        }
-        
-        refund.setStatus("COMPLETED");
-        refund.setTransactionReference(transactionRef);
-        refund.setRefundDate(LocalDate.now());
-        
-        FeeRefund updated = feeRefundRepository.save(refund);
-        createAuditLog("FEE_MANAGEMENT", "FeeRefund", refundId, "PROCESS", refund, updated, performedBy);
-        return updated;
-    }
-    
-    // ========================================
-    // FEE RECEIPT OPERATIONS (AUTO-GENERATED)
-    // ========================================
-    @Override
-    public List<FeeReceipt> getAllFeeReceipts() {
-        return feeReceiptRepository.findAll();
-    }
-    
-    @Override
-    public FeeReceipt getFeeReceiptById(Long id) {
-        return feeReceiptRepository.findById(id)
-            .orElseThrow(() -> new RuntimeException("FeeReceipt not found with id: " + id));
-    }
-    
-    @Override
-    public FeeReceipt getFeeReceiptByPaymentId(Long paymentId) {
-        return feeReceiptRepository.findByPaymentId(paymentId)
-            .orElseThrow(() -> new RuntimeException("FeeReceipt not found for payment id: " + paymentId));
-    }
-    
-    @Override
-    public List<FeeReceipt> getReceiptsByStudentUserId(Long userId) {
-        return feeReceiptRepository.findByStudentUserId(userId);
-    }
-    
-    @Override
-    public FeeReceipt generateReceipt(Long paymentId) {
-        // Check if receipt already exists
-        Optional<FeeReceipt> existingReceipt = feeReceiptRepository.findByPaymentId(paymentId);
-        if (existingReceipt.isPresent()) {
-            return existingReceipt.get();
-        }
-        
-        StudentFeePayment payment = getStudentFeePaymentById(paymentId);
-        
-        FeeReceipt receipt = new FeeReceipt();
-        receipt.setPaymentId(paymentId);
-        receipt.setReceiptNumber(generateReceiptNumber(paymentId));
-        receipt.setAmountPaid(payment.getPaidAmount());
-        receipt.setPaymentMode(payment.getPaymentMode());
-        receipt.setEmailSent(false);
-        
-        return feeReceiptRepository.save(receipt);
-    }
-    
-    private String generateReceiptNumber(Long paymentId) {
-        String prefix = "REC";
-        String year = String.valueOf(java.time.Year.now().getValue());
-        String paddedId = String.format("%08d", paymentId);
-        return prefix + year + paddedId;
-    }
-    
-    @Override
-    public void sendReceiptEmail(Long receiptId, String studentEmail) {
-        FeeReceipt receipt = getFeeReceiptById(receiptId);
-        
-        // TODO: Implement email sending logic
-        // This would use JavaMailSender to send PDF via email
-        
-        receipt.setEmailSent(true);
-        receipt.setEmailSentAt(LocalDateTime.now());
-        feeReceiptRepository.save(receipt);
-    }
-    
-    // ========================================
-    // AUDIT LOG OPERATIONS (READ-ONLY)
-    // ========================================
-    @Override
-    public List<AuditLog> getAllAuditLogs() {
-        return auditLogRepository.findAll();
-    }
-    
-    @Override
-    public AuditLog getAuditLogById(Long id) {
-        return auditLogRepository.findById(id)
-            .orElseThrow(() -> new RuntimeException("AuditLog not found with id: " + id));
-    }
-    
-    @Override
-    public List<AuditLog> getAuditLogsByModule(String module) {
-        return auditLogRepository.findByModule(module);
-    }
-    
-    @Override
-    public List<AuditLog> getAuditLogsByEntity(String entityType, Long entityId) {
-        return auditLogRepository.findByEntityTypeAndEntityId(entityType, entityId);
-    }
-    
-    // ========================================
-    // LATE FEE RULE OPERATIONS
-    // ========================================
-    @Override
-    public LateFeeRule createLateFeeRule(LateFeeRule lateFeeRule, Long performedBy) {
-        LateFeeRule saved = lateFeeRuleRepository.save(lateFeeRule);
-        createAuditLog("FEE_MANAGEMENT", "LateFeeRule", saved.getId(), "CREATE", null, saved, performedBy);
-        return saved;
-    }
-    
-    @Override
-    public List<LateFeeRule> getAllLateFeeRules() {
-        return lateFeeRuleRepository.findAll();
-    }
-    
-    @Override
-    public LateFeeRule getLateFeeRuleById(Long id) {
-        return lateFeeRuleRepository.findById(id)
-            .orElseThrow(() -> new RuntimeException("LateFeeRule not found with id: " + id));
-    }
-    
-    @Override
-    public LateFeeRule updateLateFeeRule(Long id, LateFeeRule lateFeeRule, Long performedBy) {
-        LateFeeRule existing = getLateFeeRuleById(id);
-        
-        if (lateFeeRule.getFeeTypeId() != null) existing.setFeeTypeId(lateFeeRule.getFeeTypeId());
-        if (lateFeeRule.getCalculationType() != null) existing.setCalculationType(lateFeeRule.getCalculationType());
-        if (lateFeeRule.getAmount() != null) existing.setAmount(lateFeeRule.getAmount());
-        if (lateFeeRule.getGracePeriodDays() != null) existing.setGracePeriodDays(lateFeeRule.getGracePeriodDays());
-        if (lateFeeRule.getMaxLateFee() != null) existing.setMaxLateFee(lateFeeRule.getMaxLateFee());
-        if (lateFeeRule.getIsActive() != null) existing.setIsActive(lateFeeRule.getIsActive());
-        
-        LateFeeRule updated = lateFeeRuleRepository.save(existing);
-        createAuditLog("FEE_MANAGEMENT", "LateFeeRule", id, "UPDATE", existing, updated, performedBy);
-        return updated;
-    }
-    
-    @Override
-    public void deleteLateFeeRule(Long id, Long performedBy) {
-        LateFeeRule existing = getLateFeeRuleById(id);
-        createAuditLog("FEE_MANAGEMENT", "LateFeeRule", id, "DELETE", existing, null, performedBy);
-        lateFeeRuleRepository.deleteById(id);
-    }
-    
-    // ========================================
-    // REPORTING & ANALYTICS
-    // ========================================
-    @Override
-    public Map<String, Object> getStudentFeeReport(Long userId) {
-        List<StudentFeeAllocation> allocations = getStudentFeeAllocationsByUserId(userId);
-        
-        Map<String, Object> report = new HashMap<>();
-        BigDecimal totalAllocated = BigDecimal.ZERO;
-        BigDecimal totalPaid = BigDecimal.ZERO;
-        BigDecimal totalPending = BigDecimal.ZERO;
-        
-        for (StudentFeeAllocation allocation : allocations) {
-            totalAllocated = totalAllocated.add(allocation.getFinalAmount());
-            BigDecimal paid = studentFeePaymentRepository.getTotalPaidAmount(allocation.getId())
-                .orElse(BigDecimal.ZERO);
-            totalPaid = totalPaid.add(paid);
-        }
-        
-        totalPending = totalAllocated.subtract(totalPaid);
-        
-        report.put("userId", userId);
-        report.put("totalAllocated", totalAllocated);
-        report.put("totalPaid", totalPaid);
-        report.put("totalPending", totalPending);
-        report.put("allocations", allocations);
-        
-        return report;
-    }
-    
-    @Override
-    public Map<String, Object> getBatchFeeReport(Long batchId) {
-        List<StudentFeeAllocation> allocations = studentFeeAllocationRepository.findByBatchId(batchId);
-        
-        Map<String, Object> report = new HashMap<>();
-        BigDecimal totalAllocated = BigDecimal.ZERO;
-        BigDecimal totalPaid = BigDecimal.ZERO;
-        int studentCount = (int) allocations.stream().map(StudentFeeAllocation::getUserId).distinct().count();
-        
-        for (StudentFeeAllocation allocation : allocations) {
-            totalAllocated = totalAllocated.add(allocation.getFinalAmount());
-            BigDecimal paid = studentFeePaymentRepository.getTotalPaidAmount(allocation.getId())
-                .orElse(BigDecimal.ZERO);
-            totalPaid = totalPaid.add(paid);
-        }
-        
-        report.put("batchId", batchId);
-        report.put("studentCount", studentCount);
-        report.put("totalAllocated", totalAllocated);
-        report.put("totalCollected", totalPaid);
-        report.put("totalPending", totalAllocated.subtract(totalPaid));
-        
-        return report;
-    }
-    
-    @Override
-    public Map<String, Object> getCourseFeeReport(Long courseId) {
-        List<StudentFeeAllocation> allocations = studentFeeAllocationRepository.findByCourseId(courseId);
-        
-        Map<String, Object> report = new HashMap<>();
-        BigDecimal totalAllocated = BigDecimal.ZERO;
-        BigDecimal totalPaid = BigDecimal.ZERO;
-        
-        for (StudentFeeAllocation allocation : allocations) {
-            totalAllocated = totalAllocated.add(allocation.getFinalAmount());
-            BigDecimal paid = studentFeePaymentRepository.getTotalPaidAmount(allocation.getId())
-                .orElse(BigDecimal.ZERO);
-            totalPaid = totalPaid.add(paid);
-        }
-        
-        report.put("courseId", courseId);
-        report.put("totalAllocated", totalAllocated);
-        report.put("totalCollected", totalPaid);
-        report.put("totalPending", totalAllocated.subtract(totalPaid));
-        
-        return report;
-    }
-    
-    @Override
-    public Map<String, Object> getRevenueReport(LocalDate startDate, LocalDate endDate) {
-        List<StudentFeePayment> payments = studentFeePaymentRepository.findByPaymentDateBetween(startDate, endDate);
-        
-        BigDecimal totalRevenue = payments.stream()
-            .filter(p -> "SUCCESS".equals(p.getPaymentStatus()))
-            .map(StudentFeePayment::getPaidAmount)
-            .reduce(BigDecimal.ZERO, BigDecimal::add);
-        
-        Map<String, Object> report = new HashMap<>();
-        report.put("startDate", startDate);
-        report.put("endDate", endDate);
-        report.put("totalRevenue", totalRevenue);
-        report.put("transactionCount", payments.size());
-        report.put("payments", payments);
-        
-        return report;
-    }
-    
-    @Override
-    public Map<String, Object> getMonthlyRevenueReport(int year, int month) {
-        LocalDate startDate = LocalDate.of(year, month, 1);
-        LocalDate endDate = startDate.plusMonths(1).minusDays(1);
-        return getRevenueReport(startDate, endDate);
-    }
-    
-    @Override
-    public Map<String, Object> getQuarterlyRevenueReport(int year, int quarter) {
-        int startMonth = (quarter - 1) * 3 + 1;
-        LocalDate startDate = LocalDate.of(year, startMonth, 1);
-        LocalDate endDate = startDate.plusMonths(3).minusDays(1);
-        return getRevenueReport(startDate, endDate);
-    }
-    
-    @Override
-    public Map<String, Object> getYearlyRevenueReport(int year) {
-        LocalDate startDate = LocalDate.of(year, 1, 1);
-        LocalDate endDate = LocalDate.of(year, 12, 31);
-        return getRevenueReport(startDate, endDate);
-    }
-    
-    @Override
-    public Map<String, Object> getPendingFeesReport() {
-        List<StudentFeeAllocation> pending = studentFeeAllocationRepository.findByStatus("PENDING");
-        
-        BigDecimal totalPending = pending.stream()
-            .map(StudentFeeAllocation::getRemainingAmount)
-            .reduce(BigDecimal.ZERO, BigDecimal::add);
-        
-        Map<String, Object> report = new HashMap<>();
-        report.put("totalPendingAmount", totalPending);
-        report.put("studentCount", pending.size());
-        report.put("pendingAllocations", pending);
-        
-        return report;
-    }
-    
-    @Override
-    public Map<String, Object> getOverdueFeesReport() {
-        List<StudentFeeAllocation> overdue = studentFeeAllocationRepository.findByStatus("OVERDUE");
-        
-        BigDecimal totalOverdue = overdue.stream()
-            .map(StudentFeeAllocation::getRemainingAmount)
-            .reduce(BigDecimal.ZERO, BigDecimal::add);
-        
-        Map<String, Object> report = new HashMap<>();
-        report.put("totalOverdueAmount", totalOverdue);
-        report.put("studentCount", overdue.size());
-        report.put("overdueAllocations", overdue);
-        
-        return report;
-    }
-    
-    @Override
-    public List<StudentFeeAllocation> getStudentsWithPendingFees() {
-        return studentFeeAllocationRepository.findByStatus("PENDING");
-    }
-    
-    @Override
-    public List<StudentFeeAllocation> getStudentsWithOverdueFees() {
-        return studentFeeAllocationRepository.findByStatus("OVERDUE");
-    }
 }
-

@@ -8,28 +8,129 @@ import java.time.LocalDateTime;
 @Entity
 @Table(name = "attendance_penalties")
 public class AttendancePenalty {
-    @Id @GeneratedValue(strategy = GenerationType.IDENTITY) private Long id;
-    @Column(name = "user_id", nullable = false) private Long userId;
-    @Column(name = "month_year") private String monthYear;
-    @Column(name = "attendance_percentage", precision = 5, scale = 2) private BigDecimal attendancePercentage;
-    @Column(name = "penalty_amount", nullable = false, precision = 12, scale = 2) private BigDecimal penaltyAmount;
-    @Column(name = "applied_date") private LocalDate appliedDate;
     
-    @ManyToOne
-    @JoinColumn(name = "fee_allocation_id")
-    private StudentFeeAllocation feeAllocation;
+    @Id
+    @GeneratedValue(strategy = GenerationType.IDENTITY)
+    private Long id;
     
-    @Column(name = "created_at") private LocalDateTime createdAt = LocalDateTime.now();
+    @Column(name = "user_id", nullable = false)
+    private Long userId;
     
+    @Column(name = "student_fee_allocation_id", nullable = false)
+    private Long studentFeeAllocationId;
+    
+    @Column(name = "absence_date", nullable = false)
+    private LocalDate absenceDate;
+    
+    @Column(name = "penalty_amount", nullable = false, precision = 10, scale = 2)
+    private BigDecimal penaltyAmount;
+    
+    @Column(length = 255)
+    private String reason;
+    
+    @Column(name = "applied_by")
+    private Long appliedBy;
+    
+    @Column(name = "is_active")
+    private Boolean isActive = true;
+    
+    @Column(name = "created_at", updatable = false)
+    private LocalDateTime createdAt;
+    
+    @Column(name = "updated_at")
+    private LocalDateTime updatedAt;
+    
+    @PrePersist
+    protected void onCreate() {
+        createdAt = LocalDateTime.now();
+    }
+    
+    @PreUpdate
+    protected void onUpdate() {
+        updatedAt = LocalDateTime.now();
+    }
+    
+    // Constructors
     public AttendancePenalty() {}
     
-    // Getters/Setters
-    public Long getId() { return id; } public void setId(Long id) { this.id = id; }
-    public Long getUserId() { return userId; } public void setUserId(Long userId) { this.userId = userId; }
-    public String getMonthYear() { return monthYear; } public void setMonthYear(String monthYear) { this.monthYear = monthYear; }
-    public BigDecimal getAttendancePercentage() { return attendancePercentage; } public void setAttendancePercentage(BigDecimal attendancePercentage) { this.attendancePercentage = attendancePercentage; }
-    public BigDecimal getPenaltyAmount() { return penaltyAmount; } public void setPenaltyAmount(BigDecimal penaltyAmount) { this.penaltyAmount = penaltyAmount; }
-    public LocalDate getAppliedDate() { return appliedDate; } public void setAppliedDate(LocalDate appliedDate) { this.appliedDate = appliedDate; }
-    public StudentFeeAllocation getFeeAllocation() { return feeAllocation; } public void setFeeAllocation(StudentFeeAllocation feeAllocation) { this.feeAllocation = feeAllocation; }
-    public LocalDateTime getCreatedAt() { return createdAt; } public void setCreatedAt(LocalDateTime createdAt) { this.createdAt = createdAt; }
+    // Getters and Setters
+    public Long getId() {
+        return id;
+    }
+    
+    public void setId(Long id) {
+        this.id = id;
+    }
+    
+    public Long getUserId() {
+        return userId;
+    }
+    
+    public void setUserId(Long userId) {
+        this.userId = userId;
+    }
+    
+    public Long getStudentFeeAllocationId() {
+        return studentFeeAllocationId;
+    }
+    
+    public void setStudentFeeAllocationId(Long studentFeeAllocationId) {
+        this.studentFeeAllocationId = studentFeeAllocationId;
+    }
+    
+    public LocalDate getAbsenceDate() {
+        return absenceDate;
+    }
+    
+    public void setAbsenceDate(LocalDate absenceDate) {
+        this.absenceDate = absenceDate;
+    }
+    
+    public BigDecimal getPenaltyAmount() {
+        return penaltyAmount;
+    }
+    
+    public void setPenaltyAmount(BigDecimal penaltyAmount) {
+        this.penaltyAmount = penaltyAmount;
+    }
+    
+    public String getReason() {
+        return reason;
+    }
+    
+    public void setReason(String reason) {
+        this.reason = reason;
+    }
+    
+    public Long getAppliedBy() {
+        return appliedBy;
+    }
+    
+    public void setAppliedBy(Long appliedBy) {
+        this.appliedBy = appliedBy;
+    }
+    
+    public Boolean getIsActive() {
+        return isActive;
+    }
+    
+    public void setIsActive(Boolean isActive) {
+        this.isActive = isActive;
+    }
+    
+    public LocalDateTime getCreatedAt() {
+        return createdAt;
+    }
+    
+    public void setCreatedAt(LocalDateTime createdAt) {
+        this.createdAt = createdAt;
+    }
+    
+    public LocalDateTime getUpdatedAt() {
+        return updatedAt;
+    }
+    
+    public void setUpdatedAt(LocalDateTime updatedAt) {
+        this.updatedAt = updatedAt;
+    }
 }
