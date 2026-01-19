@@ -562,8 +562,8 @@ public class FeeServiceImpl implements FeeService {
 
     @Override
     public StudentFeePayment processOnlinePayment(Long allocationId, Long installmentPlanId, 
-                                                   BigDecimal amount, String paymentMode, 
-                                                   String transactionRef, String gatewayResponse) {
+                                                  BigDecimal amount, String paymentMode, 
+                                                  String transactionRef, String gatewayResponse) {
         logger.info("Processing online payment - Allocation ID: {}, Amount: {}", allocationId, amount);
         
         try {
@@ -578,6 +578,25 @@ public class FeeServiceImpl implements FeeService {
             payment.setGatewayResponse(gatewayResponse);
             
             StudentFeePayment saved = createPayment(payment);
+
+            // ====================================================================
+            // 🔴 FIX ADDED HERE: Update the Parent Allocation Balance
+            // ====================================================================
+            StudentFeeAllocation allocation = getFeeAllocationById(allocationId);
+            
+            // 1. Calculate New Remaining Amount (Old Remaining - Current Payment)
+            BigDecimal newRemaining = allocation.getRemainingAmount().subtract(amount);
+            allocation.setRemainingAmount(newRemaining);
+            
+            // 2. Check if fully paid
+            if (newRemaining.compareTo(BigDecimal.ZERO) <= 0) {
+                allocation.setStatus(StudentFeeAllocation.AllocationStatus.COMPLETED);
+                unblockCertificate(allocation.getUserId()); // Bonus: Auto-unblock if paid
+            }
+            
+            // 3. SAVE THE ALLOCATION (This updates the report!)
+            studentFeeAllocationRepository.save(allocation);
+            // ====================================================================
             
             logger.info("Online payment processed successfully - Payment ID: {}", saved.getId());
             return saved;
