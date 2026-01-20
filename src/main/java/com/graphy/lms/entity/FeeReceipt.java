@@ -2,8 +2,10 @@ package com.graphy.lms.entity;
 
 import jakarta.persistence.*;
 import java.time.LocalDateTime;
+import lombok.ToString;
 
 @Entity
+@ToString
 @Table(name = "fee_receipts")
 public class FeeReceipt {
     

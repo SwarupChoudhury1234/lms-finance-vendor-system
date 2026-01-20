@@ -4,8 +4,10 @@ import jakarta.persistence.*;
 import java.math.BigDecimal;
 import java.time.LocalDate;
 import java.time.LocalDateTime;
+import lombok.ToString;
 
 @Entity
+@ToString
 @Table(name = "fee_refunds")
 public class FeeRefund {
     

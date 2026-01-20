@@ -253,7 +253,8 @@ public interface FeeService {
     boolean canIssueCertificate(Long userId);
     
     // Block certificate if fees unpaid
-    CertificateBlockList blockCertificate(Long userId, BigDecimal pendingAmount, String reason, Long blockedBy);
+ // Remove 'BigDecimal pendingAmount' from here too
+    public CertificateBlockList blockCertificate(Long userId, String reason, Long blockedBy);
     
     // Unblock certificate after payment
     void unblockCertificate(Long userId);

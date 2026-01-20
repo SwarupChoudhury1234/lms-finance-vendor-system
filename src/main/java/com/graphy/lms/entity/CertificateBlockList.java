@@ -1,11 +1,13 @@
 package com.graphy.lms.entity;
 
 import jakarta.persistence.*;
+import lombok.ToString;
 import java.math.BigDecimal;
 import java.time.LocalDate;
 import java.time.LocalDateTime;
 
 @Entity
+@ToString
 @Table(name = "certificate_block_list")
 public class CertificateBlockList {
     

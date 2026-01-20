@@ -1,12 +1,14 @@
 package com.graphy.lms.entity;
 
 import jakarta.persistence.*;
+import lombok.ToString;
 import java.math.BigDecimal;
 import java.time.LocalDate;
 import java.time.LocalDateTime;
 
 @Entity
 @Table(name = "late_fee_config")
+@ToString
 public class LateFeeConfig {
     
     @Id

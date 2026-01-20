@@ -1,0 +1,3195 @@
+2026-01-19 11:19:49.162 [background-preinit] INFO  o.h.validator.internal.util.Version - HV000001: Hibernate Validator 8.0.1.Final
+2026-01-19 11:19:49.226 [restartedMain] INFO  c.g.l.LmsFinanceVendorSystemApplication - Starting LmsFinanceVendorSystemApplication using Java 21.0.9 with PID 9588 (C:\Users\ACER\eclipse-workspace\lms-finance-vendor-system\target\classes started by ACER in C:\Users\ACER\eclipse-workspace\lms-finance-vendor-system)
+2026-01-19 11:19:49.227 [restartedMain] DEBUG c.g.l.LmsFinanceVendorSystemApplication - Running with Spring Boot v3.2.0, Spring v6.1.1
+2026-01-19 11:19:49.229 [restartedMain] INFO  c.g.l.LmsFinanceVendorSystemApplication - The following 1 profile is active: "dev"
+2026-01-19 11:19:49.285 [restartedMain] INFO  o.s.b.d.e.DevToolsPropertyDefaultsPostProcessor - Devtools property defaults active! Set 'spring.devtools.add-properties' to 'false' to disable
+2026-01-19 11:19:49.285 [restartedMain] INFO  o.s.b.d.e.DevToolsPropertyDefaultsPostProcessor - For additional web related logging consider setting the 'logging.level.web' property to 'DEBUG'
+2026-01-19 11:19:52.543 [restartedMain] INFO  o.s.d.r.c.RepositoryConfigurationDelegate - Bootstrapping Spring Data JPA repositories in DEFAULT mode.
+2026-01-19 11:19:52.679 [restartedMain] INFO  o.s.d.r.c.RepositoryConfigurationDelegate - Finished Spring Data repository scanning in 127 ms. Found 39 JPA repository interfaces.
+2026-01-19 11:19:53.785 [restartedMain] INFO  o.s.b.w.e.tomcat.TomcatWebServer - Tomcat initialized with port 8080 (http)
+2026-01-19 11:19:53.794 [restartedMain] INFO  o.a.coyote.http11.Http11NioProtocol - Initializing ProtocolHandler ["http-nio-8080"]
+2026-01-19 11:19:53.796 [restartedMain] INFO  o.a.catalina.core.StandardService - Starting service [Tomcat]
+2026-01-19 11:19:53.797 [restartedMain] INFO  o.a.catalina.core.StandardEngine - Starting Servlet engine: [Apache Tomcat/10.1.16]
+2026-01-19 11:19:53.861 [restartedMain] INFO  o.a.c.c.C.[Tomcat].[localhost].[/] - Initializing Spring embedded WebApplicationContext
+2026-01-19 11:19:53.861 [restartedMain] INFO  o.s.b.w.s.c.ServletWebServerApplicationContext - Root WebApplicationContext: initialization completed in 4574 ms
+2026-01-19 11:19:54.095 [restartedMain] DEBUG c.g.l.s.JwtAuthenticationFilter - Filter 'jwtAuthenticationFilter' configured for use
+2026-01-19 11:19:54.097 [restartedMain] DEBUG c.graphy.lms.config.HeaderRoleFilter - Filter 'headerRoleFilter' configured for use
+2026-01-19 11:19:54.191 [restartedMain] INFO  com.zaxxer.hikari.HikariDataSource - HikariPool-1 - Starting...
+2026-01-19 11:19:54.655 [restartedMain] INFO  com.zaxxer.hikari.pool.HikariPool - HikariPool-1 - Added connection com.mysql.cj.jdbc.ConnectionImpl@141705c
+2026-01-19 11:19:54.657 [restartedMain] INFO  com.zaxxer.hikari.HikariDataSource - HikariPool-1 - Start completed.
+2026-01-19 11:19:54.773 [restartedMain] INFO  o.f.c.i.license.VersionPrinter - Flyway Community Edition 9.22.3 by Redgate
+2026-01-19 11:19:54.773 [restartedMain] INFO  o.f.c.i.license.VersionPrinter - See release notes here: https://rd.gt/416ObMi
+2026-01-19 11:19:54.773 [restartedMain] INFO  o.f.c.i.license.VersionPrinter - 
+2026-01-19 11:19:54.835 [restartedMain] INFO  org.flywaydb.core.FlywayExecutor - Database: jdbc:mysql://localhost:3306/lms_fee_dev (MySQL 8.0)
+2026-01-19 11:19:54.954 [restartedMain] INFO  o.f.c.i.s.JdbcTableSchemaHistory - Schema history table `lms_fee_dev`.`flyway_schema_history` does not exist yet
+2026-01-19 11:19:54.958 [restartedMain] INFO  o.f.core.internal.command.DbValidate - Successfully validated 0 migrations (execution time 00:00.050s)
+2026-01-19 11:19:54.959 [restartedMain] WARN  o.f.core.internal.command.DbValidate - No migrations found. Are your locations set up correctly?
+2026-01-19 11:19:55.049 [restartedMain] INFO  o.f.c.i.s.JdbcTableSchemaHistory - Creating Schema History table `lms_fee_dev`.`flyway_schema_history` ...
+2026-01-19 11:19:55.313 [restartedMain] INFO  o.f.core.internal.command.DbMigrate - Current version of schema `lms_fee_dev`: << Empty Schema >>
+2026-01-19 11:19:55.318 [restartedMain] INFO  o.f.core.internal.command.DbMigrate - Schema `lms_fee_dev` is up to date. No migration necessary.
+2026-01-19 11:19:55.436 [restartedMain] INFO  o.h.jpa.internal.util.LogHelper - HHH000204: Processing PersistenceUnitInfo [name: default]
+2026-01-19 11:19:55.528 [restartedMain] INFO  org.hibernate.Version - HHH000412: Hibernate ORM core version 6.3.1.Final
+2026-01-19 11:19:55.576 [restartedMain] INFO  o.h.c.i.RegionFactoryInitiator - HHH000026: Second-level cache disabled
+2026-01-19 11:19:55.906 [restartedMain] INFO  o.s.o.j.p.SpringPersistenceUnitInfo - No LoadTimeWeaver setup: ignoring JPA class transformer
+2026-01-19 11:19:55.988 [restartedMain] WARN  org.hibernate.orm.deprecation - HHH90000025: MySQL8Dialect does not need to be specified explicitly using 'hibernate.dialect' (remove the property setting and it will be selected by default)
+2026-01-19 11:19:55.988 [restartedMain] WARN  org.hibernate.orm.deprecation - HHH90000026: MySQL8Dialect has been deprecated; use org.hibernate.dialect.MySQLDialect instead
+2026-01-19 11:19:57.596 [restartedMain] INFO  o.h.e.t.j.p.i.JtaPlatformInitiator - HHH000489: No JTA platform available (set 'hibernate.transaction.jta.platform' to enable JTA platform integration)
+2026-01-19 11:19:57.652 [restartedMain] DEBUG org.hibernate.SQL - 
+    create table asset_returns (
+        id bigint not null auto_increment,
+        assignment_id bigint,
+        condition_status varchar(255),
+        created_at datetime(6),
+        remarks varchar(255),
+        return_date date,
+        returned_quantity integer,
+        updated_at datetime(6),
+        primary key (id)
+    ) engine=InnoDB
+2026-01-19 11:19:57.688 [restartedMain] DEBUG org.hibernate.SQL - 
+    create table assets_assigned (
+        id bigint not null auto_increment,
+        created_at datetime(6),
+        given_date date,
+        item_id bigint,
+        quantity integer,
+        status varchar(255),
+        updated_at datetime(6),
+        user_id bigint,
+        user_role varchar(255),
+        primary key (id)
+    ) engine=InnoDB
+2026-01-19 11:19:57.718 [restartedMain] DEBUG org.hibernate.SQL - 
+    create table attendance_penalties (
+        id bigint not null auto_increment,
+        absence_date date not null,
+        applied_by bigint,
+        created_at datetime(6),
+        is_active bit,
+        penalty_amount decimal(10,2) not null,
+        reason varchar(255),
+        student_fee_allocation_id bigint not null,
+        updated_at datetime(6),
+        user_id bigint not null,
+        primary key (id)
+    ) engine=InnoDB
+2026-01-19 11:19:57.754 [restartedMain] DEBUG org.hibernate.SQL - 
+    create table attendance_penalty_rules (
+        id bigint not null auto_increment,
+        created_at datetime(6),
+        is_active bit,
+        max_penalty_per_month decimal(12,2),
+        min_attendance_percentage decimal(5,2),
+        penalty_per_absent decimal(10,2) not null,
+        primary key (id)
+    ) engine=InnoDB
+2026-01-19 11:19:57.781 [restartedMain] DEBUG org.hibernate.SQL - 
+    create table audit_logs (
+        id bigint not null auto_increment,
+        action enum ('CREATE','UPDATE','DELETE','VIEW') not null,
+        entity_id bigint not null,
+        entity_name varchar(100) not null,
+        ip_address varchar(50),
+        module varchar(50) not null,
+        new_value TEXT,
+        old_value TEXT,
+        performed_at datetime(6),
+        performed_by bigint,
+        primary key (id)
+    ) engine=InnoDB
+2026-01-19 11:19:57.814 [restartedMain] DEBUG org.hibernate.SQL - 
+    create table auto_debit_config (
+        id bigint not null auto_increment,
+        auto_debit_day integer,
+        bank_account_number varchar(50),
+        card_token varchar(255),
+        consent_date date,
+        consent_given bit,
+        created_at datetime(6),
+        is_active bit,
+        payment_gateway varchar(50),
+        student_fee_allocation_id bigint not null,
+        updated_at datetime(6),
+        user_id bigint not null,
+        primary key (id)
+    ) engine=InnoDB
+2026-01-19 11:19:57.838 [restartedMain] DEBUG org.hibernate.SQL - 
+    create table billing_transactions (
+        id bigint not null auto_increment,
+        amount decimal(38,2),
+        created_at datetime(6),
+        payment_mode varchar(255),
+        status varchar(255),
+        transaction_date date,
+        transaction_reference varchar(255),
+        updated_at datetime(6),
+        invoice_id bigint not null,
+        primary key (id)
+    ) engine=InnoDB
+2026-01-19 11:19:57.866 [restartedMain] DEBUG org.hibernate.SQL - 
+    create table certificate_block_list (
+        id bigint not null auto_increment,
+        blocked_by bigint,
+        blocked_date date,
+        blocked_reason varchar(500),
+        created_at datetime(6),
+        is_active bit,
+        pending_amount decimal(12,2) not null,
+        updated_at datetime(6),
+        user_id bigint not null,
+        primary key (id)
+    ) engine=InnoDB
+2026-01-19 11:19:57.893 [restartedMain] DEBUG org.hibernate.SQL - 
+    create table currency_rates (
+        id bigint not null auto_increment,
+        created_at datetime(6),
+        effective_date date not null,
+        exchange_rate decimal(15,6) not null,
+        from_currency varchar(10) not null,
+        to_currency varchar(10) not null,
+        updated_at datetime(6),
+        primary key (id)
+    ) engine=InnoDB
+2026-01-19 11:19:57.920 [restartedMain] DEBUG org.hibernate.SQL - 
+    create table exam_fee_linkage (
+        id bigint not null auto_increment,
+        applied_date date,
+        created_at datetime(6),
+        currency varchar(10),
+        exam_fee_amount decimal(10,2) not null,
+        exam_id bigint not null,
+        student_fee_allocation_id bigint not null,
+        updated_at datetime(6),
+        user_id bigint not null,
+        primary key (id)
+    ) engine=InnoDB
+2026-01-19 11:19:57.948 [restartedMain] DEBUG org.hibernate.SQL - 
+    create table fee_discounts (
+        id bigint not null auto_increment,
+        approved_by bigint,
+        approved_date date,
+        created_at datetime(6),
+        discount_name varchar(100),
+        discount_type enum ('PERCENTAGE','FLAT') not null,
+        discount_value decimal(10,2) not null,
+        fee_structure_id bigint not null,
+        is_active bit,
+        reason varchar(255),
+        updated_at datetime(6),
+        user_id bigint not null,
+        primary key (id)
+    ) engine=InnoDB
+2026-01-19 11:19:57.979 [restartedMain] DEBUG org.hibernate.SQL - 
+    create table fee_receipts (
+        id bigint not null auto_increment,
+        generated_at datetime(6),
+        payment_id bigint not null,
+        receipt_number varchar(100) not null,
+        receipt_pdf_url varchar(500),
+        user_id bigint not null,
+        primary key (id)
+    ) engine=InnoDB
+2026-01-19 11:19:58.009 [restartedMain] DEBUG org.hibernate.SQL - 
+    create table fee_refunds (
+        id bigint not null auto_increment,
+        approved_by bigint,
+        approved_date date,
+        created_at datetime(6),
+        processed_date date,
+        refund_amount decimal(12,2) not null,
+        refund_mode varchar(50),
+        refund_reason varchar(500),
+        refund_status enum ('PENDING','APPROVED','PROCESSED','REJECTED'),
+        requested_date date not null,
+        student_fee_allocation_id bigint not null,
+        student_fee_payment_id bigint not null,
+        transaction_reference varchar(100),
+        updated_at datetime(6),
+        user_id bigint not null,
+        primary key (id)
+    ) engine=InnoDB
+2026-01-19 11:19:58.036 [restartedMain] DEBUG org.hibernate.SQL - 
+    create table fee_reports (
+        id bigint not null auto_increment,
+        created_at datetime(6),
+        filter_criteria JSON,
+        generated_by bigint,
+        report_date date not null,
+        report_type varchar(255),
+        total_collection decimal(15,2),
+        total_pending decimal(15,2),
+        primary key (id)
+    ) engine=InnoDB
+2026-01-19 11:19:58.059 [restartedMain] DEBUG org.hibernate.SQL - 
+    create table fee_structures (
+        id bigint not null auto_increment,
+        academic_year varchar(20) not null,
+        batch_id bigint,
+        course_id bigint not null,
+        created_at datetime(6),
+        currency varchar(10),
+        fee_type_id bigint not null,
+        is_active bit,
+        total_amount decimal(12,2) not null,
+        updated_at datetime(6),
+        primary key (id)
+    ) engine=InnoDB
+2026-01-19 11:19:58.085 [restartedMain] DEBUG org.hibernate.SQL - 
+    create table fee_types (
+        id bigint not null auto_increment,
+        created_at datetime(6),
+        description varchar(255),
+        is_active bit,
+        name varchar(100) not null,
+        updated_at datetime(6),
+        primary key (id)
+    ) engine=InnoDB
+2026-01-19 11:19:58.109 [restartedMain] DEBUG org.hibernate.SQL - 
+    create table installment_plan_templates (
+        id bigint not null auto_increment,
+        advance_percentage decimal(5,2),
+        created_at datetime(6),
+        created_by bigint,
+        installment_percentages JSON not null,
+        is_default bit,
+        name varchar(100) not null,
+        number_of_installments integer not null,
+        primary key (id)
+    ) engine=InnoDB
+2026-01-19 11:19:58.134 [restartedMain] DEBUG org.hibernate.SQL - 
+    create table inventory_categories (
+        id bigint not null auto_increment,
+        category_name varchar(255),
+        created_at datetime(6),
+        description varchar(255),
+        status varchar(255),
+        updated_at datetime(6),
+        primary key (id)
+    ) engine=InnoDB
+2026-01-19 11:19:58.157 [restartedMain] DEBUG org.hibernate.SQL - 
+    create table inventory_items (
+        id bigint not null auto_increment,
+        category_id bigint,
+        created_at datetime(6),
+        item_name varchar(255),
+        status varchar(255),
+        total_quantity integer,
+        unit_price decimal(38,2),
+        updated_at datetime(6),
+        primary key (id)
+    ) engine=InnoDB
+2026-01-19 11:19:58.181 [restartedMain] DEBUG org.hibernate.SQL - 
+    create table invoice_templates (
+        id bigint not null auto_increment,
+        created_at datetime(6),
+        frequency varchar(20),
+        is_active bit,
+        name varchar(100) not null,
+        template_content TEXT,
+        primary key (id)
+    ) engine=InnoDB
+2026-01-19 11:19:58.210 [restartedMain] DEBUG org.hibernate.SQL - 
+    create table invoices (
+        id bigint not null auto_increment,
+        amount_paid decimal(38,2),
+        balance_amount decimal(38,2),
+        bill_date date,
+        created_at datetime(6),
+        currency varchar(255),
+        due_date date,
+        invoice_amount decimal(38,2),
+        invoice_number varchar(255) not null,
+        status varchar(255),
+        updated_at datetime(6),
+        order_id bigint not null,
+        primary key (id)
+    ) engine=InnoDB
+2026-01-19 11:19:58.245 [restartedMain] DEBUG org.hibernate.SQL - 
+    create table late_fee_config (
+        id bigint not null auto_increment,
+        created_at datetime(6),
+        created_by bigint,
+        effective_from date not null,
+        effective_to date,
+        is_active bit,
+        payment_schedule enum ('MONTHLY','QUARTERLY','YEARLY') not null,
+        penalty_amount decimal(10,2) not null,
+        period_count integer not null,
+        updated_at datetime(6),
+        primary key (id)
+    ) engine=InnoDB
+2026-01-19 11:19:58.276 [restartedMain] DEBUG org.hibernate.SQL - 
+    create table late_fee_penalties (
+        id bigint not null auto_increment,
+        created_at datetime(6),
+        is_waived bit,
+        penalty_amount decimal(10,2) not null,
+        penalty_date date not null,
+        reason varchar(255),
+        student_installment_plan_id bigint not null,
+        updated_at datetime(6),
+        waived_by bigint,
+        waived_date date,
+        primary key (id)
+    ) engine=InnoDB
+2026-01-19 11:19:58.300 [restartedMain] DEBUG org.hibernate.SQL - 
+    create table notification_logs (
+        id bigint not null auto_increment,
+        error_message varchar(1000),
+        message tinytext,
+        recipient varchar(255),
+        reference_id bigint,
+        sent_at datetime(6),
+        status varchar(255),
+        subject varchar(255),
+        type varchar(255) not null,
+        primary key (id)
+    ) engine=InnoDB
+2026-01-19 11:19:58.327 [restartedMain] DEBUG org.hibernate.SQL - 
+    create table payment_alternatives (
+        id bigint not null auto_increment,
+        alternative_name varchar(100) not null,
+        created_at datetime(6),
+        created_by bigint,
+        description varchar(255),
+        is_active bit,
+        number_of_installments integer not null,
+        updated_at datetime(6),
+        primary key (id)
+    ) engine=InnoDB
+2026-01-19 11:19:58.352 [restartedMain] DEBUG org.hibernate.SQL - 
+    create table payment_installments (
+        id bigint not null auto_increment,
+        adjustment_notes TEXT,
+        amount decimal(12,2) not null,
+        created_at datetime(6),
+        due_date date not null,
+        installment_number integer not null,
+        late_fee decimal(12,2),
+        paid_amount decimal(12,2),
+        status varchar(255),
+        updated_at datetime(6),
+        student_fee_allocation_id bigint not null,
+        primary key (id)
+    ) engine=InnoDB
+2026-01-19 11:19:58.376 [restartedMain] DEBUG org.hibernate.SQL - 
+    create table payment_links (
+        id bigint not null auto_increment,
+        created_at datetime(6),
+        expires_at datetime(6),
+        link_url varchar(500) not null,
+        payment_proof_path varchar(500),
+        status varchar(20),
+        submitted_at datetime(6),
+        unique_token varchar(100) not null,
+        upi_transaction_id varchar(100),
+        student_fee_allocation_id bigint not null,
+        primary key (id)
+    ) engine=InnoDB
+2026-01-19 11:19:58.403 [restartedMain] DEBUG org.hibernate.SQL - 
+    create table payment_notifications (
+        id bigint not null auto_increment,
+        created_at datetime(6),
+        delivery_status enum ('PENDING','SENT','FAILED'),
+        email varchar(255),
+        message TEXT not null,
+        notification_type enum ('PAYMENT_SUCCESS','PAYMENT_FAILED','DUE_REMINDER','OVERDUE_WARNING','RECEIPT_SENT') not null,
+        phone varchar(20),
+        sent_at datetime(6),
+        user_id bigint not null,
+        primary key (id)
+    ) engine=InnoDB
+2026-01-19 11:19:58.463 [restartedMain] DEBUG org.hibernate.SQL - 
+    create table procurement (
+        id bigint not null auto_increment,
+        cost decimal(38,2),
+        created_at datetime(6),
+        item_id bigint,
+        purchase_date date,
+        quantity integer,
+        updated_at datetime(6),
+        vendor_id bigint,
+        primary key (id)
+    ) engine=InnoDB
+2026-01-19 11:19:58.492 [restartedMain] DEBUG org.hibernate.SQL - 
+    create table purchase_orders (
+        id bigint not null auto_increment,
+        created_at datetime(6),
+        order_date date,
+        status varchar(255),
+        subtotal_amount decimal(38,2),
+        tax_amount decimal(38,2),
+        total_amount decimal(38,2),
+        updated_at datetime(6),
+        vendor_id bigint,
+        primary key (id)
+    ) engine=InnoDB
+2026-01-19 11:19:58.519 [restartedMain] DEBUG org.hibernate.SQL - 
+    create table refund_approvals (
+        id bigint not null auto_increment,
+        approval_level integer,
+        approved_date date,
+        created_at datetime(6),
+        current_approver bigint,
+        remarks TEXT,
+        requested_by bigint not null,
+        requested_date date not null,
+        status varchar(20),
+        fee_refund_id bigint not null,
+        primary key (id)
+    ) engine=InnoDB
+2026-01-19 11:19:58.549 [restartedMain] DEBUG org.hibernate.SQL - 
+    create table stock_levels (
+        id bigint not null auto_increment,
+        available_quantity integer,
+        created_at datetime(6),
+        inventory_id bigint,
+        low_stock_threshold integer,
+        updated_at datetime(6),
+        primary key (id)
+    ) engine=InnoDB
+2026-01-19 11:19:58.575 [restartedMain] DEBUG org.hibernate.SQL - 
+    create table stock_transactions (
+        id bigint not null auto_increment,
+        created_at datetime(6),
+        item_id bigint,
+        quantity integer,
+        reference_id bigint,
+        remarks varchar(255),
+        transaction_date date,
+        transaction_type varchar(255),
+        updated_at datetime(6),
+        primary key (id)
+    ) engine=InnoDB
+2026-01-19 11:19:58.604 [restartedMain] DEBUG org.hibernate.SQL - 
+    create table student_fee_allocations (
+        id bigint not null auto_increment,
+        advance_payment decimal(12,2),
+        allocation_date date,
+        created_at datetime(6),
+        currency varchar(10),
+        fee_structure_id bigint not null,
+        original_amount decimal(12,2) not null,
+        payable_amount decimal(12,2) not null,
+        remaining_amount decimal(12,2) not null,
+        status enum ('ACTIVE','COMPLETED','CANCELLED','REFUNDED'),
+        total_discount decimal(12,2),
+        updated_at datetime(6),
+        user_id bigint not null,
+        primary key (id)
+    ) engine=InnoDB
+2026-01-19 11:19:58.636 [restartedMain] DEBUG org.hibernate.SQL - 
+    create table student_fee_payments (
+        id bigint not null auto_increment,
+        created_at datetime(6),
+        currency varchar(10),
+        gateway_response TEXT,
+        paid_amount decimal(12,2) not null,
+        payment_date datetime(6) not null,
+        payment_mode enum ('CASH','CARD','UPI','NET_BANKING','BANK_TRANSFER','AUTO_DEBIT') not null,
+        payment_status enum ('PENDING','SUCCESS','FAILED','REFUNDED'),
+        recorded_by bigint,
+        screenshot_url varchar(500),
+        student_fee_allocation_id bigint not null,
+        student_installment_plan_id bigint,
+        transaction_reference varchar(100),
+        updated_at datetime(6),
+        primary key (id)
+    ) engine=InnoDB
+2026-01-19 11:19:58.664 [restartedMain] DEBUG org.hibernate.SQL - 
+    create table student_installment_plans (
+        id bigint not null auto_increment,
+        created_at datetime(6),
+        due_date date not null,
+        installment_amount decimal(12,2) not null,
+        installment_number integer not null,
+        paid_amount decimal(12,2),
+        payment_alternative_id bigint not null,
+        status enum ('PENDING','PARTIALLY_PAID','PAID','OVERDUE'),
+        student_fee_allocation_id bigint not null,
+        updated_at datetime(6),
+        primary key (id)
+    ) engine=InnoDB
+2026-01-19 11:19:58.692 [restartedMain] DEBUG org.hibernate.SQL - 
+    create table vendor_contracts (
+        id bigint not null auto_increment,
+        contract_status varchar(255),
+        contract_title varchar(255),
+        created_at datetime(6),
+        end_date date,
+        start_date date,
+        vendor_id bigint not null,
+        primary key (id)
+    ) engine=InnoDB
+2026-01-19 11:19:58.718 [restartedMain] DEBUG org.hibernate.SQL - 
+    create table vendor_payments (
+        id bigint not null auto_increment,
+        created_at datetime(6),
+        payment_amount decimal(38,2),
+        payment_date date,
+        payment_mode varchar(255),
+        payment_status varchar(255),
+        reference_number varchar(255),
+        contract_id bigint,
+        vendor_id bigint not null,
+        primary key (id)
+    ) engine=InnoDB
+2026-01-19 11:19:58.745 [restartedMain] DEBUG org.hibernate.SQL - 
+    create table vendor_services (
+        id bigint not null auto_increment,
+        service_description varchar(255),
+        service_name varchar(255),
+        status varchar(255),
+        vendor_id bigint not null,
+        primary key (id)
+    ) engine=InnoDB
+2026-01-19 11:19:58.777 [restartedMain] DEBUG org.hibernate.SQL - 
+    create table vendor_transactions (
+        id bigint not null auto_increment,
+        created_at datetime(6),
+        reference_id bigint,
+        remarks varchar(255),
+        transaction_date date,
+        transaction_type varchar(255),
+        vendor_id bigint not null,
+        primary key (id)
+    ) engine=InnoDB
+2026-01-19 11:19:58.806 [restartedMain] DEBUG org.hibernate.SQL - 
+    create table vendors (
+        id bigint not null auto_increment,
+        address varchar(255),
+        contact_person varchar(255),
+        created_at datetime(6),
+        email varchar(255),
+        phone varchar(255),
+        status varchar(255),
+        vendor_name varchar(255) not null,
+        vendor_type varchar(255),
+        primary key (id)
+    ) engine=InnoDB
+2026-01-19 11:19:58.830 [restartedMain] DEBUG org.hibernate.SQL - 
+    alter table fee_receipts 
+       drop index UK_6mw3t6pav55huy9d3brm0l79t
+2026-01-19 11:19:58.844 [restartedMain] DEBUG org.hibernate.SQL - 
+    alter table fee_receipts 
+       add constraint UK_6mw3t6pav55huy9d3brm0l79t unique (receipt_number)
+2026-01-19 11:19:58.872 [restartedMain] DEBUG org.hibernate.SQL - 
+    alter table fee_types 
+       drop index UK_rg9o35t6f7axedfyqyjuat71u
+2026-01-19 11:19:58.877 [restartedMain] DEBUG org.hibernate.SQL - 
+    alter table fee_types 
+       add constraint UK_rg9o35t6f7axedfyqyjuat71u unique (name)
+2026-01-19 11:19:58.906 [restartedMain] DEBUG org.hibernate.SQL - 
+    alter table invoices 
+       drop index UK_l1x55mfsay7co0r3m9ynvipd5
+2026-01-19 11:19:58.912 [restartedMain] DEBUG org.hibernate.SQL - 
+    alter table invoices 
+       add constraint UK_l1x55mfsay7co0r3m9ynvipd5 unique (invoice_number)
+2026-01-19 11:19:58.941 [restartedMain] DEBUG org.hibernate.SQL - 
+    alter table payment_links 
+       drop index UK_l7n1gh5vkt2duoubt8g0hm93p
+2026-01-19 11:19:58.948 [restartedMain] DEBUG org.hibernate.SQL - 
+    alter table payment_links 
+       add constraint UK_l7n1gh5vkt2duoubt8g0hm93p unique (unique_token)
+2026-01-19 11:19:58.975 [restartedMain] DEBUG org.hibernate.SQL - 
+    alter table vendors 
+       drop index UK_bgcli20vynpaq2ca2h8twxq63
+2026-01-19 11:19:58.980 [restartedMain] DEBUG org.hibernate.SQL - 
+    alter table vendors 
+       add constraint UK_bgcli20vynpaq2ca2h8twxq63 unique (vendor_name)
+2026-01-19 11:19:59.005 [restartedMain] DEBUG org.hibernate.SQL - 
+    alter table billing_transactions 
+       add constraint FK4ib54eapc5udb475lfsj3d5d2 
+       foreign key (invoice_id) 
+       references invoices (id)
+2026-01-19 11:19:59.119 [restartedMain] DEBUG org.hibernate.SQL - 
+    alter table invoices 
+       add constraint FKa9ees8akliq77jf5h5flucyon 
+       foreign key (order_id) 
+       references purchase_orders (id)
+2026-01-19 11:19:59.210 [restartedMain] DEBUG org.hibernate.SQL - 
+    alter table payment_installments 
+       add constraint FK84oa8c5oxp2il8r83jty5223p 
+       foreign key (student_fee_allocation_id) 
+       references student_fee_allocations (id)
+2026-01-19 11:19:59.280 [restartedMain] DEBUG org.hibernate.SQL - 
+    alter table payment_links 
+       add constraint FKbjhjactpyifefbdbqyde44r07 
+       foreign key (student_fee_allocation_id) 
+       references student_fee_allocations (id)
+2026-01-19 11:19:59.382 [restartedMain] DEBUG org.hibernate.SQL - 
+    alter table refund_approvals 
+       add constraint FKekh098b5jbynnlah7989jlr2g 
+       foreign key (fee_refund_id) 
+       references fee_refunds (id)
+2026-01-19 11:19:59.474 [restartedMain] DEBUG org.hibernate.SQL - 
+    alter table vendor_contracts 
+       add constraint FKa5iua5qd0uremyurrcb3m7a40 
+       foreign key (vendor_id) 
+       references vendors (id)
+2026-01-19 11:19:59.577 [restartedMain] DEBUG org.hibernate.SQL - 
+    alter table vendor_payments 
+       add constraint FK121i0qokm59piycvhr7qm0wby 
+       foreign key (contract_id) 
+       references vendor_contracts (id)
+2026-01-19 11:19:59.656 [restartedMain] DEBUG org.hibernate.SQL - 
+    alter table vendor_payments 
+       add constraint FKta0ckdv8pqbryr862w11ycy70 
+       foreign key (vendor_id) 
+       references vendors (id)
+2026-01-19 11:19:59.717 [restartedMain] DEBUG org.hibernate.SQL - 
+    alter table vendor_services 
+       add constraint FK190p3jid2c9omselykf5268du 
+       foreign key (vendor_id) 
+       references vendors (id)
+2026-01-19 11:19:59.790 [restartedMain] DEBUG org.hibernate.SQL - 
+    alter table vendor_transactions 
+       add constraint FKl167g7ytdfd28y02b49hjlofu 
+       foreign key (vendor_id) 
+       references vendors (id)
+2026-01-19 11:19:59.860 [restartedMain] INFO  o.s.o.j.LocalContainerEntityManagerFactoryBean - Initialized JPA EntityManagerFactory for persistence unit 'default'
+2026-01-19 11:20:00.573 [restartedMain] INFO  o.s.d.j.r.query.QueryEnhancerFactory - Hibernate is in classpath; If applicable, HQL parser will be used.
+2026-01-19 11:20:02.543 [restartedMain] WARN  o.s.b.a.o.j.JpaBaseConfiguration$JpaWebConfiguration - spring.jpa.open-in-view is enabled by default. Therefore, database queries may be performed during view rendering. Explicitly configure spring.jpa.open-in-view to disable this warning
+2026-01-19 11:20:02.589 [restartedMain] WARN  o.s.b.a.s.s.UserDetailsServiceAutoConfiguration - 
+
+Using generated security password: 70634461-912a-406c-90c3-991040636022
+
+This generated password is for development use only. Your security configuration must be updated before running your application in production.
+
+2026-01-19 11:20:03.327 [restartedMain] INFO  o.s.b.a.e.web.EndpointLinksResolver - Exposing 1 endpoint(s) beneath base path '/actuator'
+2026-01-19 11:20:03.424 [restartedMain] INFO  o.s.s.web.DefaultSecurityFilterChain - Will secure any request with [org.springframework.security.web.session.DisableEncodeUrlFilter@2436e99d, org.springframework.security.web.context.request.async.WebAsyncManagerIntegrationFilter@702b62f0, org.springframework.security.web.context.SecurityContextHolderFilter@218c0f31, org.springframework.security.web.header.HeaderWriterFilter@590b4cf3, org.springframework.security.web.authentication.logout.LogoutFilter@680441d, com.graphy.lms.security.JwtAuthenticationFilter@5b54675, com.graphy.lms.config.HeaderRoleFilter@769208f6, org.springframework.security.web.savedrequest.RequestCacheAwareFilter@21a17843, org.springframework.security.web.servletapi.SecurityContextHolderAwareRequestFilter@2522778f, org.springframework.security.web.authentication.AnonymousAuthenticationFilter@30e9d9c9, org.springframework.security.web.session.SessionManagementFilter@5bc90343, org.springframework.security.web.access.ExceptionTranslationFilter@234bdabd, org.springframework.security.web.access.intercept.AuthorizationFilter@665c0302]
+2026-01-19 11:20:04.243 [restartedMain] INFO  o.s.b.d.a.OptionalLiveReloadServer - LiveReload server is running on port 35729
+2026-01-19 11:20:04.320 [restartedMain] INFO  o.a.coyote.http11.Http11NioProtocol - Starting ProtocolHandler ["http-nio-8080"]
+2026-01-19 11:20:04.344 [restartedMain] INFO  o.s.b.w.e.tomcat.TomcatWebServer - Tomcat started on port 8080 (http) with context path ''
+2026-01-19 11:20:04.369 [restartedMain] INFO  c.g.l.LmsFinanceVendorSystemApplication - Started LmsFinanceVendorSystemApplication in 15.778 seconds (process running for 16.696)
+2026-01-19 11:20:04.767 [RMI TCP Connection(4)-127.0.0.1] INFO  o.a.c.c.C.[Tomcat].[localhost].[/] - Initializing Spring DispatcherServlet 'dispatcherServlet'
+2026-01-19 11:20:04.767 [RMI TCP Connection(4)-127.0.0.1] INFO  o.s.web.servlet.DispatcherServlet - Initializing Servlet 'dispatcherServlet'
+2026-01-19 11:20:04.770 [RMI TCP Connection(4)-127.0.0.1] INFO  o.s.web.servlet.DispatcherServlet - Completed initialization in 2 ms
+2026-01-19 11:46:32.921 [http-nio-8080-exec-3] WARN  o.s.w.s.h.HandlerMappingIntrospector - Cache miss for REQUEST dispatch to '/api/fee-management/auth/generate-token' (previous null). Performing MatchableHandlerMapping lookup. This is logged once only at WARN level, and every time at TRACE.
+2026-01-19 12:06:46.153 [http-nio-8080-exec-1] DEBUG c.g.lms.service.impl.FeeServiceImpl - Creating new fee type: Tuition Fee
+2026-01-19 12:06:46.305 [http-nio-8080-exec-1] DEBUG org.hibernate.SQL - 
+    insert 
+    into
+        fee_types
+        (created_at, description, is_active, name, updated_at) 
+    values
+        (?, ?, ?, ?, ?)
+2026-01-19 12:06:46.487 [http-nio-8080-exec-1] DEBUG org.hibernate.SQL - 
+    insert 
+    into
+        audit_logs
+        (action, entity_id, entity_name, ip_address, module, new_value, old_value, performed_at, performed_by) 
+    values
+        (?, ?, ?, ?, ?, ?, ?, ?, ?)
+2026-01-19 12:06:46.575 [http-nio-8080-exec-1] INFO  c.g.lms.service.impl.FeeServiceImpl - Fee type created successfully with ID: 1
+2026-01-19 12:08:22.180 [http-nio-8080-exec-5] DEBUG org.hibernate.SQL - 
+    insert 
+    into
+        fee_structures
+        (academic_year, batch_id, course_id, created_at, currency, fee_type_id, is_active, total_amount, updated_at) 
+    values
+        (?, ?, ?, ?, ?, ?, ?, ?, ?)
+2026-01-19 12:08:22.214 [http-nio-8080-exec-5] DEBUG org.hibernate.SQL - 
+    insert 
+    into
+        audit_logs
+        (action, entity_id, entity_name, ip_address, module, new_value, old_value, performed_at, performed_by) 
+    values
+        (?, ?, ?, ?, ?, ?, ?, ?, ?)
+2026-01-19 12:10:44.633 [http-nio-8080-exec-6] DEBUG org.hibernate.SQL - 
+    insert 
+    into
+        payment_alternatives
+        (alternative_name, created_at, created_by, description, is_active, number_of_installments, updated_at) 
+    values
+        (?, ?, ?, ?, ?, ?, ?)
+2026-01-19 12:10:44.698 [http-nio-8080-exec-6] DEBUG org.hibernate.SQL - 
+    insert 
+    into
+        audit_logs
+        (action, entity_id, entity_name, ip_address, module, new_value, old_value, performed_at, performed_by) 
+    values
+        (?, ?, ?, ?, ?, ?, ?, ?, ?)
+2026-01-19 12:14:11.603 [http-nio-8080-exec-10] DEBUG org.hibernate.SQL - 
+    select
+        fs1_0.id,
+        fs1_0.academic_year,
+        fs1_0.batch_id,
+        fs1_0.course_id,
+        fs1_0.created_at,
+        fs1_0.currency,
+        fs1_0.fee_type_id,
+        fs1_0.is_active,
+        fs1_0.total_amount,
+        fs1_0.updated_at 
+    from
+        fee_structures fs1_0 
+    where
+        fs1_0.id=?
+2026-01-19 12:14:11.873 [http-nio-8080-exec-10] DEBUG org.hibernate.SQL - 
+    select
+        fd1_0.id,
+        fd1_0.approved_by,
+        fd1_0.approved_date,
+        fd1_0.created_at,
+        fd1_0.discount_name,
+        fd1_0.discount_type,
+        fd1_0.discount_value,
+        fd1_0.fee_structure_id,
+        fd1_0.is_active,
+        fd1_0.reason,
+        fd1_0.updated_at,
+        fd1_0.user_id 
+    from
+        fee_discounts fd1_0 
+    where
+        fd1_0.user_id=? 
+        and fd1_0.fee_structure_id=?
+2026-01-19 12:14:11.909 [http-nio-8080-exec-10] DEBUG org.hibernate.SQL - 
+    insert 
+    into
+        student_fee_allocations
+        (advance_payment, allocation_date, created_at, currency, fee_structure_id, original_amount, payable_amount, remaining_amount, status, total_discount, updated_at, user_id) 
+    values
+        (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+2026-01-19 12:14:11.937 [http-nio-8080-exec-10] DEBUG org.hibernate.SQL - 
+    insert 
+    into
+        audit_logs
+        (action, entity_id, entity_name, ip_address, module, new_value, old_value, performed_at, performed_by) 
+    values
+        (?, ?, ?, ?, ?, ?, ?, ?, ?)
+2026-01-19 12:18:00.908 [http-nio-8080-exec-2] WARN  o.s.w.s.m.m.a.ExceptionHandlerExceptionResolver - Resolved [org.springframework.web.method.annotation.MethodArgumentTypeMismatchException: Failed to convert value of type 'java.lang.String' to required type 'java.lang.Long'; For input string: "create-multiple"]
+2026-01-19 12:19:37.642 [http-nio-8080-exec-4] DEBUG org.hibernate.SQL - 
+    select
+        sfa1_0.id,
+        sfa1_0.advance_payment,
+        sfa1_0.allocation_date,
+        sfa1_0.created_at,
+        sfa1_0.currency,
+        sfa1_0.fee_structure_id,
+        sfa1_0.original_amount,
+        sfa1_0.payable_amount,
+        sfa1_0.remaining_amount,
+        sfa1_0.status,
+        sfa1_0.total_discount,
+        sfa1_0.updated_at,
+        sfa1_0.user_id 
+    from
+        student_fee_allocations sfa1_0 
+    where
+        sfa1_0.id=?
+2026-01-19 12:19:37.652 [http-nio-8080-exec-4] DEBUG org.hibernate.SQL - 
+    select
+        pa1_0.id,
+        pa1_0.alternative_name,
+        pa1_0.created_at,
+        pa1_0.created_by,
+        pa1_0.description,
+        pa1_0.is_active,
+        pa1_0.number_of_installments,
+        pa1_0.updated_at 
+    from
+        payment_alternatives pa1_0 
+    where
+        pa1_0.id=?
+2026-01-19 12:19:37.670 [http-nio-8080-exec-4] WARN  o.s.w.s.m.m.a.ExceptionHandlerExceptionResolver - Resolved [java.lang.RuntimeException: Sum of installment amounts must equal remaining amount: 130000.00]
+2026-01-19 12:22:27.920 [http-nio-8080-exec-6] DEBUG org.hibernate.SQL - 
+    select
+        sfa1_0.id,
+        sfa1_0.advance_payment,
+        sfa1_0.allocation_date,
+        sfa1_0.created_at,
+        sfa1_0.currency,
+        sfa1_0.fee_structure_id,
+        sfa1_0.original_amount,
+        sfa1_0.payable_amount,
+        sfa1_0.remaining_amount,
+        sfa1_0.status,
+        sfa1_0.total_discount,
+        sfa1_0.updated_at,
+        sfa1_0.user_id 
+    from
+        student_fee_allocations sfa1_0 
+    where
+        sfa1_0.id=?
+2026-01-19 12:22:27.924 [http-nio-8080-exec-6] DEBUG org.hibernate.SQL - 
+    select
+        pa1_0.id,
+        pa1_0.alternative_name,
+        pa1_0.created_at,
+        pa1_0.created_by,
+        pa1_0.description,
+        pa1_0.is_active,
+        pa1_0.number_of_installments,
+        pa1_0.updated_at 
+    from
+        payment_alternatives pa1_0 
+    where
+        pa1_0.id=?
+2026-01-19 12:22:27.946 [http-nio-8080-exec-6] DEBUG org.hibernate.SQL - 
+    insert 
+    into
+        student_installment_plans
+        (created_at, due_date, installment_amount, installment_number, paid_amount, payment_alternative_id, status, student_fee_allocation_id, updated_at) 
+    values
+        (?, ?, ?, ?, ?, ?, ?, ?, ?)
+2026-01-19 12:22:27.979 [http-nio-8080-exec-6] DEBUG org.hibernate.SQL - 
+    insert 
+    into
+        student_installment_plans
+        (created_at, due_date, installment_amount, installment_number, paid_amount, payment_alternative_id, status, student_fee_allocation_id, updated_at) 
+    values
+        (?, ?, ?, ?, ?, ?, ?, ?, ?)
+2026-01-19 12:22:28.031 [http-nio-8080-exec-6] DEBUG org.hibernate.SQL - 
+    insert 
+    into
+        student_installment_plans
+        (created_at, due_date, installment_amount, installment_number, paid_amount, payment_alternative_id, status, student_fee_allocation_id, updated_at) 
+    values
+        (?, ?, ?, ?, ?, ?, ?, ?, ?)
+2026-01-19 12:22:28.055 [http-nio-8080-exec-6] DEBUG org.hibernate.SQL - 
+    insert 
+    into
+        student_installment_plans
+        (created_at, due_date, installment_amount, installment_number, paid_amount, payment_alternative_id, status, student_fee_allocation_id, updated_at) 
+    values
+        (?, ?, ?, ?, ?, ?, ?, ?, ?)
+2026-01-19 12:22:28.061 [http-nio-8080-exec-6] DEBUG org.hibernate.SQL - 
+    insert 
+    into
+        student_installment_plans
+        (created_at, due_date, installment_amount, installment_number, paid_amount, payment_alternative_id, status, student_fee_allocation_id, updated_at) 
+    values
+        (?, ?, ?, ?, ?, ?, ?, ?, ?)
+2026-01-19 12:31:09.340 [http-nio-8080-exec-10] INFO  c.g.lms.service.impl.FeeServiceImpl - Processing online payment - Allocation ID: 1, Amount: 20000
+2026-01-19 12:31:09.352 [http-nio-8080-exec-10] DEBUG org.hibernate.SQL - 
+    insert 
+    into
+        student_fee_payments
+        (created_at, currency, gateway_response, paid_amount, payment_date, payment_mode, payment_status, recorded_by, screenshot_url, student_fee_allocation_id, student_installment_plan_id, transaction_reference, updated_at) 
+    values
+        (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+2026-01-19 12:31:09.368 [http-nio-8080-exec-10] DEBUG org.hibernate.SQL - 
+    insert 
+    into
+        audit_logs
+        (action, entity_id, entity_name, ip_address, module, new_value, old_value, performed_at, performed_by) 
+    values
+        (?, ?, ?, ?, ?, ?, ?, ?, ?)
+2026-01-19 12:31:09.372 [http-nio-8080-exec-10] DEBUG org.hibernate.SQL - 
+    select
+        sip1_0.id,
+        sip1_0.created_at,
+        sip1_0.due_date,
+        sip1_0.installment_amount,
+        sip1_0.installment_number,
+        sip1_0.paid_amount,
+        sip1_0.payment_alternative_id,
+        sip1_0.status,
+        sip1_0.student_fee_allocation_id,
+        sip1_0.updated_at 
+    from
+        student_installment_plans sip1_0 
+    where
+        sip1_0.id=?
+2026-01-19 12:31:09.421 [http-nio-8080-exec-10] DEBUG org.hibernate.SQL - 
+    select
+        fr1_0.id,
+        fr1_0.generated_at,
+        fr1_0.payment_id,
+        fr1_0.receipt_number,
+        fr1_0.receipt_pdf_url,
+        fr1_0.user_id 
+    from
+        fee_receipts fr1_0 
+    where
+        fr1_0.payment_id=?
+2026-01-19 12:31:09.435 [http-nio-8080-exec-10] DEBUG org.hibernate.SQL - 
+    select
+        sfa1_0.id,
+        sfa1_0.advance_payment,
+        sfa1_0.allocation_date,
+        sfa1_0.created_at,
+        sfa1_0.currency,
+        sfa1_0.fee_structure_id,
+        sfa1_0.original_amount,
+        sfa1_0.payable_amount,
+        sfa1_0.remaining_amount,
+        sfa1_0.status,
+        sfa1_0.total_discount,
+        sfa1_0.updated_at,
+        sfa1_0.user_id 
+    from
+        student_fee_allocations sfa1_0 
+    where
+        sfa1_0.id=?
+2026-01-19 12:31:09.451 [http-nio-8080-exec-10] DEBUG org.hibernate.SQL - 
+    insert 
+    into
+        fee_receipts
+        (generated_at, payment_id, receipt_number, receipt_pdf_url, user_id) 
+    values
+        (?, ?, ?, ?, ?)
+2026-01-19 12:31:09.461 [http-nio-8080-exec-10] DEBUG org.hibernate.SQL - 
+    select
+        fr1_0.id,
+        fr1_0.generated_at,
+        fr1_0.payment_id,
+        fr1_0.receipt_number,
+        fr1_0.receipt_pdf_url,
+        fr1_0.user_id 
+    from
+        fee_receipts fr1_0 
+    where
+        fr1_0.payment_id=?
+2026-01-19 12:31:09.469 [http-nio-8080-exec-10] DEBUG org.hibernate.SQL - 
+    insert 
+    into
+        payment_notifications
+        (created_at, delivery_status, email, message, notification_type, phone, sent_at, user_id) 
+    values
+        (?, ?, ?, ?, ?, ?, ?, ?)
+2026-01-19 12:31:09.478 [http-nio-8080-exec-10] DEBUG org.hibernate.SQL - 
+    insert 
+    into
+        audit_logs
+        (action, entity_id, entity_name, ip_address, module, new_value, old_value, performed_at, performed_by) 
+    values
+        (?, ?, ?, ?, ?, ?, ?, ?, ?)
+2026-01-19 12:31:09.481 [http-nio-8080-exec-10] INFO  c.g.lms.service.impl.FeeServiceImpl - Online payment processed successfully - Payment ID: 1
+2026-01-19 12:31:09.513 [http-nio-8080-exec-10] DEBUG org.hibernate.SQL - 
+    update
+        student_installment_plans 
+    set
+        due_date=?,
+        installment_amount=?,
+        installment_number=?,
+        paid_amount=?,
+        payment_alternative_id=?,
+        status=?,
+        student_fee_allocation_id=?,
+        updated_at=? 
+    where
+        id=?
+2026-01-19 12:43:07.548 [http-nio-8080-exec-7] DEBUG org.hibernate.SQL - 
+    select
+        sfa1_0.id,
+        sfa1_0.advance_payment,
+        sfa1_0.allocation_date,
+        sfa1_0.created_at,
+        sfa1_0.currency,
+        sfa1_0.fee_structure_id,
+        sfa1_0.original_amount,
+        sfa1_0.payable_amount,
+        sfa1_0.remaining_amount,
+        sfa1_0.status,
+        sfa1_0.total_discount,
+        sfa1_0.updated_at,
+        sfa1_0.user_id 
+    from
+        student_fee_allocations sfa1_0 
+    where
+        sfa1_0.id=?
+2026-01-19 12:43:07.589 [http-nio-8080-exec-7] DEBUG org.hibernate.SQL - 
+    select
+        sip1_0.id,
+        sip1_0.created_at,
+        sip1_0.due_date,
+        sip1_0.installment_amount,
+        sip1_0.installment_number,
+        sip1_0.paid_amount,
+        sip1_0.payment_alternative_id,
+        sip1_0.status,
+        sip1_0.student_fee_allocation_id,
+        sip1_0.updated_at 
+    from
+        student_installment_plans sip1_0 
+    where
+        sip1_0.student_fee_allocation_id=?
+2026-01-19 12:44:34.184 [http-nio-8080-exec-9] DEBUG org.hibernate.SQL - 
+    select
+        sfa1_0.id,
+        sfa1_0.advance_payment,
+        sfa1_0.allocation_date,
+        sfa1_0.created_at,
+        sfa1_0.currency,
+        sfa1_0.fee_structure_id,
+        sfa1_0.original_amount,
+        sfa1_0.payable_amount,
+        sfa1_0.remaining_amount,
+        sfa1_0.status,
+        sfa1_0.total_discount,
+        sfa1_0.updated_at,
+        sfa1_0.user_id 
+    from
+        student_fee_allocations sfa1_0 
+    where
+        sfa1_0.user_id=?
+2026-01-19 12:44:34.192 [http-nio-8080-exec-9] DEBUG org.hibernate.SQL - 
+    select
+        sip1_0.id,
+        sip1_0.created_at,
+        sip1_0.due_date,
+        sip1_0.installment_amount,
+        sip1_0.installment_number,
+        sip1_0.paid_amount,
+        sip1_0.payment_alternative_id,
+        sip1_0.status,
+        sip1_0.student_fee_allocation_id,
+        sip1_0.updated_at 
+    from
+        student_installment_plans sip1_0 
+    where
+        sip1_0.student_fee_allocation_id=?
+2026-01-19 12:44:47.612 [http-nio-8080-exec-10] DEBUG org.hibernate.SQL - 
+    select
+        sfa1_0.id,
+        sfa1_0.advance_payment,
+        sfa1_0.allocation_date,
+        sfa1_0.created_at,
+        sfa1_0.currency,
+        sfa1_0.fee_structure_id,
+        sfa1_0.original_amount,
+        sfa1_0.payable_amount,
+        sfa1_0.remaining_amount,
+        sfa1_0.status,
+        sfa1_0.total_discount,
+        sfa1_0.updated_at,
+        sfa1_0.user_id 
+    from
+        student_fee_allocations sfa1_0 
+    where
+        sfa1_0.user_id=?
+2026-01-19 12:44:47.619 [http-nio-8080-exec-10] DEBUG org.hibernate.SQL - 
+    select
+        sip1_0.id,
+        sip1_0.created_at,
+        sip1_0.due_date,
+        sip1_0.installment_amount,
+        sip1_0.installment_number,
+        sip1_0.paid_amount,
+        sip1_0.payment_alternative_id,
+        sip1_0.status,
+        sip1_0.student_fee_allocation_id,
+        sip1_0.updated_at 
+    from
+        student_installment_plans sip1_0 
+    where
+        sip1_0.student_fee_allocation_id=?
+2026-01-19 12:46:13.176 [http-nio-8080-exec-2] DEBUG org.hibernate.SQL - 
+    select
+        sfa1_0.id,
+        sfa1_0.advance_payment,
+        sfa1_0.allocation_date,
+        sfa1_0.created_at,
+        sfa1_0.currency,
+        sfa1_0.fee_structure_id,
+        sfa1_0.original_amount,
+        sfa1_0.payable_amount,
+        sfa1_0.remaining_amount,
+        sfa1_0.status,
+        sfa1_0.total_discount,
+        sfa1_0.updated_at,
+        sfa1_0.user_id 
+    from
+        student_fee_allocations sfa1_0 
+    where
+        sfa1_0.user_id=?
+2026-01-19 12:46:13.184 [http-nio-8080-exec-2] DEBUG org.hibernate.SQL - 
+    select
+        sip1_0.id,
+        sip1_0.created_at,
+        sip1_0.due_date,
+        sip1_0.installment_amount,
+        sip1_0.installment_number,
+        sip1_0.paid_amount,
+        sip1_0.payment_alternative_id,
+        sip1_0.status,
+        sip1_0.student_fee_allocation_id,
+        sip1_0.updated_at 
+    from
+        student_installment_plans sip1_0 
+    where
+        sip1_0.student_fee_allocation_id=?
+2026-01-19 12:47:12.786 [http-nio-8080-exec-5] DEBUG org.hibernate.SQL - 
+    select
+        sip1_0.id,
+        sip1_0.created_at,
+        sip1_0.due_date,
+        sip1_0.installment_amount,
+        sip1_0.installment_number,
+        sip1_0.paid_amount,
+        sip1_0.payment_alternative_id,
+        sip1_0.status,
+        sip1_0.student_fee_allocation_id,
+        sip1_0.updated_at 
+    from
+        student_installment_plans sip1_0 
+    where
+        sip1_0.id=?
+2026-01-19 12:47:12.791 [http-nio-8080-exec-5] DEBUG org.hibernate.SQL - 
+    select
+        sfa1_0.id,
+        sfa1_0.advance_payment,
+        sfa1_0.allocation_date,
+        sfa1_0.created_at,
+        sfa1_0.currency,
+        sfa1_0.fee_structure_id,
+        sfa1_0.original_amount,
+        sfa1_0.payable_amount,
+        sfa1_0.remaining_amount,
+        sfa1_0.status,
+        sfa1_0.total_discount,
+        sfa1_0.updated_at,
+        sfa1_0.user_id 
+    from
+        student_fee_allocations sfa1_0 
+    where
+        sfa1_0.id=?
+2026-01-19 12:47:56.613 [http-nio-8080-exec-4] DEBUG org.hibernate.SQL - 
+    select
+        sip1_0.id,
+        sip1_0.created_at,
+        sip1_0.due_date,
+        sip1_0.installment_amount,
+        sip1_0.installment_number,
+        sip1_0.paid_amount,
+        sip1_0.payment_alternative_id,
+        sip1_0.status,
+        sip1_0.student_fee_allocation_id,
+        sip1_0.updated_at 
+    from
+        student_installment_plans sip1_0 
+    where
+        sip1_0.id=?
+2026-01-19 12:50:49.938 [http-nio-8080-exec-8] DEBUG org.hibernate.SQL - 
+    select
+        sfa1_0.id,
+        sfa1_0.advance_payment,
+        sfa1_0.allocation_date,
+        sfa1_0.created_at,
+        sfa1_0.currency,
+        sfa1_0.fee_structure_id,
+        sfa1_0.original_amount,
+        sfa1_0.payable_amount,
+        sfa1_0.remaining_amount,
+        sfa1_0.status,
+        sfa1_0.total_discount,
+        sfa1_0.updated_at,
+        sfa1_0.user_id 
+    from
+        student_fee_allocations sfa1_0 
+    where
+        sfa1_0.user_id=?
+2026-01-19 12:50:50.006 [http-nio-8080-exec-8] DEBUG org.hibernate.SQL - 
+    select
+        sum(sfp1_0.paid_amount) 
+    from
+        student_fee_payments sfp1_0 
+    where
+        sfp1_0.student_fee_allocation_id=? 
+        and sfp1_0.payment_status='SUCCESS'
+2026-01-19 12:50:50.027 [http-nio-8080-exec-8] DEBUG org.hibernate.SQL - 
+    select
+        sip1_0.id,
+        sip1_0.created_at,
+        sip1_0.due_date,
+        sip1_0.installment_amount,
+        sip1_0.installment_number,
+        sip1_0.paid_amount,
+        sip1_0.payment_alternative_id,
+        sip1_0.status,
+        sip1_0.student_fee_allocation_id,
+        sip1_0.updated_at 
+    from
+        student_installment_plans sip1_0 
+    where
+        sip1_0.student_fee_allocation_id=?
+2026-01-19 12:50:50.039 [http-nio-8080-exec-8] DEBUG org.hibernate.SQL - 
+    select
+        sum(lfp1_0.penalty_amount) 
+    from
+        late_fee_penalties lfp1_0 
+    where
+        lfp1_0.student_installment_plan_id=? 
+        and lfp1_0.is_waived=0
+2026-01-19 12:50:50.076 [http-nio-8080-exec-8] DEBUG org.hibernate.SQL - 
+    select
+        sum(lfp1_0.penalty_amount) 
+    from
+        late_fee_penalties lfp1_0 
+    where
+        lfp1_0.student_installment_plan_id=? 
+        and lfp1_0.is_waived=0
+2026-01-19 12:50:50.081 [http-nio-8080-exec-8] DEBUG org.hibernate.SQL - 
+    select
+        sum(lfp1_0.penalty_amount) 
+    from
+        late_fee_penalties lfp1_0 
+    where
+        lfp1_0.student_installment_plan_id=? 
+        and lfp1_0.is_waived=0
+2026-01-19 12:50:50.085 [http-nio-8080-exec-8] DEBUG org.hibernate.SQL - 
+    select
+        sum(lfp1_0.penalty_amount) 
+    from
+        late_fee_penalties lfp1_0 
+    where
+        lfp1_0.student_installment_plan_id=? 
+        and lfp1_0.is_waived=0
+2026-01-19 12:50:50.089 [http-nio-8080-exec-8] DEBUG org.hibernate.SQL - 
+    select
+        sum(lfp1_0.penalty_amount) 
+    from
+        late_fee_penalties lfp1_0 
+    where
+        lfp1_0.student_installment_plan_id=? 
+        and lfp1_0.is_waived=0
+2026-01-19 12:50:50.095 [http-nio-8080-exec-8] DEBUG org.hibernate.SQL - 
+    select
+        sum(ap1_0.penalty_amount) 
+    from
+        attendance_penalties ap1_0 
+    where
+        ap1_0.student_fee_allocation_id=? 
+        and ap1_0.is_active=1
+2026-01-19 13:25:46.922 [http-nio-8080-exec-1] WARN  o.s.w.s.m.m.a.ExceptionHandlerExceptionResolver - Resolved [org.springframework.security.access.AccessDeniedException: Access Denied]
+2026-01-19 13:26:31.735 [http-nio-8080-exec-2] DEBUG org.hibernate.SQL - 
+    select
+        sfa1_0.id,
+        sfa1_0.advance_payment,
+        sfa1_0.allocation_date,
+        sfa1_0.created_at,
+        sfa1_0.currency,
+        sfa1_0.fee_structure_id,
+        sfa1_0.original_amount,
+        sfa1_0.payable_amount,
+        sfa1_0.remaining_amount,
+        sfa1_0.status,
+        sfa1_0.total_discount,
+        sfa1_0.updated_at,
+        sfa1_0.user_id 
+    from
+        student_fee_allocations sfa1_0 
+    where
+        sfa1_0.user_id=?
+2026-01-19 13:26:31.785 [http-nio-8080-exec-2] DEBUG org.hibernate.SQL - 
+    select
+        sip1_0.id,
+        sip1_0.created_at,
+        sip1_0.due_date,
+        sip1_0.installment_amount,
+        sip1_0.installment_number,
+        sip1_0.paid_amount,
+        sip1_0.payment_alternative_id,
+        sip1_0.status,
+        sip1_0.student_fee_allocation_id,
+        sip1_0.updated_at 
+    from
+        student_installment_plans sip1_0 
+    where
+        sip1_0.student_fee_allocation_id=?
+2026-01-19 13:31:59.323 [HikariPool-1 housekeeper] WARN  com.zaxxer.hikari.pool.HikariPool - HikariPool-1 - Thread starvation or clock leap detected (housekeeper delta=2m32s583ms464µs300ns).
+2026-01-19 14:18:32.105 [HikariPool-1 housekeeper] WARN  com.zaxxer.hikari.pool.HikariPool - HikariPool-1 - Thread starvation or clock leap detected (housekeeper delta=46m2s774ms895µs900ns).
+2026-01-19 14:27:17.901 [http-nio-8080-exec-7] WARN  o.s.w.s.m.m.a.ExceptionHandlerExceptionResolver - Resolved [org.springframework.security.access.AccessDeniedException: Access Denied]
+2026-01-19 14:28:16.385 [http-nio-8080-exec-6] DEBUG org.hibernate.SQL - 
+    insert 
+    into
+        fee_discounts
+        (approved_by, approved_date, created_at, discount_name, discount_type, discount_value, fee_structure_id, is_active, reason, updated_at, user_id) 
+    values
+        (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+2026-01-19 14:28:16.534 [http-nio-8080-exec-6] DEBUG org.hibernate.SQL - 
+    insert 
+    into
+        audit_logs
+        (action, entity_id, entity_name, ip_address, module, new_value, old_value, performed_at, performed_by) 
+    values
+        (?, ?, ?, ?, ?, ?, ?, ?, ?)
+2026-01-19 14:35:17.237 [http-nio-8080-exec-10] DEBUG org.hibernate.SQL - 
+    select
+        sfp1_0.id,
+        sfp1_0.created_at,
+        sfp1_0.currency,
+        sfp1_0.gateway_response,
+        sfp1_0.paid_amount,
+        sfp1_0.payment_date,
+        sfp1_0.payment_mode,
+        sfp1_0.payment_status,
+        sfp1_0.recorded_by,
+        sfp1_0.screenshot_url,
+        sfp1_0.student_fee_allocation_id,
+        sfp1_0.student_installment_plan_id,
+        sfp1_0.transaction_reference,
+        sfp1_0.updated_at 
+    from
+        student_fee_payments sfp1_0 
+    where
+        sfp1_0.id=?
+2026-01-19 14:35:17.400 [http-nio-8080-exec-10] DEBUG org.hibernate.SQL - 
+    insert 
+    into
+        audit_logs
+        (action, entity_id, entity_name, ip_address, module, new_value, old_value, performed_at, performed_by) 
+    values
+        (?, ?, ?, ?, ?, ?, ?, ?, ?)
+2026-01-19 14:35:17.430 [http-nio-8080-exec-10] DEBUG org.hibernate.SQL - 
+    delete 
+    from
+        student_fee_payments 
+    where
+        id=?
+2026-01-19 14:36:08.644 [http-nio-8080-exec-3] DEBUG org.hibernate.SQL - 
+    select
+        sfa1_0.id,
+        sfa1_0.advance_payment,
+        sfa1_0.allocation_date,
+        sfa1_0.created_at,
+        sfa1_0.currency,
+        sfa1_0.fee_structure_id,
+        sfa1_0.original_amount,
+        sfa1_0.payable_amount,
+        sfa1_0.remaining_amount,
+        sfa1_0.status,
+        sfa1_0.total_discount,
+        sfa1_0.updated_at,
+        sfa1_0.user_id 
+    from
+        student_fee_allocations sfa1_0 
+    where
+        sfa1_0.id=?
+2026-01-19 14:36:08.651 [http-nio-8080-exec-3] DEBUG org.hibernate.SQL - 
+    insert 
+    into
+        audit_logs
+        (action, entity_id, entity_name, ip_address, module, new_value, old_value, performed_at, performed_by) 
+    values
+        (?, ?, ?, ?, ?, ?, ?, ?, ?)
+2026-01-19 14:36:08.664 [http-nio-8080-exec-3] DEBUG org.hibernate.SQL - 
+    delete 
+    from
+        student_fee_allocations 
+    where
+        id=?
+2026-01-19 14:36:43.937 [http-nio-8080-exec-2] DEBUG org.hibernate.SQL - 
+    select
+        fs1_0.id,
+        fs1_0.academic_year,
+        fs1_0.batch_id,
+        fs1_0.course_id,
+        fs1_0.created_at,
+        fs1_0.currency,
+        fs1_0.fee_type_id,
+        fs1_0.is_active,
+        fs1_0.total_amount,
+        fs1_0.updated_at 
+    from
+        fee_structures fs1_0 
+    where
+        fs1_0.id=?
+2026-01-19 14:36:43.966 [http-nio-8080-exec-2] DEBUG org.hibernate.SQL - 
+    select
+        fd1_0.id,
+        fd1_0.approved_by,
+        fd1_0.approved_date,
+        fd1_0.created_at,
+        fd1_0.discount_name,
+        fd1_0.discount_type,
+        fd1_0.discount_value,
+        fd1_0.fee_structure_id,
+        fd1_0.is_active,
+        fd1_0.reason,
+        fd1_0.updated_at,
+        fd1_0.user_id 
+    from
+        fee_discounts fd1_0 
+    where
+        fd1_0.user_id=? 
+        and fd1_0.fee_structure_id=?
+2026-01-19 14:36:43.980 [http-nio-8080-exec-2] DEBUG org.hibernate.SQL - 
+    insert 
+    into
+        student_fee_allocations
+        (advance_payment, allocation_date, created_at, currency, fee_structure_id, original_amount, payable_amount, remaining_amount, status, total_discount, updated_at, user_id) 
+    values
+        (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+2026-01-19 14:36:43.989 [http-nio-8080-exec-2] DEBUG org.hibernate.SQL - 
+    insert 
+    into
+        audit_logs
+        (action, entity_id, entity_name, ip_address, module, new_value, old_value, performed_at, performed_by) 
+    values
+        (?, ?, ?, ?, ?, ?, ?, ?, ?)
+2026-01-19 14:39:19.328 [http-nio-8080-exec-7] DEBUG org.hibernate.SQL - 
+    select
+        sfa1_0.id,
+        sfa1_0.advance_payment,
+        sfa1_0.allocation_date,
+        sfa1_0.created_at,
+        sfa1_0.currency,
+        sfa1_0.fee_structure_id,
+        sfa1_0.original_amount,
+        sfa1_0.payable_amount,
+        sfa1_0.remaining_amount,
+        sfa1_0.status,
+        sfa1_0.total_discount,
+        sfa1_0.updated_at,
+        sfa1_0.user_id 
+    from
+        student_fee_allocations sfa1_0 
+    where
+        sfa1_0.id=?
+2026-01-19 14:39:19.337 [http-nio-8080-exec-7] DEBUG org.hibernate.SQL - 
+    select
+        pa1_0.id,
+        pa1_0.alternative_name,
+        pa1_0.created_at,
+        pa1_0.created_by,
+        pa1_0.description,
+        pa1_0.is_active,
+        pa1_0.number_of_installments,
+        pa1_0.updated_at 
+    from
+        payment_alternatives pa1_0 
+    where
+        pa1_0.id=?
+2026-01-19 14:39:19.349 [http-nio-8080-exec-7] DEBUG org.hibernate.SQL - 
+    insert 
+    into
+        student_installment_plans
+        (created_at, due_date, installment_amount, installment_number, paid_amount, payment_alternative_id, status, student_fee_allocation_id, updated_at) 
+    values
+        (?, ?, ?, ?, ?, ?, ?, ?, ?)
+2026-01-19 14:39:19.357 [http-nio-8080-exec-7] DEBUG org.hibernate.SQL - 
+    insert 
+    into
+        student_installment_plans
+        (created_at, due_date, installment_amount, installment_number, paid_amount, payment_alternative_id, status, student_fee_allocation_id, updated_at) 
+    values
+        (?, ?, ?, ?, ?, ?, ?, ?, ?)
+2026-01-19 14:39:19.361 [http-nio-8080-exec-7] DEBUG org.hibernate.SQL - 
+    insert 
+    into
+        student_installment_plans
+        (created_at, due_date, installment_amount, installment_number, paid_amount, payment_alternative_id, status, student_fee_allocation_id, updated_at) 
+    values
+        (?, ?, ?, ?, ?, ?, ?, ?, ?)
+2026-01-19 14:39:19.366 [http-nio-8080-exec-7] DEBUG org.hibernate.SQL - 
+    insert 
+    into
+        student_installment_plans
+        (created_at, due_date, installment_amount, installment_number, paid_amount, payment_alternative_id, status, student_fee_allocation_id, updated_at) 
+    values
+        (?, ?, ?, ?, ?, ?, ?, ?, ?)
+2026-01-19 14:39:19.370 [http-nio-8080-exec-7] DEBUG org.hibernate.SQL - 
+    insert 
+    into
+        student_installment_plans
+        (created_at, due_date, installment_amount, installment_number, paid_amount, payment_alternative_id, status, student_fee_allocation_id, updated_at) 
+    values
+        (?, ?, ?, ?, ?, ?, ?, ?, ?)
+2026-01-19 14:40:45.810 [http-nio-8080-exec-9] WARN  o.s.w.s.m.m.a.ExceptionHandlerExceptionResolver - Resolved [org.springframework.http.converter.HttpMessageNotReadableException: JSON parse error: Cannot deserialize value of type `com.graphy.lms.entity.StudentInstallmentPlan` from Array value (token `JsonToken.START_ARRAY`)]
+2026-01-19 14:46:09.385 [http-nio-8080-exec-10] DEBUG org.hibernate.SQL - 
+    select
+        sfa1_0.id,
+        sfa1_0.advance_payment,
+        sfa1_0.allocation_date,
+        sfa1_0.created_at,
+        sfa1_0.currency,
+        sfa1_0.fee_structure_id,
+        sfa1_0.original_amount,
+        sfa1_0.payable_amount,
+        sfa1_0.remaining_amount,
+        sfa1_0.status,
+        sfa1_0.total_discount,
+        sfa1_0.updated_at,
+        sfa1_0.user_id 
+    from
+        student_fee_allocations sfa1_0 
+    where
+        sfa1_0.id=?
+2026-01-19 14:46:09.392 [http-nio-8080-exec-10] DEBUG org.hibernate.SQL - 
+    select
+        pa1_0.id,
+        pa1_0.alternative_name,
+        pa1_0.created_at,
+        pa1_0.created_by,
+        pa1_0.description,
+        pa1_0.is_active,
+        pa1_0.number_of_installments,
+        pa1_0.updated_at 
+    from
+        payment_alternatives pa1_0 
+    where
+        pa1_0.id=?
+2026-01-19 14:46:09.393 [http-nio-8080-exec-10] DEBUG org.hibernate.SQL - 
+    insert 
+    into
+        student_installment_plans
+        (created_at, due_date, installment_amount, installment_number, paid_amount, payment_alternative_id, status, student_fee_allocation_id, updated_at) 
+    values
+        (?, ?, ?, ?, ?, ?, ?, ?, ?)
+2026-01-19 14:46:09.400 [http-nio-8080-exec-10] DEBUG org.hibernate.SQL - 
+    insert 
+    into
+        student_installment_plans
+        (created_at, due_date, installment_amount, installment_number, paid_amount, payment_alternative_id, status, student_fee_allocation_id, updated_at) 
+    values
+        (?, ?, ?, ?, ?, ?, ?, ?, ?)
+2026-01-19 14:46:09.404 [http-nio-8080-exec-10] DEBUG org.hibernate.SQL - 
+    insert 
+    into
+        student_installment_plans
+        (created_at, due_date, installment_amount, installment_number, paid_amount, payment_alternative_id, status, student_fee_allocation_id, updated_at) 
+    values
+        (?, ?, ?, ?, ?, ?, ?, ?, ?)
+2026-01-19 14:46:09.408 [http-nio-8080-exec-10] DEBUG org.hibernate.SQL - 
+    insert 
+    into
+        student_installment_plans
+        (created_at, due_date, installment_amount, installment_number, paid_amount, payment_alternative_id, status, student_fee_allocation_id, updated_at) 
+    values
+        (?, ?, ?, ?, ?, ?, ?, ?, ?)
+2026-01-19 14:46:09.414 [http-nio-8080-exec-10] DEBUG org.hibernate.SQL - 
+    insert 
+    into
+        student_installment_plans
+        (created_at, due_date, installment_amount, installment_number, paid_amount, payment_alternative_id, status, student_fee_allocation_id, updated_at) 
+    values
+        (?, ?, ?, ?, ?, ?, ?, ?, ?)
+2026-01-19 14:50:55.708 [http-nio-8080-exec-5] DEBUG org.hibernate.SQL - 
+    select
+        sfa1_0.id,
+        sfa1_0.advance_payment,
+        sfa1_0.allocation_date,
+        sfa1_0.created_at,
+        sfa1_0.currency,
+        sfa1_0.fee_structure_id,
+        sfa1_0.original_amount,
+        sfa1_0.payable_amount,
+        sfa1_0.remaining_amount,
+        sfa1_0.status,
+        sfa1_0.total_discount,
+        sfa1_0.updated_at,
+        sfa1_0.user_id 
+    from
+        student_fee_allocations sfa1_0
+2026-01-19 14:53:12.695 [http-nio-8080-exec-8] DEBUG org.hibernate.SQL - 
+    select
+        sip1_0.id,
+        sip1_0.created_at,
+        sip1_0.due_date,
+        sip1_0.installment_amount,
+        sip1_0.installment_number,
+        sip1_0.paid_amount,
+        sip1_0.payment_alternative_id,
+        sip1_0.status,
+        sip1_0.student_fee_allocation_id,
+        sip1_0.updated_at 
+    from
+        student_installment_plans sip1_0
+2026-01-19 14:57:10.190 [http-nio-8080-exec-1] DEBUG org.hibernate.SQL - 
+    select
+        sip1_0.id,
+        sip1_0.created_at,
+        sip1_0.due_date,
+        sip1_0.installment_amount,
+        sip1_0.installment_number,
+        sip1_0.paid_amount,
+        sip1_0.payment_alternative_id,
+        sip1_0.status,
+        sip1_0.student_fee_allocation_id,
+        sip1_0.updated_at 
+    from
+        student_installment_plans sip1_0 
+    where
+        sip1_0.id=?
+2026-01-19 14:57:10.201 [http-nio-8080-exec-1] DEBUG org.hibernate.SQL - 
+    insert 
+    into
+        audit_logs
+        (action, entity_id, entity_name, ip_address, module, new_value, old_value, performed_at, performed_by) 
+    values
+        (?, ?, ?, ?, ?, ?, ?, ?, ?)
+2026-01-19 14:57:10.213 [http-nio-8080-exec-1] DEBUG org.hibernate.SQL - 
+    delete 
+    from
+        student_installment_plans 
+    where
+        id=?
+2026-01-19 14:57:18.401 [http-nio-8080-exec-10] DEBUG org.hibernate.SQL - 
+    select
+        sip1_0.id,
+        sip1_0.created_at,
+        sip1_0.due_date,
+        sip1_0.installment_amount,
+        sip1_0.installment_number,
+        sip1_0.paid_amount,
+        sip1_0.payment_alternative_id,
+        sip1_0.status,
+        sip1_0.student_fee_allocation_id,
+        sip1_0.updated_at 
+    from
+        student_installment_plans sip1_0 
+    where
+        sip1_0.id=?
+2026-01-19 14:57:18.405 [http-nio-8080-exec-10] DEBUG org.hibernate.SQL - 
+    insert 
+    into
+        audit_logs
+        (action, entity_id, entity_name, ip_address, module, new_value, old_value, performed_at, performed_by) 
+    values
+        (?, ?, ?, ?, ?, ?, ?, ?, ?)
+2026-01-19 14:57:18.408 [http-nio-8080-exec-10] DEBUG org.hibernate.SQL - 
+    delete 
+    from
+        student_installment_plans 
+    where
+        id=?
+2026-01-19 14:57:24.310 [http-nio-8080-exec-3] DEBUG org.hibernate.SQL - 
+    select
+        sip1_0.id,
+        sip1_0.created_at,
+        sip1_0.due_date,
+        sip1_0.installment_amount,
+        sip1_0.installment_number,
+        sip1_0.paid_amount,
+        sip1_0.payment_alternative_id,
+        sip1_0.status,
+        sip1_0.student_fee_allocation_id,
+        sip1_0.updated_at 
+    from
+        student_installment_plans sip1_0 
+    where
+        sip1_0.id=?
+2026-01-19 14:57:24.312 [http-nio-8080-exec-3] DEBUG org.hibernate.SQL - 
+    insert 
+    into
+        audit_logs
+        (action, entity_id, entity_name, ip_address, module, new_value, old_value, performed_at, performed_by) 
+    values
+        (?, ?, ?, ?, ?, ?, ?, ?, ?)
+2026-01-19 14:57:24.351 [http-nio-8080-exec-3] DEBUG org.hibernate.SQL - 
+    delete 
+    from
+        student_installment_plans 
+    where
+        id=?
+2026-01-19 14:57:33.082 [http-nio-8080-exec-2] WARN  o.s.w.s.m.m.a.ExceptionHandlerExceptionResolver - Resolved [org.springframework.web.method.annotation.MethodArgumentTypeMismatchException: Failed to convert value of type 'java.lang.String' to required type 'java.lang.Long'; For input string: "3,4,5"]
+2026-01-19 14:57:40.325 [http-nio-8080-exec-4] DEBUG org.hibernate.SQL - 
+    select
+        sip1_0.id,
+        sip1_0.created_at,
+        sip1_0.due_date,
+        sip1_0.installment_amount,
+        sip1_0.installment_number,
+        sip1_0.paid_amount,
+        sip1_0.payment_alternative_id,
+        sip1_0.status,
+        sip1_0.student_fee_allocation_id,
+        sip1_0.updated_at 
+    from
+        student_installment_plans sip1_0 
+    where
+        sip1_0.id=?
+2026-01-19 14:57:40.333 [http-nio-8080-exec-4] WARN  o.s.w.s.m.m.a.ExceptionHandlerExceptionResolver - Resolved [java.lang.RuntimeException: StudentInstallmentPlan not found with id: 3]
+2026-01-19 14:57:52.594 [http-nio-8080-exec-8] DEBUG org.hibernate.SQL - 
+    select
+        sip1_0.id,
+        sip1_0.created_at,
+        sip1_0.due_date,
+        sip1_0.installment_amount,
+        sip1_0.installment_number,
+        sip1_0.paid_amount,
+        sip1_0.payment_alternative_id,
+        sip1_0.status,
+        sip1_0.student_fee_allocation_id,
+        sip1_0.updated_at 
+    from
+        student_installment_plans sip1_0 
+    where
+        sip1_0.id=?
+2026-01-19 14:57:52.635 [http-nio-8080-exec-8] DEBUG org.hibernate.SQL - 
+    insert 
+    into
+        audit_logs
+        (action, entity_id, entity_name, ip_address, module, new_value, old_value, performed_at, performed_by) 
+    values
+        (?, ?, ?, ?, ?, ?, ?, ?, ?)
+2026-01-19 14:57:52.639 [http-nio-8080-exec-8] DEBUG org.hibernate.SQL - 
+    delete 
+    from
+        student_installment_plans 
+    where
+        id=?
+2026-01-19 14:57:58.487 [http-nio-8080-exec-6] DEBUG org.hibernate.SQL - 
+    select
+        sip1_0.id,
+        sip1_0.created_at,
+        sip1_0.due_date,
+        sip1_0.installment_amount,
+        sip1_0.installment_number,
+        sip1_0.paid_amount,
+        sip1_0.payment_alternative_id,
+        sip1_0.status,
+        sip1_0.student_fee_allocation_id,
+        sip1_0.updated_at 
+    from
+        student_installment_plans sip1_0 
+    where
+        sip1_0.id=?
+2026-01-19 14:57:58.489 [http-nio-8080-exec-6] DEBUG org.hibernate.SQL - 
+    insert 
+    into
+        audit_logs
+        (action, entity_id, entity_name, ip_address, module, new_value, old_value, performed_at, performed_by) 
+    values
+        (?, ?, ?, ?, ?, ?, ?, ?, ?)
+2026-01-19 14:57:58.530 [http-nio-8080-exec-6] DEBUG org.hibernate.SQL - 
+    delete 
+    from
+        student_installment_plans 
+    where
+        id=?
+2026-01-19 14:58:06.907 [http-nio-8080-exec-9] DEBUG org.hibernate.SQL - 
+    select
+        sip1_0.id,
+        sip1_0.created_at,
+        sip1_0.due_date,
+        sip1_0.installment_amount,
+        sip1_0.installment_number,
+        sip1_0.paid_amount,
+        sip1_0.payment_alternative_id,
+        sip1_0.status,
+        sip1_0.student_fee_allocation_id,
+        sip1_0.updated_at 
+    from
+        student_installment_plans sip1_0 
+    where
+        sip1_0.id=?
+2026-01-19 14:58:06.911 [http-nio-8080-exec-9] DEBUG org.hibernate.SQL - 
+    insert 
+    into
+        audit_logs
+        (action, entity_id, entity_name, ip_address, module, new_value, old_value, performed_at, performed_by) 
+    values
+        (?, ?, ?, ?, ?, ?, ?, ?, ?)
+2026-01-19 14:58:06.948 [http-nio-8080-exec-9] DEBUG org.hibernate.SQL - 
+    delete 
+    from
+        student_installment_plans 
+    where
+        id=?
+2026-01-19 14:58:11.600 [http-nio-8080-exec-1] DEBUG org.hibernate.SQL - 
+    select
+        sip1_0.id,
+        sip1_0.created_at,
+        sip1_0.due_date,
+        sip1_0.installment_amount,
+        sip1_0.installment_number,
+        sip1_0.paid_amount,
+        sip1_0.payment_alternative_id,
+        sip1_0.status,
+        sip1_0.student_fee_allocation_id,
+        sip1_0.updated_at 
+    from
+        student_installment_plans sip1_0 
+    where
+        sip1_0.id=?
+2026-01-19 14:58:11.603 [http-nio-8080-exec-1] DEBUG org.hibernate.SQL - 
+    insert 
+    into
+        audit_logs
+        (action, entity_id, entity_name, ip_address, module, new_value, old_value, performed_at, performed_by) 
+    values
+        (?, ?, ?, ?, ?, ?, ?, ?, ?)
+2026-01-19 14:58:11.608 [http-nio-8080-exec-1] DEBUG org.hibernate.SQL - 
+    delete 
+    from
+        student_installment_plans 
+    where
+        id=?
+2026-01-19 14:58:18.024 [http-nio-8080-exec-10] DEBUG org.hibernate.SQL - 
+    select
+        sip1_0.id,
+        sip1_0.created_at,
+        sip1_0.due_date,
+        sip1_0.installment_amount,
+        sip1_0.installment_number,
+        sip1_0.paid_amount,
+        sip1_0.payment_alternative_id,
+        sip1_0.status,
+        sip1_0.student_fee_allocation_id,
+        sip1_0.updated_at 
+    from
+        student_installment_plans sip1_0 
+    where
+        sip1_0.id=?
+2026-01-19 14:58:18.026 [http-nio-8080-exec-10] DEBUG org.hibernate.SQL - 
+    insert 
+    into
+        audit_logs
+        (action, entity_id, entity_name, ip_address, module, new_value, old_value, performed_at, performed_by) 
+    values
+        (?, ?, ?, ?, ?, ?, ?, ?, ?)
+2026-01-19 14:58:18.072 [http-nio-8080-exec-10] DEBUG org.hibernate.SQL - 
+    delete 
+    from
+        student_installment_plans 
+    where
+        id=?
+2026-01-19 14:58:22.303 [http-nio-8080-exec-3] DEBUG org.hibernate.SQL - 
+    select
+        sip1_0.id,
+        sip1_0.created_at,
+        sip1_0.due_date,
+        sip1_0.installment_amount,
+        sip1_0.installment_number,
+        sip1_0.paid_amount,
+        sip1_0.payment_alternative_id,
+        sip1_0.status,
+        sip1_0.student_fee_allocation_id,
+        sip1_0.updated_at 
+    from
+        student_installment_plans sip1_0 
+    where
+        sip1_0.id=?
+2026-01-19 14:58:22.307 [http-nio-8080-exec-3] DEBUG org.hibernate.SQL - 
+    insert 
+    into
+        audit_logs
+        (action, entity_id, entity_name, ip_address, module, new_value, old_value, performed_at, performed_by) 
+    values
+        (?, ?, ?, ?, ?, ?, ?, ?, ?)
+2026-01-19 14:58:22.310 [http-nio-8080-exec-3] DEBUG org.hibernate.SQL - 
+    delete 
+    from
+        student_installment_plans 
+    where
+        id=?
+2026-01-19 14:58:27.360 [http-nio-8080-exec-2] DEBUG org.hibernate.SQL - 
+    select
+        sip1_0.id,
+        sip1_0.created_at,
+        sip1_0.due_date,
+        sip1_0.installment_amount,
+        sip1_0.installment_number,
+        sip1_0.paid_amount,
+        sip1_0.payment_alternative_id,
+        sip1_0.status,
+        sip1_0.student_fee_allocation_id,
+        sip1_0.updated_at 
+    from
+        student_installment_plans sip1_0 
+    where
+        sip1_0.id=?
+2026-01-19 14:58:27.364 [http-nio-8080-exec-2] DEBUG org.hibernate.SQL - 
+    insert 
+    into
+        audit_logs
+        (action, entity_id, entity_name, ip_address, module, new_value, old_value, performed_at, performed_by) 
+    values
+        (?, ?, ?, ?, ?, ?, ?, ?, ?)
+2026-01-19 14:58:27.367 [http-nio-8080-exec-2] DEBUG org.hibernate.SQL - 
+    delete 
+    from
+        student_installment_plans 
+    where
+        id=?
+2026-01-19 14:58:57.398 [http-nio-8080-exec-5] DEBUG org.hibernate.SQL - 
+    select
+        sip1_0.id,
+        sip1_0.created_at,
+        sip1_0.due_date,
+        sip1_0.installment_amount,
+        sip1_0.installment_number,
+        sip1_0.paid_amount,
+        sip1_0.payment_alternative_id,
+        sip1_0.status,
+        sip1_0.student_fee_allocation_id,
+        sip1_0.updated_at 
+    from
+        student_installment_plans sip1_0
+2026-01-19 15:01:10.474 [http-nio-8080-exec-8] DEBUG org.hibernate.SQL - 
+    select
+        sfa1_0.id,
+        sfa1_0.advance_payment,
+        sfa1_0.allocation_date,
+        sfa1_0.created_at,
+        sfa1_0.currency,
+        sfa1_0.fee_structure_id,
+        sfa1_0.original_amount,
+        sfa1_0.payable_amount,
+        sfa1_0.remaining_amount,
+        sfa1_0.status,
+        sfa1_0.total_discount,
+        sfa1_0.updated_at,
+        sfa1_0.user_id 
+    from
+        student_fee_allocations sfa1_0 
+    where
+        sfa1_0.user_id=?
+2026-01-19 15:01:10.479 [http-nio-8080-exec-8] DEBUG org.hibernate.SQL - 
+    select
+        sip1_0.id,
+        sip1_0.created_at,
+        sip1_0.due_date,
+        sip1_0.installment_amount,
+        sip1_0.installment_number,
+        sip1_0.paid_amount,
+        sip1_0.payment_alternative_id,
+        sip1_0.status,
+        sip1_0.student_fee_allocation_id,
+        sip1_0.updated_at 
+    from
+        student_installment_plans sip1_0 
+    where
+        sip1_0.student_fee_allocation_id=?
+2026-01-19 15:04:57.226 [http-nio-8080-exec-1] INFO  c.g.lms.service.impl.FeeServiceImpl - Processing online payment - Allocation ID: 2, Amount: 20000
+2026-01-19 15:04:57.235 [http-nio-8080-exec-1] DEBUG org.hibernate.SQL - 
+    insert 
+    into
+        student_fee_payments
+        (created_at, currency, gateway_response, paid_amount, payment_date, payment_mode, payment_status, recorded_by, screenshot_url, student_fee_allocation_id, student_installment_plan_id, transaction_reference, updated_at) 
+    values
+        (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+2026-01-19 15:04:57.240 [http-nio-8080-exec-1] DEBUG org.hibernate.SQL - 
+    insert 
+    into
+        audit_logs
+        (action, entity_id, entity_name, ip_address, module, new_value, old_value, performed_at, performed_by) 
+    values
+        (?, ?, ?, ?, ?, ?, ?, ?, ?)
+2026-01-19 15:04:57.244 [http-nio-8080-exec-1] DEBUG org.hibernate.SQL - 
+    select
+        sip1_0.id,
+        sip1_0.created_at,
+        sip1_0.due_date,
+        sip1_0.installment_amount,
+        sip1_0.installment_number,
+        sip1_0.paid_amount,
+        sip1_0.payment_alternative_id,
+        sip1_0.status,
+        sip1_0.student_fee_allocation_id,
+        sip1_0.updated_at 
+    from
+        student_installment_plans sip1_0 
+    where
+        sip1_0.id=?
+2026-01-19 15:04:57.257 [http-nio-8080-exec-1] DEBUG org.hibernate.SQL - 
+    select
+        fr1_0.id,
+        fr1_0.generated_at,
+        fr1_0.payment_id,
+        fr1_0.receipt_number,
+        fr1_0.receipt_pdf_url,
+        fr1_0.user_id 
+    from
+        fee_receipts fr1_0 
+    where
+        fr1_0.payment_id=?
+2026-01-19 15:04:57.265 [http-nio-8080-exec-1] DEBUG org.hibernate.SQL - 
+    select
+        sfa1_0.id,
+        sfa1_0.advance_payment,
+        sfa1_0.allocation_date,
+        sfa1_0.created_at,
+        sfa1_0.currency,
+        sfa1_0.fee_structure_id,
+        sfa1_0.original_amount,
+        sfa1_0.payable_amount,
+        sfa1_0.remaining_amount,
+        sfa1_0.status,
+        sfa1_0.total_discount,
+        sfa1_0.updated_at,
+        sfa1_0.user_id 
+    from
+        student_fee_allocations sfa1_0 
+    where
+        sfa1_0.id=?
+2026-01-19 15:04:57.271 [http-nio-8080-exec-1] DEBUG org.hibernate.SQL - 
+    insert 
+    into
+        fee_receipts
+        (generated_at, payment_id, receipt_number, receipt_pdf_url, user_id) 
+    values
+        (?, ?, ?, ?, ?)
+2026-01-19 15:04:57.276 [http-nio-8080-exec-1] DEBUG org.hibernate.SQL - 
+    select
+        fr1_0.id,
+        fr1_0.generated_at,
+        fr1_0.payment_id,
+        fr1_0.receipt_number,
+        fr1_0.receipt_pdf_url,
+        fr1_0.user_id 
+    from
+        fee_receipts fr1_0 
+    where
+        fr1_0.payment_id=?
+2026-01-19 15:04:57.280 [http-nio-8080-exec-1] DEBUG org.hibernate.SQL - 
+    insert 
+    into
+        payment_notifications
+        (created_at, delivery_status, email, message, notification_type, phone, sent_at, user_id) 
+    values
+        (?, ?, ?, ?, ?, ?, ?, ?)
+2026-01-19 15:04:57.284 [http-nio-8080-exec-1] DEBUG org.hibernate.SQL - 
+    insert 
+    into
+        audit_logs
+        (action, entity_id, entity_name, ip_address, module, new_value, old_value, performed_at, performed_by) 
+    values
+        (?, ?, ?, ?, ?, ?, ?, ?, ?)
+2026-01-19 15:04:57.285 [http-nio-8080-exec-1] INFO  c.g.lms.service.impl.FeeServiceImpl - Online payment processed successfully - Payment ID: 2
+2026-01-19 15:04:57.290 [http-nio-8080-exec-1] DEBUG org.hibernate.SQL - 
+    update
+        student_installment_plans 
+    set
+        due_date=?,
+        installment_amount=?,
+        installment_number=?,
+        paid_amount=?,
+        payment_alternative_id=?,
+        status=?,
+        student_fee_allocation_id=?,
+        updated_at=? 
+    where
+        id=?
+2026-01-19 15:05:52.578 [http-nio-8080-exec-10] DEBUG org.hibernate.SQL - 
+    select
+        sfa1_0.id,
+        sfa1_0.advance_payment,
+        sfa1_0.allocation_date,
+        sfa1_0.created_at,
+        sfa1_0.currency,
+        sfa1_0.fee_structure_id,
+        sfa1_0.original_amount,
+        sfa1_0.payable_amount,
+        sfa1_0.remaining_amount,
+        sfa1_0.status,
+        sfa1_0.total_discount,
+        sfa1_0.updated_at,
+        sfa1_0.user_id 
+    from
+        student_fee_allocations sfa1_0 
+    where
+        sfa1_0.user_id=?
+2026-01-19 15:05:52.587 [http-nio-8080-exec-10] DEBUG org.hibernate.SQL - 
+    select
+        sip1_0.id,
+        sip1_0.created_at,
+        sip1_0.due_date,
+        sip1_0.installment_amount,
+        sip1_0.installment_number,
+        sip1_0.paid_amount,
+        sip1_0.payment_alternative_id,
+        sip1_0.status,
+        sip1_0.student_fee_allocation_id,
+        sip1_0.updated_at 
+    from
+        student_installment_plans sip1_0 
+    where
+        sip1_0.student_fee_allocation_id=?
+2026-01-19 15:09:06.462 [http-nio-8080-exec-5] DEBUG org.hibernate.SQL - 
+    select
+        sfa1_0.id,
+        sfa1_0.advance_payment,
+        sfa1_0.allocation_date,
+        sfa1_0.created_at,
+        sfa1_0.currency,
+        sfa1_0.fee_structure_id,
+        sfa1_0.original_amount,
+        sfa1_0.payable_amount,
+        sfa1_0.remaining_amount,
+        sfa1_0.status,
+        sfa1_0.total_discount,
+        sfa1_0.updated_at,
+        sfa1_0.user_id 
+    from
+        student_fee_allocations sfa1_0 
+    where
+        sfa1_0.user_id=?
+2026-01-19 15:09:06.466 [http-nio-8080-exec-5] DEBUG org.hibernate.SQL - 
+    select
+        sum(sfp1_0.paid_amount) 
+    from
+        student_fee_payments sfp1_0 
+    where
+        sfp1_0.student_fee_allocation_id=? 
+        and sfp1_0.payment_status='SUCCESS'
+2026-01-19 15:09:06.494 [http-nio-8080-exec-5] DEBUG org.hibernate.SQL - 
+    select
+        sip1_0.id,
+        sip1_0.created_at,
+        sip1_0.due_date,
+        sip1_0.installment_amount,
+        sip1_0.installment_number,
+        sip1_0.paid_amount,
+        sip1_0.payment_alternative_id,
+        sip1_0.status,
+        sip1_0.student_fee_allocation_id,
+        sip1_0.updated_at 
+    from
+        student_installment_plans sip1_0 
+    where
+        sip1_0.student_fee_allocation_id=?
+2026-01-19 15:09:06.498 [http-nio-8080-exec-5] DEBUG org.hibernate.SQL - 
+    select
+        sum(lfp1_0.penalty_amount) 
+    from
+        late_fee_penalties lfp1_0 
+    where
+        lfp1_0.student_installment_plan_id=? 
+        and lfp1_0.is_waived=0
+2026-01-19 15:09:06.503 [http-nio-8080-exec-5] DEBUG org.hibernate.SQL - 
+    select
+        sum(lfp1_0.penalty_amount) 
+    from
+        late_fee_penalties lfp1_0 
+    where
+        lfp1_0.student_installment_plan_id=? 
+        and lfp1_0.is_waived=0
+2026-01-19 15:09:06.507 [http-nio-8080-exec-5] DEBUG org.hibernate.SQL - 
+    select
+        sum(lfp1_0.penalty_amount) 
+    from
+        late_fee_penalties lfp1_0 
+    where
+        lfp1_0.student_installment_plan_id=? 
+        and lfp1_0.is_waived=0
+2026-01-19 15:09:06.511 [http-nio-8080-exec-5] DEBUG org.hibernate.SQL - 
+    select
+        sum(lfp1_0.penalty_amount) 
+    from
+        late_fee_penalties lfp1_0 
+    where
+        lfp1_0.student_installment_plan_id=? 
+        and lfp1_0.is_waived=0
+2026-01-19 15:09:06.515 [http-nio-8080-exec-5] DEBUG org.hibernate.SQL - 
+    select
+        sum(lfp1_0.penalty_amount) 
+    from
+        late_fee_penalties lfp1_0 
+    where
+        lfp1_0.student_installment_plan_id=? 
+        and lfp1_0.is_waived=0
+2026-01-19 15:09:06.517 [http-nio-8080-exec-5] DEBUG org.hibernate.SQL - 
+    select
+        sum(ap1_0.penalty_amount) 
+    from
+        attendance_penalties ap1_0 
+    where
+        ap1_0.student_fee_allocation_id=? 
+        and ap1_0.is_active=1
+2026-01-19 15:19:02.468 [http-nio-8080-exec-8] WARN  o.s.w.s.m.m.a.ExceptionHandlerExceptionResolver - Resolved [org.springframework.web.HttpRequestMethodNotSupportedException: Request method 'POST' is not supported]
+2026-01-19 15:19:40.771 [http-nio-8080-exec-9] DEBUG org.hibernate.SQL - 
+    select
+        sfa1_0.id,
+        sfa1_0.advance_payment,
+        sfa1_0.allocation_date,
+        sfa1_0.created_at,
+        sfa1_0.currency,
+        sfa1_0.fee_structure_id,
+        sfa1_0.original_amount,
+        sfa1_0.payable_amount,
+        sfa1_0.remaining_amount,
+        sfa1_0.status,
+        sfa1_0.total_discount,
+        sfa1_0.updated_at,
+        sfa1_0.user_id 
+    from
+        student_fee_allocations sfa1_0 
+    where
+        sfa1_0.user_id=?
+2026-01-19 15:19:40.814 [http-nio-8080-exec-9] DEBUG org.hibernate.SQL - 
+    select
+        sum(sfp1_0.paid_amount) 
+    from
+        student_fee_payments sfp1_0 
+    where
+        sfp1_0.student_fee_allocation_id=? 
+        and sfp1_0.payment_status='SUCCESS'
+2026-01-19 15:19:40.819 [http-nio-8080-exec-9] DEBUG org.hibernate.SQL - 
+    select
+        sip1_0.id,
+        sip1_0.created_at,
+        sip1_0.due_date,
+        sip1_0.installment_amount,
+        sip1_0.installment_number,
+        sip1_0.paid_amount,
+        sip1_0.payment_alternative_id,
+        sip1_0.status,
+        sip1_0.student_fee_allocation_id,
+        sip1_0.updated_at 
+    from
+        student_installment_plans sip1_0 
+    where
+        sip1_0.student_fee_allocation_id=?
+2026-01-19 15:19:40.823 [http-nio-8080-exec-9] DEBUG org.hibernate.SQL - 
+    select
+        sum(lfp1_0.penalty_amount) 
+    from
+        late_fee_penalties lfp1_0 
+    where
+        lfp1_0.student_installment_plan_id=? 
+        and lfp1_0.is_waived=0
+2026-01-19 15:19:40.826 [http-nio-8080-exec-9] DEBUG org.hibernate.SQL - 
+    select
+        sum(lfp1_0.penalty_amount) 
+    from
+        late_fee_penalties lfp1_0 
+    where
+        lfp1_0.student_installment_plan_id=? 
+        and lfp1_0.is_waived=0
+2026-01-19 15:19:40.831 [http-nio-8080-exec-9] DEBUG org.hibernate.SQL - 
+    select
+        sum(lfp1_0.penalty_amount) 
+    from
+        late_fee_penalties lfp1_0 
+    where
+        lfp1_0.student_installment_plan_id=? 
+        and lfp1_0.is_waived=0
+2026-01-19 15:19:40.834 [http-nio-8080-exec-9] DEBUG org.hibernate.SQL - 
+    select
+        sum(lfp1_0.penalty_amount) 
+    from
+        late_fee_penalties lfp1_0 
+    where
+        lfp1_0.student_installment_plan_id=? 
+        and lfp1_0.is_waived=0
+2026-01-19 15:19:40.836 [http-nio-8080-exec-9] DEBUG org.hibernate.SQL - 
+    select
+        sum(lfp1_0.penalty_amount) 
+    from
+        late_fee_penalties lfp1_0 
+    where
+        lfp1_0.student_installment_plan_id=? 
+        and lfp1_0.is_waived=0
+2026-01-19 15:19:40.837 [http-nio-8080-exec-9] DEBUG org.hibernate.SQL - 
+    select
+        sum(ap1_0.penalty_amount) 
+    from
+        attendance_penalties ap1_0 
+    where
+        ap1_0.student_fee_allocation_id=? 
+        and ap1_0.is_active=1
+2026-01-19 15:36:36.996 [http-nio-8080-exec-3] DEBUG org.hibernate.SQL - 
+    select
+        sfa1_0.id,
+        sfa1_0.advance_payment,
+        sfa1_0.allocation_date,
+        sfa1_0.created_at,
+        sfa1_0.currency,
+        sfa1_0.fee_structure_id,
+        sfa1_0.original_amount,
+        sfa1_0.payable_amount,
+        sfa1_0.remaining_amount,
+        sfa1_0.status,
+        sfa1_0.total_discount,
+        sfa1_0.updated_at,
+        sfa1_0.user_id 
+    from
+        student_fee_allocations sfa1_0 
+    where
+        sfa1_0.user_id=?
+2026-01-19 15:36:37.044 [http-nio-8080-exec-3] DEBUG org.hibernate.SQL - 
+    select
+        sum(sfp1_0.paid_amount) 
+    from
+        student_fee_payments sfp1_0 
+    where
+        sfp1_0.student_fee_allocation_id=? 
+        and sfp1_0.payment_status='SUCCESS'
+2026-01-19 15:36:37.052 [http-nio-8080-exec-3] DEBUG org.hibernate.SQL - 
+    select
+        sip1_0.id,
+        sip1_0.created_at,
+        sip1_0.due_date,
+        sip1_0.installment_amount,
+        sip1_0.installment_number,
+        sip1_0.paid_amount,
+        sip1_0.payment_alternative_id,
+        sip1_0.status,
+        sip1_0.student_fee_allocation_id,
+        sip1_0.updated_at 
+    from
+        student_installment_plans sip1_0 
+    where
+        sip1_0.student_fee_allocation_id=?
+2026-01-19 15:36:37.055 [http-nio-8080-exec-3] DEBUG org.hibernate.SQL - 
+    select
+        sum(lfp1_0.penalty_amount) 
+    from
+        late_fee_penalties lfp1_0 
+    where
+        lfp1_0.student_installment_plan_id=? 
+        and lfp1_0.is_waived=0
+2026-01-19 15:36:37.057 [http-nio-8080-exec-3] DEBUG org.hibernate.SQL - 
+    select
+        sum(lfp1_0.penalty_amount) 
+    from
+        late_fee_penalties lfp1_0 
+    where
+        lfp1_0.student_installment_plan_id=? 
+        and lfp1_0.is_waived=0
+2026-01-19 15:36:37.059 [http-nio-8080-exec-3] DEBUG org.hibernate.SQL - 
+    select
+        sum(lfp1_0.penalty_amount) 
+    from
+        late_fee_penalties lfp1_0 
+    where
+        lfp1_0.student_installment_plan_id=? 
+        and lfp1_0.is_waived=0
+2026-01-19 15:36:37.061 [http-nio-8080-exec-3] DEBUG org.hibernate.SQL - 
+    select
+        sum(lfp1_0.penalty_amount) 
+    from
+        late_fee_penalties lfp1_0 
+    where
+        lfp1_0.student_installment_plan_id=? 
+        and lfp1_0.is_waived=0
+2026-01-19 15:36:37.063 [http-nio-8080-exec-3] DEBUG org.hibernate.SQL - 
+    select
+        sum(lfp1_0.penalty_amount) 
+    from
+        late_fee_penalties lfp1_0 
+    where
+        lfp1_0.student_installment_plan_id=? 
+        and lfp1_0.is_waived=0
+2026-01-19 15:36:37.067 [http-nio-8080-exec-3] DEBUG org.hibernate.SQL - 
+    select
+        sum(ap1_0.penalty_amount) 
+    from
+        attendance_penalties ap1_0 
+    where
+        ap1_0.student_fee_allocation_id=? 
+        and ap1_0.is_active=1
+2026-01-19 16:02:02.931 [File Watcher] INFO  o.s.b.d.a.LocalDevToolsAutoConfiguration$RestartingClassPathChangeChangedEventListener - Restarting due to 1 class path change (0 additions, 0 deletions, 1 modification)
+2026-01-19 16:02:02.979 [Thread-5] INFO  o.a.coyote.http11.Http11NioProtocol - Stopping ProtocolHandler ["http-nio-8080"]
+2026-01-19 16:02:03.047 [Thread-5] INFO  o.s.o.j.LocalContainerEntityManagerFactoryBean - Closing JPA EntityManagerFactory for persistence unit 'default'
+2026-01-19 16:02:03.073 [Thread-5] INFO  com.zaxxer.hikari.HikariDataSource - HikariPool-1 - Shutdown initiated...
+2026-01-19 16:02:03.079 [Thread-5] INFO  com.zaxxer.hikari.HikariDataSource - HikariPool-1 - Shutdown completed.
+2026-01-19 16:02:03.445 [restartedMain] INFO  c.g.l.LmsFinanceVendorSystemApplication - Starting LmsFinanceVendorSystemApplication using Java 21.0.9 with PID 9588 (C:\Users\ACER\eclipse-workspace\lms-finance-vendor-system\target\classes started by ACER in C:\Users\ACER\eclipse-workspace\lms-finance-vendor-system)
+2026-01-19 16:02:03.445 [restartedMain] DEBUG c.g.l.LmsFinanceVendorSystemApplication - Running with Spring Boot v3.2.0, Spring v6.1.1
+2026-01-19 16:02:03.446 [restartedMain] INFO  c.g.l.LmsFinanceVendorSystemApplication - The following 1 profile is active: "dev"
+2026-01-19 16:02:06.143 [restartedMain] INFO  o.s.d.r.c.RepositoryConfigurationDelegate - Bootstrapping Spring Data JPA repositories in DEFAULT mode.
+2026-01-19 16:02:06.290 [restartedMain] INFO  o.s.d.r.c.RepositoryConfigurationDelegate - Finished Spring Data repository scanning in 146 ms. Found 39 JPA repository interfaces.
+2026-01-19 16:02:06.994 [restartedMain] INFO  o.s.b.w.e.tomcat.TomcatWebServer - Tomcat initialized with port 8080 (http)
+2026-01-19 16:02:07.002 [restartedMain] INFO  o.a.coyote.http11.Http11NioProtocol - Initializing ProtocolHandler ["http-nio-8080"]
+2026-01-19 16:02:07.002 [restartedMain] INFO  o.a.catalina.core.StandardService - Starting service [Tomcat]
+2026-01-19 16:02:07.002 [restartedMain] INFO  o.a.catalina.core.StandardEngine - Starting Servlet engine: [Apache Tomcat/10.1.16]
+2026-01-19 16:02:07.067 [restartedMain] INFO  o.a.c.c.C.[Tomcat].[localhost].[/] - Initializing Spring embedded WebApplicationContext
+2026-01-19 16:02:07.067 [restartedMain] INFO  o.s.b.w.s.c.ServletWebServerApplicationContext - Root WebApplicationContext: initialization completed in 3616 ms
+2026-01-19 16:02:07.336 [restartedMain] DEBUG c.g.l.s.JwtAuthenticationFilter - Filter 'jwtAuthenticationFilter' configured for use
+2026-01-19 16:02:07.336 [restartedMain] DEBUG c.graphy.lms.config.HeaderRoleFilter - Filter 'headerRoleFilter' configured for use
+2026-01-19 16:02:07.425 [restartedMain] INFO  com.zaxxer.hikari.HikariDataSource - HikariPool-2 - Starting...
+2026-01-19 16:02:07.508 [restartedMain] INFO  com.zaxxer.hikari.pool.HikariPool - HikariPool-2 - Added connection com.mysql.cj.jdbc.ConnectionImpl@4aff877e
+2026-01-19 16:02:07.509 [restartedMain] INFO  com.zaxxer.hikari.HikariDataSource - HikariPool-2 - Start completed.
+2026-01-19 16:02:07.592 [restartedMain] INFO  org.flywaydb.core.FlywayExecutor - Database: jdbc:mysql://localhost:3306/lms_fee_dev (MySQL 8.0)
+2026-01-19 16:02:07.712 [restartedMain] INFO  o.f.core.internal.command.DbValidate - Successfully validated 0 migrations (execution time 00:00.047s)
+2026-01-19 16:02:07.712 [restartedMain] WARN  o.f.core.internal.command.DbValidate - No migrations found. Are your locations set up correctly?
+2026-01-19 16:02:07.728 [restartedMain] INFO  o.f.core.internal.command.DbMigrate - Current version of schema `lms_fee_dev`: << Empty Schema >>
+2026-01-19 16:02:07.728 [restartedMain] INFO  o.f.core.internal.command.DbMigrate - Schema `lms_fee_dev` is up to date. No migration necessary.
+2026-01-19 16:02:07.807 [restartedMain] INFO  o.h.jpa.internal.util.LogHelper - HHH000204: Processing PersistenceUnitInfo [name: default]
+2026-01-19 16:02:07.807 [restartedMain] INFO  o.h.c.i.RegionFactoryInitiator - HHH000026: Second-level cache disabled
+2026-01-19 16:02:07.829 [restartedMain] INFO  o.s.o.j.p.SpringPersistenceUnitInfo - No LoadTimeWeaver setup: ignoring JPA class transformer
+2026-01-19 16:02:07.829 [restartedMain] WARN  org.hibernate.orm.deprecation - HHH90000025: MySQL8Dialect does not need to be specified explicitly using 'hibernate.dialect' (remove the property setting and it will be selected by default)
+2026-01-19 16:02:07.829 [restartedMain] WARN  org.hibernate.orm.deprecation - HHH90000026: MySQL8Dialect has been deprecated; use org.hibernate.dialect.MySQLDialect instead
+2026-01-19 16:02:08.633 [restartedMain] INFO  o.h.e.t.j.p.i.JtaPlatformInitiator - HHH000489: No JTA platform available (set 'hibernate.transaction.jta.platform' to enable JTA platform integration)
+2026-01-19 16:02:08.868 [restartedMain] INFO  o.s.o.j.LocalContainerEntityManagerFactoryBean - Initialized JPA EntityManagerFactory for persistence unit 'default'
+2026-01-19 16:02:11.295 [restartedMain] WARN  o.s.b.a.o.j.JpaBaseConfiguration$JpaWebConfiguration - spring.jpa.open-in-view is enabled by default. Therefore, database queries may be performed during view rendering. Explicitly configure spring.jpa.open-in-view to disable this warning
+2026-01-19 16:02:11.360 [restartedMain] WARN  o.s.b.a.s.s.UserDetailsServiceAutoConfiguration - 
+
+Using generated security password: c7425be5-ee9e-4b1c-9e62-3072c1a96d86
+
+This generated password is for development use only. Your security configuration must be updated before running your application in production.
+
+2026-01-19 16:02:12.109 [restartedMain] INFO  o.s.b.a.e.web.EndpointLinksResolver - Exposing 1 endpoint(s) beneath base path '/actuator'
+2026-01-19 16:02:12.220 [restartedMain] INFO  o.s.s.web.DefaultSecurityFilterChain - Will secure any request with [org.springframework.security.web.session.DisableEncodeUrlFilter@6ba5d30f, org.springframework.security.web.context.request.async.WebAsyncManagerIntegrationFilter@5c4f60e1, org.springframework.security.web.context.SecurityContextHolderFilter@27287708, org.springframework.security.web.header.HeaderWriterFilter@61299a5d, org.springframework.security.web.authentication.logout.LogoutFilter@61119e61, com.graphy.lms.security.JwtAuthenticationFilter@1ea7d41d, com.graphy.lms.config.HeaderRoleFilter@13e1eed0, org.springframework.security.web.savedrequest.RequestCacheAwareFilter@27a7fc7a, org.springframework.security.web.servletapi.SecurityContextHolderAwareRequestFilter@4d5b4485, org.springframework.security.web.authentication.AnonymousAuthenticationFilter@1e0bc72d, org.springframework.security.web.session.SessionManagementFilter@296ae4c7, org.springframework.security.web.access.ExceptionTranslationFilter@229f5962, org.springframework.security.web.access.intercept.AuthorizationFilter@56704339]
+2026-01-19 16:02:13.211 [restartedMain] INFO  o.s.b.d.a.OptionalLiveReloadServer - LiveReload server is running on port 35729
+2026-01-19 16:02:13.269 [restartedMain] INFO  o.a.coyote.http11.Http11NioProtocol - Starting ProtocolHandler ["http-nio-8080"]
+2026-01-19 16:02:13.274 [restartedMain] INFO  o.s.b.w.e.tomcat.TomcatWebServer - Tomcat started on port 8080 (http) with context path ''
+2026-01-19 16:02:13.291 [restartedMain] INFO  c.g.l.LmsFinanceVendorSystemApplication - Started LmsFinanceVendorSystemApplication in 10.026 seconds (process running for 16945.618)
+2026-01-19 16:02:13.294 [restartedMain] INFO  o.s.b.d.a.ConditionEvaluationDeltaLoggingListener - Condition evaluation unchanged
+2026-01-19 16:05:46.313 [RMI TCP Connection(252)-127.0.0.1] INFO  o.s.b.a.SpringApplicationAdminMXBeanRegistrar$SpringApplicationAdmin - Application shutdown requested.
+2026-01-19 16:05:46.317 [RMI TCP Connection(252)-127.0.0.1] INFO  o.a.coyote.http11.Http11NioProtocol - Stopping ProtocolHandler ["http-nio-8080"]
+2026-01-19 16:05:46.328 [RMI TCP Connection(252)-127.0.0.1] INFO  o.s.o.j.LocalContainerEntityManagerFactoryBean - Closing JPA EntityManagerFactory for persistence unit 'default'
+2026-01-19 16:05:46.329 [RMI TCP Connection(252)-127.0.0.1] INFO  com.zaxxer.hikari.HikariDataSource - HikariPool-2 - Shutdown initiated...
+2026-01-19 16:05:46.332 [RMI TCP Connection(252)-127.0.0.1] INFO  com.zaxxer.hikari.HikariDataSource - HikariPool-2 - Shutdown completed.
+2026-01-19 16:06:09.861 [background-preinit] INFO  o.h.validator.internal.util.Version - HV000001: Hibernate Validator 8.0.1.Final
+2026-01-19 16:06:09.983 [restartedMain] INFO  c.g.l.LmsFinanceVendorSystemApplication - Starting LmsFinanceVendorSystemApplication using Java 21.0.9 with PID 16600 (C:\Users\ACER\eclipse-workspace\lms-finance-vendor-system\target\classes started by ACER in C:\Users\ACER\eclipse-workspace\lms-finance-vendor-system)
+2026-01-19 16:06:09.983 [restartedMain] DEBUG c.g.l.LmsFinanceVendorSystemApplication - Running with Spring Boot v3.2.0, Spring v6.1.1
+2026-01-19 16:06:09.986 [restartedMain] INFO  c.g.l.LmsFinanceVendorSystemApplication - The following 1 profile is active: "dev"
+2026-01-19 16:06:10.034 [restartedMain] INFO  o.s.b.d.e.DevToolsPropertyDefaultsPostProcessor - Devtools property defaults active! Set 'spring.devtools.add-properties' to 'false' to disable
+2026-01-19 16:06:10.034 [restartedMain] INFO  o.s.b.d.e.DevToolsPropertyDefaultsPostProcessor - For additional web related logging consider setting the 'logging.level.web' property to 'DEBUG'
+2026-01-19 16:06:12.119 [restartedMain] INFO  o.s.d.r.c.RepositoryConfigurationDelegate - Bootstrapping Spring Data JPA repositories in DEFAULT mode.
+2026-01-19 16:06:12.496 [restartedMain] INFO  o.s.d.r.c.RepositoryConfigurationDelegate - Finished Spring Data repository scanning in 358 ms. Found 39 JPA repository interfaces.
+2026-01-19 16:06:14.847 [restartedMain] INFO  o.s.b.w.e.tomcat.TomcatWebServer - Tomcat initialized with port 8080 (http)
+2026-01-19 16:06:14.863 [restartedMain] INFO  o.a.coyote.http11.Http11NioProtocol - Initializing ProtocolHandler ["http-nio-8080"]
+2026-01-19 16:06:14.863 [restartedMain] INFO  o.a.catalina.core.StandardService - Starting service [Tomcat]
+2026-01-19 16:06:14.863 [restartedMain] INFO  o.a.catalina.core.StandardEngine - Starting Servlet engine: [Apache Tomcat/10.1.16]
+2026-01-19 16:06:14.992 [restartedMain] INFO  o.a.c.c.C.[Tomcat].[localhost].[/] - Initializing Spring embedded WebApplicationContext
+2026-01-19 16:06:14.992 [restartedMain] INFO  o.s.b.w.s.c.ServletWebServerApplicationContext - Root WebApplicationContext: initialization completed in 4958 ms
+2026-01-19 16:06:15.472 [restartedMain] DEBUG c.g.l.s.JwtAuthenticationFilter - Filter 'jwtAuthenticationFilter' configured for use
+2026-01-19 16:06:15.472 [restartedMain] DEBUG c.graphy.lms.config.HeaderRoleFilter - Filter 'headerRoleFilter' configured for use
+2026-01-19 16:06:15.662 [restartedMain] INFO  com.zaxxer.hikari.HikariDataSource - HikariPool-1 - Starting...
+2026-01-19 16:06:16.021 [restartedMain] INFO  com.zaxxer.hikari.pool.HikariPool - HikariPool-1 - Added connection com.mysql.cj.jdbc.ConnectionImpl@495eac4e
+2026-01-19 16:06:16.025 [restartedMain] INFO  com.zaxxer.hikari.HikariDataSource - HikariPool-1 - Start completed.
+2026-01-19 16:06:16.261 [restartedMain] INFO  o.f.c.i.license.VersionPrinter - Flyway Community Edition 9.22.3 by Redgate
+2026-01-19 16:06:16.263 [restartedMain] INFO  o.f.c.i.license.VersionPrinter - See release notes here: https://rd.gt/416ObMi
+2026-01-19 16:06:16.263 [restartedMain] INFO  o.f.c.i.license.VersionPrinter - 
+2026-01-19 16:06:16.284 [restartedMain] INFO  org.flywaydb.core.FlywayExecutor - Database: jdbc:mysql://localhost:3306/lms_fee_dev (MySQL 8.0)
+2026-01-19 16:06:16.370 [restartedMain] INFO  o.f.core.internal.command.DbValidate - Successfully validated 0 migrations (execution time 00:00.033s)
+2026-01-19 16:06:16.370 [restartedMain] WARN  o.f.core.internal.command.DbValidate - No migrations found. Are your locations set up correctly?
+2026-01-19 16:06:16.386 [restartedMain] INFO  o.f.core.internal.command.DbMigrate - Current version of schema `lms_fee_dev`: << Empty Schema >>
+2026-01-19 16:06:16.402 [restartedMain] INFO  o.f.core.internal.command.DbMigrate - Schema `lms_fee_dev` is up to date. No migration necessary.
+2026-01-19 16:06:16.641 [restartedMain] INFO  o.h.jpa.internal.util.LogHelper - HHH000204: Processing PersistenceUnitInfo [name: default]
+2026-01-19 16:06:16.785 [restartedMain] INFO  org.hibernate.Version - HHH000412: Hibernate ORM core version 6.3.1.Final
+2026-01-19 16:06:16.881 [restartedMain] INFO  o.h.c.i.RegionFactoryInitiator - HHH000026: Second-level cache disabled
+2026-01-19 16:06:17.492 [restartedMain] INFO  o.s.o.j.p.SpringPersistenceUnitInfo - No LoadTimeWeaver setup: ignoring JPA class transformer
+2026-01-19 16:06:17.634 [restartedMain] WARN  org.hibernate.orm.deprecation - HHH90000025: MySQL8Dialect does not need to be specified explicitly using 'hibernate.dialect' (remove the property setting and it will be selected by default)
+2026-01-19 16:06:17.634 [restartedMain] WARN  org.hibernate.orm.deprecation - HHH90000026: MySQL8Dialect has been deprecated; use org.hibernate.dialect.MySQLDialect instead
+2026-01-19 16:06:20.011 [restartedMain] INFO  o.h.e.t.j.p.i.JtaPlatformInitiator - HHH000489: No JTA platform available (set 'hibernate.transaction.jta.platform' to enable JTA platform integration)
+2026-01-19 16:06:20.184 [restartedMain] INFO  o.s.o.j.LocalContainerEntityManagerFactoryBean - Initialized JPA EntityManagerFactory for persistence unit 'default'
+2026-01-19 16:06:21.254 [restartedMain] INFO  o.s.d.j.r.query.QueryEnhancerFactory - Hibernate is in classpath; If applicable, HQL parser will be used.
+2026-01-19 16:06:24.088 [restartedMain] WARN  o.s.b.a.o.j.JpaBaseConfiguration$JpaWebConfiguration - spring.jpa.open-in-view is enabled by default. Therefore, database queries may be performed during view rendering. Explicitly configure spring.jpa.open-in-view to disable this warning
+2026-01-19 16:06:24.177 [restartedMain] WARN  o.s.b.a.s.s.UserDetailsServiceAutoConfiguration - 
+
+Using generated security password: 337aa541-ba10-477c-a0d4-36891a3e977a
+
+This generated password is for development use only. Your security configuration must be updated before running your application in production.
+
+2026-01-19 16:06:25.178 [restartedMain] INFO  o.s.b.a.e.web.EndpointLinksResolver - Exposing 1 endpoint(s) beneath base path '/actuator'
+2026-01-19 16:06:25.282 [restartedMain] INFO  o.s.s.web.DefaultSecurityFilterChain - Will secure any request with [org.springframework.security.web.session.DisableEncodeUrlFilter@7beb9f4d, org.springframework.security.web.context.request.async.WebAsyncManagerIntegrationFilter@7189776d, org.springframework.security.web.context.SecurityContextHolderFilter@662de842, org.springframework.security.web.header.HeaderWriterFilter@4854a605, org.springframework.security.web.authentication.logout.LogoutFilter@4e7597ac, com.graphy.lms.security.JwtAuthenticationFilter@593fc350, com.graphy.lms.config.HeaderRoleFilter@36deb7f0, org.springframework.security.web.savedrequest.RequestCacheAwareFilter@41a50918, org.springframework.security.web.servletapi.SecurityContextHolderAwareRequestFilter@4867d8dd, org.springframework.security.web.authentication.AnonymousAuthenticationFilter@7d82e2dd, org.springframework.security.web.session.SessionManagementFilter@7bf2632d, org.springframework.security.web.access.ExceptionTranslationFilter@51ba8232, org.springframework.security.web.access.intercept.AuthorizationFilter@56bf13c4]
+2026-01-19 16:06:26.956 [restartedMain] INFO  o.s.b.d.a.OptionalLiveReloadServer - LiveReload server is running on port 35729
+2026-01-19 16:06:27.073 [restartedMain] INFO  o.a.coyote.http11.Http11NioProtocol - Starting ProtocolHandler ["http-nio-8080"]
+2026-01-19 16:06:27.184 [restartedMain] INFO  o.s.b.w.e.tomcat.TomcatWebServer - Tomcat started on port 8080 (http) with context path ''
+2026-01-19 16:06:27.213 [restartedMain] INFO  c.g.l.LmsFinanceVendorSystemApplication - Started LmsFinanceVendorSystemApplication in 18.085 seconds (process running for 29.021)
+2026-01-19 16:06:27.900 [RMI TCP Connection(4)-127.0.0.1] INFO  o.a.c.c.C.[Tomcat].[localhost].[/] - Initializing Spring DispatcherServlet 'dispatcherServlet'
+2026-01-19 16:06:27.900 [RMI TCP Connection(4)-127.0.0.1] INFO  o.s.web.servlet.DispatcherServlet - Initializing Servlet 'dispatcherServlet'
+2026-01-19 16:06:27.903 [RMI TCP Connection(4)-127.0.0.1] INFO  o.s.web.servlet.DispatcherServlet - Completed initialization in 3 ms
+2026-01-19 16:07:24.271 [http-nio-8080-exec-3] WARN  o.s.w.s.h.HandlerMappingIntrospector - Cache miss for REQUEST dispatch to '/api/fee-management/reports/student/101' (previous null). Performing MatchableHandlerMapping lookup. This is logged once only at WARN level, and every time at TRACE.
+2026-01-19 16:07:24.493 [http-nio-8080-exec-3] DEBUG org.hibernate.SQL - 
+    select
+        sfa1_0.id,
+        sfa1_0.advance_payment,
+        sfa1_0.allocation_date,
+        sfa1_0.created_at,
+        sfa1_0.currency,
+        sfa1_0.fee_structure_id,
+        sfa1_0.original_amount,
+        sfa1_0.payable_amount,
+        sfa1_0.remaining_amount,
+        sfa1_0.status,
+        sfa1_0.total_discount,
+        sfa1_0.updated_at,
+        sfa1_0.user_id 
+    from
+        student_fee_allocations sfa1_0 
+    where
+        sfa1_0.user_id=?
+2026-01-19 16:07:24.565 [http-nio-8080-exec-3] DEBUG org.hibernate.SQL - 
+    select
+        sum(sfp1_0.paid_amount) 
+    from
+        student_fee_payments sfp1_0 
+    where
+        sfp1_0.student_fee_allocation_id=? 
+        and sfp1_0.payment_status='SUCCESS'
+2026-01-19 16:07:24.574 [http-nio-8080-exec-3] DEBUG org.hibernate.SQL - 
+    select
+        sip1_0.id,
+        sip1_0.created_at,
+        sip1_0.due_date,
+        sip1_0.installment_amount,
+        sip1_0.installment_number,
+        sip1_0.paid_amount,
+        sip1_0.payment_alternative_id,
+        sip1_0.status,
+        sip1_0.student_fee_allocation_id,
+        sip1_0.updated_at 
+    from
+        student_installment_plans sip1_0 
+    where
+        sip1_0.student_fee_allocation_id=?
+2026-01-19 16:07:24.585 [http-nio-8080-exec-3] DEBUG org.hibernate.SQL - 
+    select
+        sum(lfp1_0.penalty_amount) 
+    from
+        late_fee_penalties lfp1_0 
+    where
+        lfp1_0.student_installment_plan_id=? 
+        and lfp1_0.is_waived=0
+2026-01-19 16:07:24.594 [http-nio-8080-exec-3] DEBUG org.hibernate.SQL - 
+    select
+        sum(lfp1_0.penalty_amount) 
+    from
+        late_fee_penalties lfp1_0 
+    where
+        lfp1_0.student_installment_plan_id=? 
+        and lfp1_0.is_waived=0
+2026-01-19 16:07:24.597 [http-nio-8080-exec-3] DEBUG org.hibernate.SQL - 
+    select
+        sum(lfp1_0.penalty_amount) 
+    from
+        late_fee_penalties lfp1_0 
+    where
+        lfp1_0.student_installment_plan_id=? 
+        and lfp1_0.is_waived=0
+2026-01-19 16:07:24.601 [http-nio-8080-exec-3] DEBUG org.hibernate.SQL - 
+    select
+        sum(lfp1_0.penalty_amount) 
+    from
+        late_fee_penalties lfp1_0 
+    where
+        lfp1_0.student_installment_plan_id=? 
+        and lfp1_0.is_waived=0
+2026-01-19 16:07:24.607 [http-nio-8080-exec-3] DEBUG org.hibernate.SQL - 
+    select
+        sum(lfp1_0.penalty_amount) 
+    from
+        late_fee_penalties lfp1_0 
+    where
+        lfp1_0.student_installment_plan_id=? 
+        and lfp1_0.is_waived=0
+2026-01-19 16:07:24.612 [http-nio-8080-exec-3] DEBUG org.hibernate.SQL - 
+    select
+        sum(ap1_0.penalty_amount) 
+    from
+        attendance_penalties ap1_0 
+    where
+        ap1_0.student_fee_allocation_id=? 
+        and ap1_0.is_active=1
+2026-01-19 16:09:24.713 [http-nio-8080-exec-5] DEBUG org.hibernate.SQL - 
+    select
+        sfa1_0.id,
+        sfa1_0.advance_payment,
+        sfa1_0.allocation_date,
+        sfa1_0.created_at,
+        sfa1_0.currency,
+        sfa1_0.fee_structure_id,
+        sfa1_0.original_amount,
+        sfa1_0.payable_amount,
+        sfa1_0.remaining_amount,
+        sfa1_0.status,
+        sfa1_0.total_discount,
+        sfa1_0.updated_at,
+        sfa1_0.user_id 
+    from
+        student_fee_allocations sfa1_0 
+    where
+        sfa1_0.user_id=?
+2026-01-19 16:09:24.718 [http-nio-8080-exec-5] DEBUG org.hibernate.SQL - 
+    select
+        sum(sfp1_0.paid_amount) 
+    from
+        student_fee_payments sfp1_0 
+    where
+        sfp1_0.student_fee_allocation_id=? 
+        and sfp1_0.payment_status='SUCCESS'
+2026-01-19 16:09:24.721 [http-nio-8080-exec-5] DEBUG org.hibernate.SQL - 
+    select
+        sip1_0.id,
+        sip1_0.created_at,
+        sip1_0.due_date,
+        sip1_0.installment_amount,
+        sip1_0.installment_number,
+        sip1_0.paid_amount,
+        sip1_0.payment_alternative_id,
+        sip1_0.status,
+        sip1_0.student_fee_allocation_id,
+        sip1_0.updated_at 
+    from
+        student_installment_plans sip1_0 
+    where
+        sip1_0.student_fee_allocation_id=?
+2026-01-19 16:09:24.729 [http-nio-8080-exec-5] DEBUG org.hibernate.SQL - 
+    select
+        sum(lfp1_0.penalty_amount) 
+    from
+        late_fee_penalties lfp1_0 
+    where
+        lfp1_0.student_installment_plan_id=? 
+        and lfp1_0.is_waived=0
+2026-01-19 16:09:24.732 [http-nio-8080-exec-5] DEBUG org.hibernate.SQL - 
+    select
+        sum(lfp1_0.penalty_amount) 
+    from
+        late_fee_penalties lfp1_0 
+    where
+        lfp1_0.student_installment_plan_id=? 
+        and lfp1_0.is_waived=0
+2026-01-19 16:09:24.735 [http-nio-8080-exec-5] DEBUG org.hibernate.SQL - 
+    select
+        sum(lfp1_0.penalty_amount) 
+    from
+        late_fee_penalties lfp1_0 
+    where
+        lfp1_0.student_installment_plan_id=? 
+        and lfp1_0.is_waived=0
+2026-01-19 16:09:24.738 [http-nio-8080-exec-5] DEBUG org.hibernate.SQL - 
+    select
+        sum(lfp1_0.penalty_amount) 
+    from
+        late_fee_penalties lfp1_0 
+    where
+        lfp1_0.student_installment_plan_id=? 
+        and lfp1_0.is_waived=0
+2026-01-19 16:09:24.741 [http-nio-8080-exec-5] DEBUG org.hibernate.SQL - 
+    select
+        sum(lfp1_0.penalty_amount) 
+    from
+        late_fee_penalties lfp1_0 
+    where
+        lfp1_0.student_installment_plan_id=? 
+        and lfp1_0.is_waived=0
+2026-01-19 16:09:24.746 [http-nio-8080-exec-5] DEBUG org.hibernate.SQL - 
+    select
+        sum(ap1_0.penalty_amount) 
+    from
+        attendance_penalties ap1_0 
+    where
+        ap1_0.student_fee_allocation_id=? 
+        and ap1_0.is_active=1
+2026-01-19 16:31:23.139 [HikariPool-1 housekeeper] WARN  com.zaxxer.hikari.pool.HikariPool - HikariPool-1 - Thread starvation or clock leap detected (housekeeper delta=2m6s542ms132µs700ns).
+2026-01-19 16:32:55.321 [http-nio-8080-exec-9] WARN  o.s.w.s.m.m.a.ExceptionHandlerExceptionResolver - Resolved [org.springframework.web.servlet.resource.NoResourceFoundException: No static resource api/fee-management/fee-refunds.]
+2026-01-19 16:44:52.796 [http-nio-8080-exec-10] DEBUG org.hibernate.SQL - 
+    insert 
+    into
+        fee_refunds
+        (approved_by, approved_date, created_at, processed_date, refund_amount, refund_mode, refund_reason, refund_status, requested_date, student_fee_allocation_id, student_fee_payment_id, transaction_reference, updated_at, user_id) 
+    values
+        (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+2026-01-19 16:44:53.141 [http-nio-8080-exec-10] DEBUG org.hibernate.SQL - 
+    insert 
+    into
+        audit_logs
+        (action, entity_id, entity_name, ip_address, module, new_value, old_value, performed_at, performed_by) 
+    values
+        (?, ?, ?, ?, ?, ?, ?, ?, ?)
+2026-01-19 16:47:35.169 [http-nio-8080-exec-3] DEBUG org.hibernate.SQL - 
+    select
+        fr1_0.id,
+        fr1_0.approved_by,
+        fr1_0.approved_date,
+        fr1_0.created_at,
+        fr1_0.processed_date,
+        fr1_0.refund_amount,
+        fr1_0.refund_mode,
+        fr1_0.refund_reason,
+        fr1_0.refund_status,
+        fr1_0.requested_date,
+        fr1_0.student_fee_allocation_id,
+        fr1_0.student_fee_payment_id,
+        fr1_0.transaction_reference,
+        fr1_0.updated_at,
+        fr1_0.user_id 
+    from
+        fee_refunds fr1_0 
+    where
+        fr1_0.id=?
+2026-01-19 16:47:35.285 [http-nio-8080-exec-3] DEBUG org.hibernate.SQL - 
+    update
+        fee_refunds 
+    set
+        approved_by=?,
+        approved_date=?,
+        processed_date=?,
+        refund_amount=?,
+        refund_mode=?,
+        refund_reason=?,
+        refund_status=?,
+        requested_date=?,
+        student_fee_allocation_id=?,
+        student_fee_payment_id=?,
+        transaction_reference=?,
+        updated_at=?,
+        user_id=? 
+    where
+        id=?
+2026-01-19 16:49:44.078 [http-nio-8080-exec-5] DEBUG org.hibernate.SQL - 
+    select
+        fr1_0.id,
+        fr1_0.approved_by,
+        fr1_0.approved_date,
+        fr1_0.created_at,
+        fr1_0.processed_date,
+        fr1_0.refund_amount,
+        fr1_0.refund_mode,
+        fr1_0.refund_reason,
+        fr1_0.refund_status,
+        fr1_0.requested_date,
+        fr1_0.student_fee_allocation_id,
+        fr1_0.student_fee_payment_id,
+        fr1_0.transaction_reference,
+        fr1_0.updated_at,
+        fr1_0.user_id 
+    from
+        fee_refunds fr1_0 
+    where
+        fr1_0.id=?
+2026-01-19 16:49:44.088 [http-nio-8080-exec-5] DEBUG org.hibernate.SQL - 
+    select
+        sfa1_0.id,
+        sfa1_0.advance_payment,
+        sfa1_0.allocation_date,
+        sfa1_0.created_at,
+        sfa1_0.currency,
+        sfa1_0.fee_structure_id,
+        sfa1_0.original_amount,
+        sfa1_0.payable_amount,
+        sfa1_0.remaining_amount,
+        sfa1_0.status,
+        sfa1_0.total_discount,
+        sfa1_0.updated_at,
+        sfa1_0.user_id 
+    from
+        student_fee_allocations sfa1_0 
+    where
+        sfa1_0.id=?
+2026-01-19 16:49:44.184 [http-nio-8080-exec-5] WARN  o.s.w.s.m.m.a.ExceptionHandlerExceptionResolver - Resolved [java.lang.RuntimeException: StudentFeeAllocation not found with id: 1]
+2026-01-19 16:52:25.865 [http-nio-8080-exec-9] DEBUG org.hibernate.SQL - 
+    select
+        fr1_0.id,
+        fr1_0.approved_by,
+        fr1_0.approved_date,
+        fr1_0.created_at,
+        fr1_0.processed_date,
+        fr1_0.refund_amount,
+        fr1_0.refund_mode,
+        fr1_0.refund_reason,
+        fr1_0.refund_status,
+        fr1_0.requested_date,
+        fr1_0.student_fee_allocation_id,
+        fr1_0.student_fee_payment_id,
+        fr1_0.transaction_reference,
+        fr1_0.updated_at,
+        fr1_0.user_id 
+    from
+        fee_refunds fr1_0 
+    where
+        fr1_0.id=?
+2026-01-19 16:52:25.874 [http-nio-8080-exec-9] DEBUG org.hibernate.SQL - 
+    select
+        sfa1_0.id,
+        sfa1_0.advance_payment,
+        sfa1_0.allocation_date,
+        sfa1_0.created_at,
+        sfa1_0.currency,
+        sfa1_0.fee_structure_id,
+        sfa1_0.original_amount,
+        sfa1_0.payable_amount,
+        sfa1_0.remaining_amount,
+        sfa1_0.status,
+        sfa1_0.total_discount,
+        sfa1_0.updated_at,
+        sfa1_0.user_id 
+    from
+        student_fee_allocations sfa1_0 
+    where
+        sfa1_0.id=?
+2026-01-19 16:52:25.883 [http-nio-8080-exec-9] WARN  o.s.w.s.m.m.a.ExceptionHandlerExceptionResolver - Resolved [java.lang.RuntimeException: StudentFeeAllocation not found with id: 1]
+2026-01-19 16:53:24.285 [http-nio-8080-exec-10] DEBUG org.hibernate.SQL - 
+    select
+        fr1_0.id,
+        fr1_0.approved_by,
+        fr1_0.approved_date,
+        fr1_0.created_at,
+        fr1_0.processed_date,
+        fr1_0.refund_amount,
+        fr1_0.refund_mode,
+        fr1_0.refund_reason,
+        fr1_0.refund_status,
+        fr1_0.requested_date,
+        fr1_0.student_fee_allocation_id,
+        fr1_0.student_fee_payment_id,
+        fr1_0.transaction_reference,
+        fr1_0.updated_at,
+        fr1_0.user_id 
+    from
+        fee_refunds fr1_0 
+    where
+        fr1_0.id=?
+2026-01-19 16:53:24.326 [http-nio-8080-exec-10] WARN  o.s.w.s.m.m.a.ExceptionHandlerExceptionResolver - Resolved [java.lang.RuntimeException: FeeRefund not found with id: 2]
+2026-01-19 16:55:25.746 [http-nio-8080-exec-2] DEBUG org.hibernate.SQL - 
+    select
+        fr1_0.id,
+        fr1_0.approved_by,
+        fr1_0.approved_date,
+        fr1_0.created_at,
+        fr1_0.processed_date,
+        fr1_0.refund_amount,
+        fr1_0.refund_mode,
+        fr1_0.refund_reason,
+        fr1_0.refund_status,
+        fr1_0.requested_date,
+        fr1_0.student_fee_allocation_id,
+        fr1_0.student_fee_payment_id,
+        fr1_0.transaction_reference,
+        fr1_0.updated_at,
+        fr1_0.user_id 
+    from
+        fee_refunds fr1_0 
+    where
+        fr1_0.id=?
+2026-01-19 16:55:25.752 [http-nio-8080-exec-2] DEBUG org.hibernate.SQL - 
+    select
+        sfa1_0.id,
+        sfa1_0.advance_payment,
+        sfa1_0.allocation_date,
+        sfa1_0.created_at,
+        sfa1_0.currency,
+        sfa1_0.fee_structure_id,
+        sfa1_0.original_amount,
+        sfa1_0.payable_amount,
+        sfa1_0.remaining_amount,
+        sfa1_0.status,
+        sfa1_0.total_discount,
+        sfa1_0.updated_at,
+        sfa1_0.user_id 
+    from
+        student_fee_allocations sfa1_0 
+    where
+        sfa1_0.id=?
+2026-01-19 16:55:25.758 [http-nio-8080-exec-2] WARN  o.s.w.s.m.m.a.ExceptionHandlerExceptionResolver - Resolved [java.lang.RuntimeException: StudentFeeAllocation not found with id: 1]
+2026-01-19 16:58:13.174 [http-nio-8080-exec-4] DEBUG org.hibernate.SQL - 
+    insert 
+    into
+        fee_refunds
+        (approved_by, approved_date, created_at, processed_date, refund_amount, refund_mode, refund_reason, refund_status, requested_date, student_fee_allocation_id, student_fee_payment_id, transaction_reference, updated_at, user_id) 
+    values
+        (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+2026-01-19 16:58:13.210 [http-nio-8080-exec-4] DEBUG org.hibernate.SQL - 
+    insert 
+    into
+        audit_logs
+        (action, entity_id, entity_name, ip_address, module, new_value, old_value, performed_at, performed_by) 
+    values
+        (?, ?, ?, ?, ?, ?, ?, ?, ?)
+2026-01-19 16:58:21.102 [http-nio-8080-exec-6] DEBUG org.hibernate.SQL - 
+    select
+        fr1_0.id,
+        fr1_0.approved_by,
+        fr1_0.approved_date,
+        fr1_0.created_at,
+        fr1_0.processed_date,
+        fr1_0.refund_amount,
+        fr1_0.refund_mode,
+        fr1_0.refund_reason,
+        fr1_0.refund_status,
+        fr1_0.requested_date,
+        fr1_0.student_fee_allocation_id,
+        fr1_0.student_fee_payment_id,
+        fr1_0.transaction_reference,
+        fr1_0.updated_at,
+        fr1_0.user_id 
+    from
+        fee_refunds fr1_0 
+    where
+        fr1_0.id=?
+2026-01-19 16:58:48.997 [http-nio-8080-exec-5] DEBUG org.hibernate.SQL - 
+    select
+        fr1_0.id,
+        fr1_0.approved_by,
+        fr1_0.approved_date,
+        fr1_0.created_at,
+        fr1_0.processed_date,
+        fr1_0.refund_amount,
+        fr1_0.refund_mode,
+        fr1_0.refund_reason,
+        fr1_0.refund_status,
+        fr1_0.requested_date,
+        fr1_0.student_fee_allocation_id,
+        fr1_0.student_fee_payment_id,
+        fr1_0.transaction_reference,
+        fr1_0.updated_at,
+        fr1_0.user_id 
+    from
+        fee_refunds fr1_0 
+    where
+        fr1_0.id=?
+2026-01-19 16:58:49.004 [http-nio-8080-exec-5] DEBUG org.hibernate.SQL - 
+    update
+        fee_refunds 
+    set
+        approved_by=?,
+        approved_date=?,
+        processed_date=?,
+        refund_amount=?,
+        refund_mode=?,
+        refund_reason=?,
+        refund_status=?,
+        requested_date=?,
+        student_fee_allocation_id=?,
+        student_fee_payment_id=?,
+        transaction_reference=?,
+        updated_at=?,
+        user_id=? 
+    where
+        id=?
+2026-01-19 16:59:11.686 [http-nio-8080-exec-8] DEBUG org.hibernate.SQL - 
+    select
+        fr1_0.id,
+        fr1_0.approved_by,
+        fr1_0.approved_date,
+        fr1_0.created_at,
+        fr1_0.processed_date,
+        fr1_0.refund_amount,
+        fr1_0.refund_mode,
+        fr1_0.refund_reason,
+        fr1_0.refund_status,
+        fr1_0.requested_date,
+        fr1_0.student_fee_allocation_id,
+        fr1_0.student_fee_payment_id,
+        fr1_0.transaction_reference,
+        fr1_0.updated_at,
+        fr1_0.user_id 
+    from
+        fee_refunds fr1_0 
+    where
+        fr1_0.id=?
+2026-01-19 16:59:11.696 [http-nio-8080-exec-8] DEBUG org.hibernate.SQL - 
+    select
+        sfa1_0.id,
+        sfa1_0.advance_payment,
+        sfa1_0.allocation_date,
+        sfa1_0.created_at,
+        sfa1_0.currency,
+        sfa1_0.fee_structure_id,
+        sfa1_0.original_amount,
+        sfa1_0.payable_amount,
+        sfa1_0.remaining_amount,
+        sfa1_0.status,
+        sfa1_0.total_discount,
+        sfa1_0.updated_at,
+        sfa1_0.user_id 
+    from
+        student_fee_allocations sfa1_0 
+    where
+        sfa1_0.id=?
+2026-01-19 16:59:11.745 [http-nio-8080-exec-8] DEBUG org.hibernate.SQL - 
+    select
+        sfp1_0.id,
+        sfp1_0.created_at,
+        sfp1_0.currency,
+        sfp1_0.gateway_response,
+        sfp1_0.paid_amount,
+        sfp1_0.payment_date,
+        sfp1_0.payment_mode,
+        sfp1_0.payment_status,
+        sfp1_0.recorded_by,
+        sfp1_0.screenshot_url,
+        sfp1_0.student_fee_allocation_id,
+        sfp1_0.student_installment_plan_id,
+        sfp1_0.transaction_reference,
+        sfp1_0.updated_at 
+    from
+        student_fee_payments sfp1_0 
+    where
+        sfp1_0.id=?
+2026-01-19 16:59:11.786 [http-nio-8080-exec-8] DEBUG org.hibernate.SQL - 
+    update
+        fee_refunds 
+    set
+        approved_by=?,
+        approved_date=?,
+        processed_date=?,
+        refund_amount=?,
+        refund_mode=?,
+        refund_reason=?,
+        refund_status=?,
+        requested_date=?,
+        student_fee_allocation_id=?,
+        student_fee_payment_id=?,
+        transaction_reference=?,
+        updated_at=?,
+        user_id=? 
+    where
+        id=?
+2026-01-19 16:59:11.803 [http-nio-8080-exec-8] DEBUG org.hibernate.SQL - 
+    update
+        student_fee_allocations 
+    set
+        advance_payment=?,
+        allocation_date=?,
+        currency=?,
+        fee_structure_id=?,
+        original_amount=?,
+        payable_amount=?,
+        remaining_amount=?,
+        status=?,
+        total_discount=?,
+        updated_at=?,
+        user_id=? 
+    where
+        id=?
+2026-01-19 16:59:11.832 [http-nio-8080-exec-8] DEBUG org.hibernate.SQL - 
+    update
+        student_fee_payments 
+    set
+        currency=?,
+        gateway_response=?,
+        paid_amount=?,
+        payment_date=?,
+        payment_mode=?,
+        payment_status=?,
+        recorded_by=?,
+        screenshot_url=?,
+        student_fee_allocation_id=?,
+        student_installment_plan_id=?,
+        transaction_reference=?,
+        updated_at=? 
+    where
+        id=?
+2026-01-19 17:18:56.349 [HikariPool-1 housekeeper] WARN  com.zaxxer.hikari.pool.HikariPool - HikariPool-1 - Thread starvation or clock leap detected (housekeeper delta=12m2s641ms921µs300ns).
+2026-01-19 17:25:27.617 [http-nio-8080-exec-10] DEBUG org.hibernate.SQL - 
+    select
+        sfa1_0.id,
+        sfa1_0.advance_payment,
+        sfa1_0.allocation_date,
+        sfa1_0.created_at,
+        sfa1_0.currency,
+        sfa1_0.fee_structure_id,
+        sfa1_0.original_amount,
+        sfa1_0.payable_amount,
+        sfa1_0.remaining_amount,
+        sfa1_0.status,
+        sfa1_0.total_discount,
+        sfa1_0.updated_at,
+        sfa1_0.user_id 
+    from
+        student_fee_allocations sfa1_0 
+    where
+        sfa1_0.user_id=?
+2026-01-19 17:25:27.784 [http-nio-8080-exec-10] DEBUG org.hibernate.SQL - 
+    select
+        sum(sfp1_0.paid_amount) 
+    from
+        student_fee_payments sfp1_0 
+    where
+        sfp1_0.student_fee_allocation_id=? 
+        and sfp1_0.payment_status='SUCCESS'
+2026-01-19 17:25:27.809 [http-nio-8080-exec-10] DEBUG org.hibernate.SQL - 
+    select
+        sip1_0.id,
+        sip1_0.created_at,
+        sip1_0.due_date,
+        sip1_0.installment_amount,
+        sip1_0.installment_number,
+        sip1_0.paid_amount,
+        sip1_0.payment_alternative_id,
+        sip1_0.status,
+        sip1_0.student_fee_allocation_id,
+        sip1_0.updated_at 
+    from
+        student_installment_plans sip1_0 
+    where
+        sip1_0.student_fee_allocation_id=?
+2026-01-19 17:25:27.828 [http-nio-8080-exec-10] DEBUG org.hibernate.SQL - 
+    select
+        sum(lfp1_0.penalty_amount) 
+    from
+        late_fee_penalties lfp1_0 
+    where
+        lfp1_0.student_installment_plan_id=? 
+        and lfp1_0.is_waived=0
+2026-01-19 17:25:27.871 [http-nio-8080-exec-10] DEBUG org.hibernate.SQL - 
+    select
+        sum(lfp1_0.penalty_amount) 
+    from
+        late_fee_penalties lfp1_0 
+    where
+        lfp1_0.student_installment_plan_id=? 
+        and lfp1_0.is_waived=0
+2026-01-19 17:25:27.879 [http-nio-8080-exec-10] DEBUG org.hibernate.SQL - 
+    select
+        sum(lfp1_0.penalty_amount) 
+    from
+        late_fee_penalties lfp1_0 
+    where
+        lfp1_0.student_installment_plan_id=? 
+        and lfp1_0.is_waived=0
+2026-01-19 17:25:27.889 [http-nio-8080-exec-10] DEBUG org.hibernate.SQL - 
+    select
+        sum(lfp1_0.penalty_amount) 
+    from
+        late_fee_penalties lfp1_0 
+    where
+        lfp1_0.student_installment_plan_id=? 
+        and lfp1_0.is_waived=0
+2026-01-19 17:25:27.895 [http-nio-8080-exec-10] DEBUG org.hibernate.SQL - 
+    select
+        sum(lfp1_0.penalty_amount) 
+    from
+        late_fee_penalties lfp1_0 
+    where
+        lfp1_0.student_installment_plan_id=? 
+        and lfp1_0.is_waived=0
+2026-01-19 17:25:27.904 [http-nio-8080-exec-10] DEBUG org.hibernate.SQL - 
+    select
+        sum(ap1_0.penalty_amount) 
+    from
+        attendance_penalties ap1_0 
+    where
+        ap1_0.student_fee_allocation_id=? 
+        and ap1_0.is_active=1
+2026-01-19 17:35:13.341 [http-nio-8080-exec-3] DEBUG org.hibernate.SQL - 
+    insert 
+    into
+        attendance_penalties
+        (absence_date, applied_by, created_at, is_active, penalty_amount, reason, student_fee_allocation_id, updated_at, user_id) 
+    values
+        (?, ?, ?, ?, ?, ?, ?, ?, ?)
+2026-01-19 17:35:13.450 [http-nio-8080-exec-3] DEBUG org.hibernate.SQL - 
+    insert 
+    into
+        audit_logs
+        (action, entity_id, entity_name, ip_address, module, new_value, old_value, performed_at, performed_by) 
+    values
+        (?, ?, ?, ?, ?, ?, ?, ?, ?)
+2026-01-19 17:35:13.462 [http-nio-8080-exec-3] DEBUG org.hibernate.SQL - 
+    select
+        sfa1_0.id,
+        sfa1_0.advance_payment,
+        sfa1_0.allocation_date,
+        sfa1_0.created_at,
+        sfa1_0.currency,
+        sfa1_0.fee_structure_id,
+        sfa1_0.original_amount,
+        sfa1_0.payable_amount,
+        sfa1_0.remaining_amount,
+        sfa1_0.status,
+        sfa1_0.total_discount,
+        sfa1_0.updated_at,
+        sfa1_0.user_id 
+    from
+        student_fee_allocations sfa1_0 
+    where
+        sfa1_0.id=?
+2026-01-19 17:35:13.486 [http-nio-8080-exec-3] DEBUG org.hibernate.SQL - 
+    update
+        student_fee_allocations 
+    set
+        advance_payment=?,
+        allocation_date=?,
+        currency=?,
+        fee_structure_id=?,
+        original_amount=?,
+        payable_amount=?,
+        remaining_amount=?,
+        status=?,
+        total_discount=?,
+        updated_at=?,
+        user_id=? 
+    where
+        id=?
+2026-01-19 17:42:48.108 [HikariPool-1 housekeeper] WARN  com.zaxxer.hikari.pool.HikariPool - HikariPool-1 - Thread starvation or clock leap detected (housekeeper delta=1m21s396ms133µs).
+2026-01-19 18:03:30.497 [HikariPool-1 housekeeper] WARN  com.zaxxer.hikari.pool.HikariPool - HikariPool-1 - Thread starvation or clock leap detected (housekeeper delta=3m42s9ms252µs200ns).
+2026-01-19 18:19:29.741 [HikariPool-1 housekeeper] WARN  com.zaxxer.hikari.pool.HikariPool - HikariPool-1 - Thread starvation or clock leap detected (housekeeper delta=7m59s101ms807µs800ns).
+2026-01-19 18:26:21.913 [HikariPool-1 housekeeper] WARN  com.zaxxer.hikari.pool.HikariPool - HikariPool-1 - Thread starvation or clock leap detected (housekeeper delta=52s60ms374µs100ns).
+2026-01-19 19:32:24.271 [RMI TCP Connection(198)-127.0.0.1] INFO  o.s.b.a.SpringApplicationAdminMXBeanRegistrar$SpringApplicationAdmin - Application shutdown requested.
+2026-01-19 19:32:24.353 [RMI TCP Connection(198)-127.0.0.1] INFO  o.a.coyote.http11.Http11NioProtocol - Stopping ProtocolHandler ["http-nio-8080"]
+2026-01-19 19:32:24.408 [RMI TCP Connection(198)-127.0.0.1] INFO  o.s.o.j.LocalContainerEntityManagerFactoryBean - Closing JPA EntityManagerFactory for persistence unit 'default'
+2026-01-19 19:32:24.431 [RMI TCP Connection(198)-127.0.0.1] INFO  com.zaxxer.hikari.HikariDataSource - HikariPool-1 - Shutdown initiated...
+2026-01-19 19:32:24.436 [RMI TCP Connection(198)-127.0.0.1] INFO  com.zaxxer.hikari.HikariDataSource - HikariPool-1 - Shutdown completed.

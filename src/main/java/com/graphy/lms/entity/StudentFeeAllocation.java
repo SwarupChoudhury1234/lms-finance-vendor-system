@@ -4,9 +4,11 @@ import jakarta.persistence.*;
 import java.math.BigDecimal;
 import java.time.LocalDate;
 import java.time.LocalDateTime;
+import lombok.ToString;
 
 @Entity
 @Table(name = "student_fee_allocations")
+@ToString
 public class StudentFeeAllocation {
     
     @Id

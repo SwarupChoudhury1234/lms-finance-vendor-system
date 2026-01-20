@@ -3,8 +3,10 @@ package com.graphy.lms.entity;
 import jakarta.persistence.*;
 import java.math.BigDecimal;
 import java.time.LocalDateTime;
+import lombok.ToString;
 
 @Entity
+@ToString
 @Table(name = "student_fee_payments")
 public class StudentFeePayment {
     

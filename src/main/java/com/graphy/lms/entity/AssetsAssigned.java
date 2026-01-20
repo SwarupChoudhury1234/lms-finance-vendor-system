@@ -4,8 +4,10 @@ import jakarta.persistence.*;
 import lombok.Data;
 import java.time.LocalDate;
 import java.time.LocalDateTime;
+import lombok.ToString;
 
 @Entity
+@ToString
 @Table(name="assets_assigned")
 @Data
 public class AssetsAssigned {

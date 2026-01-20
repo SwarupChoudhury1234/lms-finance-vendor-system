@@ -474,17 +474,74 @@ public class FeeServiceImpl implements FeeService {
     }
 
     @Override
+    @Transactional
     public List<StudentInstallmentPlan> resetInstallments(Long allocationId, Long alternativeId, 
-                                                          List<Map<String, Object>> newInstallmentDetails) {
-        // Delete existing installments
-        List<StudentInstallmentPlan> existingInstallments = getInstallmentPlansByAllocationId(allocationId);
-        for (StudentInstallmentPlan installment : existingInstallments) {
-            studentInstallmentPlanRepository.deleteById(installment.getId());
-        }
+                                                        List<Map<String, Object>> newInstallmentDetails) {
         
-        // Create new installments
-        return createInstallmentsForStudent(allocationId, alternativeId, newInstallmentDetails);
-    }
+        // 1. Fetch the Alternative
+        PaymentAlternative alternative = getPaymentAlternativeById(alternativeId);
+
+        // 2. Fetch Existing Installments
+        List<StudentInstallmentPlan> existingInstallments = getInstallmentPlansByAllocationId(allocationId);
+        
+        // 3. SEPARATE Paid vs. Pending
+        List<StudentInstallmentPlan> paidInstallments = new ArrayList<>();
+        BigDecimal totalPaidInstallments = BigDecimal.ZERO;
+
+        for (StudentInstallmentPlan plan : existingInstallments) {
+            if (plan.getStatus() == StudentInstallmentPlan.InstallmentStatus.PAID) {
+                paidInstallments.add(plan);
+                totalPaidInstallments = totalPaidInstallments.add(plan.getInstallmentAmount());
+            } else {
+                // Delete PENDING installments to make room for the new plan
+                studentInstallmentPlanRepository.delete(plan);
+            }
+        }
+
+        // 4. VALIDATE: (Paid Installments + New Plan) should equal (Total Payable - Advance Payment)
+        StudentFeeAllocation allocation = getFeeAllocationById(allocationId);
+        
+        BigDecimal totalPayable = allocation.getPayableAmount();
+        BigDecimal advancePayment = allocation.getAdvancePayment() != null ? 
+                                   allocation.getAdvancePayment() : BigDecimal.ZERO;
+        
+        // The Target Amount involved in installments is (Total - Advance)
+        BigDecimal targetInstallmentTotal = totalPayable.subtract(advancePayment);
+        
+        BigDecimal newPlanTotal = BigDecimal.ZERO;
+        for (Map<String, Object> detail : newInstallmentDetails) {
+            newPlanTotal = newPlanTotal.add(new BigDecimal(detail.get("dueAmount").toString()));
+        }
+
+        BigDecimal finalCalculatedTotal = totalPaidInstallments.add(newPlanTotal);
+        
+        // Allow a small difference of 1.00 for floating point errors
+        if (finalCalculatedTotal.subtract(targetInstallmentTotal).abs().compareTo(BigDecimal.ONE) > 0) {
+             throw new RuntimeException("Mismatch! Target Installment Total is " + targetInstallmentTotal + 
+                                       " (Total " + totalPayable + " - Advance " + advancePayment + ")" +
+                                       " but (Paid Inst " + totalPaidInstallments + " + New Plan " + newPlanTotal + ") = " + finalCalculatedTotal);
+        }
+
+        // 5. CREATE NEW INSTALLMENTS
+        List<StudentInstallmentPlan> newPlans = new ArrayList<>();
+        
+        // Add back the paid ones
+        newPlans.addAll(paidInstallments);
+
+        for (Map<String, Object> detail : newInstallmentDetails) {
+            StudentInstallmentPlan plan = new StudentInstallmentPlan();
+            plan.setStudentFeeAllocationId(allocationId);
+            plan.setPaymentAlternativeId(alternativeId);
+            plan.setInstallmentNumber((Integer) detail.get("installmentNumber"));
+            plan.setDueDate(LocalDate.parse(detail.get("dueDate").toString())); 
+            plan.setInstallmentAmount(new BigDecimal(detail.get("dueAmount").toString()));
+            plan.setStatus(StudentInstallmentPlan.InstallmentStatus.PENDING);
+            
+            newPlans.add(studentInstallmentPlanRepository.save(plan));
+        }
+
+        return newPlans;
+    }	
 
     @Override
     public List<StudentInstallmentPlan> getOverdueInstallments() {
@@ -998,12 +1055,38 @@ public class FeeServiceImpl implements FeeService {
     
     @Override
     public FeeRefund createRefundRequest(FeeRefund refund) {
+        // 1. Fetch the Allocation details
+        StudentFeeAllocation allocation = getFeeAllocationById(refund.getStudentFeeAllocationId());
+
+        // 2. Calculate Total Refundable Amount (Sum of actual payments made)
+        // Note: This excludes 'Advance Payment' because that is stored in Allocation, 
+        // whereas this list comes from the Payment transaction table.
+        List<StudentFeePayment> payments = studentFeePaymentRepository
+                .findByStudentFeeAllocationId(allocation.getId());
+
+        BigDecimal totalPaidViaInstallments = BigDecimal.ZERO;
+        
+        for (StudentFeePayment payment : payments) {
+            // Only count successful payments towards the refundable limit
+            if (payment.getPaymentStatus() == StudentFeePayment.PaymentStatus.SUCCESS) {
+                totalPaidViaInstallments = totalPaidViaInstallments.add(payment.getPaidAmount());
+            }
+        }
+
+        // 3. VALIDATION: Check if requested amount exceeds what they actually paid
+        if (refund.getRefundAmount().compareTo(totalPaidViaInstallments) > 0) {
+            throw new RuntimeException("Invalid Refund Request! You requested " + refund.getRefundAmount() + 
+                                       " but the total refundable amount (excluding advance) is only " + 
+                                       totalPaidViaInstallments);
+        }
+
+        // 4. If valid, proceed to save
         refund.setRefundStatus(FeeRefund.RefundStatus.PENDING);
         refund.setRequestedDate(LocalDate.now());
         
         FeeRefund saved = feeRefundRepository.save(refund);
         createAuditLog("FEE_MANAGEMENT", "FeeRefund", saved.getId(), 
-                      AuditLog.Action.CREATE, null, refund.toString(), null);
+                       AuditLog.Action.CREATE, null, refund.toString(), null);
         return saved;
     }
 
@@ -1574,16 +1657,29 @@ public class FeeServiceImpl implements FeeService {
     }
 
     @Override
-    public CertificateBlockList blockCertificate(Long userId, BigDecimal pendingAmount, 
-                                                 String reason, Long blockedBy) {
-        // Check if already blocked
+    public CertificateBlockList blockCertificate(Long userId, String reason, Long blockedBy) {
+        // 1. Check if already blocked (Existing logic)
         if (!canIssueCertificate(userId)) {
             throw new RuntimeException("Certificate already blocked for user: " + userId);
         }
         
+        // 2. NEW LOGIC: Auto-Calculate Total Pending Amount from DB
+        BigDecimal totalPending = BigDecimal.ZERO;
+        
+        // This helper method exists in your code (Line ~320)
+        List<StudentFeeAllocation> allocations = getFeeAllocationsByUserId(userId);
+        
+        for (StudentFeeAllocation allocation : allocations) {
+            // We sum up the 'RemainingAmount' from all allocations
+            if (allocation.getRemainingAmount() != null) {
+                totalPending = totalPending.add(allocation.getRemainingAmount());
+            }
+        }
+        
+        // 3. Create the Block Record using the calculated amount
         CertificateBlockList block = new CertificateBlockList();
         block.setUserId(userId);
-        block.setPendingAmount(pendingAmount);
+        block.setPendingAmount(totalPending); // <--- Auto-filled here
         block.setBlockedReason(reason);
         block.setBlockedBy(blockedBy);
         block.setBlockedDate(LocalDate.now());
@@ -1591,13 +1687,18 @@ public class FeeServiceImpl implements FeeService {
         
         return createCertificateBlock(block);
     }
-
     @Override
     public void unblockCertificate(Long userId) {
+        // Find the active block for this user
         certificateBlockListRepository.findByUserIdAndIsActive(userId, true)
                 .ifPresent(block -> {
+                    // Mark it as inactive (unblocked)
                     block.setIsActive(false);
                     certificateBlockListRepository.save(block);
+                    
+                    // Audit log for unblocking
+                    createAuditLog("FEE_MANAGEMENT", "CertificateBlockList", block.getId(), 
+                                  AuditLog.Action.UPDATE, "ACTIVE", "INACTIVE (Unblocked)", null);
                 });
     }
 

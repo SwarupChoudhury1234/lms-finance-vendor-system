@@ -1,6 +1,10 @@
 package com.graphy.lms.controller;
 
 import com.graphy.lms.entity.*;
+import org.springframework.core.io.ByteArrayResource;
+import org.springframework.core.io.Resource;
+import org.springframework.http.HttpHeaders;
+import org.springframework.http.MediaType;
 import com.graphy.lms.security.*;
 import com.graphy.lms.service.*;
 
@@ -776,7 +780,7 @@ public class FeeController {
     // ============================================
     
     @PostMapping("/refunds")
-    @PreAuthorize("hasRole('ADMIN')")
+    @PreAuthorize("hasAnyRole('ADMIN', 'STUDENT')")
     public ResponseEntity<FeeRefund> createRefundRequest(@RequestBody FeeRefund refund) {
         FeeRefund created = feeManagementService.createRefundRequest(refund);
         return new ResponseEntity<>(created, HttpStatus.CREATED);
@@ -877,6 +881,31 @@ public class FeeController {
         }
         
         return ResponseEntity.ok(receipt);
+    }
+ // ============================================
+    // FIX: SERVE RECEIPT FILE (Download Endpoint)
+    // ============================================
+    @GetMapping("/receipts/download/{fileName}")
+    public ResponseEntity<Resource> downloadReceipt(@PathVariable String fileName) {
+        // Since we don't have a real PDF generator yet, we create a text file on the fly.
+        // This tricks the browser into thinking it downloaded a real receipt.
+        
+        String dummyContent = "OFFICIAL RECEIPT\n" +
+                              "----------------\n" +
+                              "Receipt Number: " + fileName + "\n" +
+                              "Status: PAID\n" +
+                              "Date: " + LocalDate.now() + "\n" +
+                              "\n" +
+                              "Thank you for your payment!";
+        
+        ByteArrayResource resource = new ByteArrayResource(dummyContent.getBytes());
+
+        return ResponseEntity.ok()
+                // This header forces the browser/Postman to pop up the "Save As" dialog
+                .header(HttpHeaders.CONTENT_DISPOSITION, "attachment; filename=\"" + fileName + "\"")
+                .contentLength(resource.contentLength())
+                .contentType(MediaType.TEXT_PLAIN) 
+                .body(resource);
     }
     
     @GetMapping("/receipts")
@@ -1174,10 +1203,13 @@ public class FeeController {
     @PreAuthorize("hasRole('ADMIN')")
     public ResponseEntity<CertificateBlockList> blockCertificate(
             @RequestParam Long userId,
-            @RequestParam BigDecimal pendingAmount,
+            // @RequestParam BigDecimal pendingAmount,  <-- DELETE THIS LINE
             @RequestParam String reason,
             @RequestParam Long blockedBy) {
-        CertificateBlockList block = feeManagementService.blockCertificate(userId, pendingAmount, reason, blockedBy);
+        
+        // Call the new method signature
+        CertificateBlockList block = feeManagementService.blockCertificate(userId, reason, blockedBy);
+        
         return new ResponseEntity<>(block, HttpStatus.CREATED);
     }
     

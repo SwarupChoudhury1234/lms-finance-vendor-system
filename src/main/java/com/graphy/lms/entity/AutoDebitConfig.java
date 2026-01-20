@@ -1,11 +1,13 @@
 package com.graphy.lms.entity;
 
 import jakarta.persistence.*;
+import lombok.ToString;
 import java.time.LocalDate;
 import java.time.LocalDateTime;
 
 @Entity
 @Table(name = "auto_debit_config")
+@ToString
 public class AutoDebitConfig {
     
     @Id

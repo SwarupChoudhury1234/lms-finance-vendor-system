@@ -2,10 +2,12 @@ package com.graphy.lms.entity;
 
 import jakarta.persistence.*;
 import java.time.LocalDateTime;
+import lombok.ToString;
 import jakarta.validation.constraints.NotBlank;
 import jakarta.validation.constraints.Size;
 
 @Entity
+@ToString
 @Table(name = "fee_types")
 public class FeeType {
     
