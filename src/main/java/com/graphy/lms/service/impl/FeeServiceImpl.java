@@ -1,6 +1,11 @@
 package com.graphy.lms.service.impl;
 
 import com.graphy.lms.entity.*;
+import com.razorpay.RazorpayClient;
+import com.razorpay.Order;
+import com.razorpay.Utils;
+import org.json.JSONObject;
+import com.razorpay.RazorpayException;
 import com.graphy.lms.service.*;
 import com.graphy.lms.repository.*;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -44,6 +49,12 @@ public class FeeServiceImpl implements FeeService {
     @Autowired private CurrencyRateRepository currencyRateRepository;
     @Autowired private AuditLogRepository auditLogRepository;
     @Autowired private CertificateBlockListRepository certificateBlockListRepository;
+ // Inside the class:
+    @Autowired
+    private RazorpayClient razorpayClient;
+
+    @org.springframework.beans.factory.annotation.Value("${razorpay.key.secret}")
+    private String razorpaySecret;
 
     // ============================================
     // 1. FEE TYPES CRUD
@@ -1947,5 +1958,34 @@ public class FeeServiceImpl implements FeeService {
         allPayments.sort(Comparator.comparing(StudentFeePayment::getPaymentDate).reversed());
         
         return allPayments;
+    }
+    @Override
+    public String createRazorpayOrder(Long allocationId, BigDecimal amount) {
+        try {
+            JSONObject orderRequest = new JSONObject();
+            // Convert amount to paise (multiply by 100)
+            orderRequest.put("amount", amount.multiply(new BigDecimal("100")).intValue());
+            orderRequest.put("currency", "INR");
+            orderRequest.put("receipt", "txn_" + allocationId + "_" + System.currentTimeMillis());
+
+            Order order = razorpayClient.orders.create(orderRequest);
+            return order.get("id"); // Returns "order_123456"
+        } catch (RazorpayException e) {
+            throw new RuntimeException("Razorpay Error: " + e.getMessage());
+        }
+    }
+
+    @Override
+    public boolean verifyRazorpayPayment(String orderId, String paymentId, String signature) {
+        try {
+            JSONObject options = new JSONObject();
+            options.put("razorpay_order_id", orderId);
+            options.put("razorpay_payment_id", paymentId);
+            options.put("razorpay_signature", signature);
+
+            return Utils.verifyPaymentSignature(options, razorpaySecret);
+        } catch (RazorpayException e) {
+            return false;
+        }
     }
 }

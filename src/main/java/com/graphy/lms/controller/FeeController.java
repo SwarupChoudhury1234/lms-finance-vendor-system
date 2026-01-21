@@ -1,26 +1,53 @@
 package com.graphy.lms.controller;
 
-import com.graphy.lms.entity.*;
-import org.springframework.core.io.ByteArrayResource;
-import org.springframework.core.io.Resource;
-import org.springframework.http.HttpHeaders;
-import org.springframework.http.MediaType;
-import com.graphy.lms.security.*;
-import com.graphy.lms.service.*;
-
-import jakarta.validation.Valid;
-
-import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.http.HttpStatus;
-import org.springframework.http.ResponseEntity;
-import org.springframework.security.access.prepost.PreAuthorize;
-import org.springframework.web.bind.annotation.*;
-
 import java.math.BigDecimal;
 import java.time.LocalDate;
+import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.stream.Collectors;
+
+import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.core.io.ByteArrayResource;
+import org.springframework.core.io.Resource;
+import org.springframework.http.HttpHeaders;
+import org.springframework.http.HttpStatus;
+import org.springframework.http.MediaType;
+import org.springframework.http.ResponseEntity;
+import org.springframework.security.access.prepost.PreAuthorize;
+import org.springframework.web.bind.annotation.DeleteMapping;
+import org.springframework.web.bind.annotation.GetMapping;
+import org.springframework.web.bind.annotation.PathVariable;
+import org.springframework.web.bind.annotation.PostMapping;
+import org.springframework.web.bind.annotation.PutMapping;
+import org.springframework.web.bind.annotation.RequestBody;
+import org.springframework.web.bind.annotation.RequestMapping;
+import org.springframework.web.bind.annotation.RequestParam;
+import org.springframework.web.bind.annotation.RestController;
+
+import com.graphy.lms.entity.AttendancePenalty;
+import com.graphy.lms.entity.AuditLog;
+import com.graphy.lms.entity.AutoDebitConfig;
+import com.graphy.lms.entity.CertificateBlockList;
+import com.graphy.lms.entity.CurrencyRate;
+import com.graphy.lms.entity.ExamFeeLinkage;
+import com.graphy.lms.entity.FeeDiscount;
+import com.graphy.lms.entity.FeeReceipt;
+import com.graphy.lms.entity.FeeRefund;
+import com.graphy.lms.entity.FeeStructure;
+import com.graphy.lms.entity.FeeType;
+import com.graphy.lms.entity.LateFeeConfig;
+import com.graphy.lms.entity.LateFeePenalty;
+import com.graphy.lms.entity.PaymentAlternative;
+import com.graphy.lms.entity.PaymentNotification;
+import com.graphy.lms.entity.StudentFeeAllocation;
+import com.graphy.lms.entity.StudentFeePayment;
+import com.graphy.lms.entity.StudentInstallmentPlan;
+import com.graphy.lms.security.AccessControlService;
+import com.graphy.lms.security.UserContext;
+import com.graphy.lms.service.FeeService;
+
+import jakarta.validation.Valid;
 
 @RestController
 @RequestMapping("/api/fee-management")
@@ -1287,5 +1314,44 @@ public class FeeController {
     public ResponseEntity<Map<String, Object>> getOverallFinancialSummary() {
         Map<String, Object> summary = feeManagementService.getOverallFinancialSummary();
         return ResponseEntity.ok(summary);
+    }
+ // 1. INITIATE PAYMENT (Get Order ID)
+    @PostMapping("/payments/initiate")
+    public ResponseEntity<Map<String, String>> initiatePayment(
+            @RequestParam Long allocationId, 
+            @RequestParam BigDecimal amount) {
+        
+        String orderId = feeManagementService.createRazorpayOrder(allocationId, amount);
+        
+        Map<String, String> response = new HashMap<>();
+        response.put("orderId", orderId);
+        return ResponseEntity.ok(response);
+    }
+
+    // 2. VERIFY PAYMENT (Complete the Transaction)
+    @PostMapping("/payments/verify")
+    public ResponseEntity<String> verifyPayment(
+            @RequestParam String orderId,
+            @RequestParam String paymentId,
+            @RequestParam String signature,
+            @RequestParam Long allocationId,
+            @RequestParam BigDecimal amount) {
+        
+        boolean isValid = feeManagementService.verifyRazorpayPayment(orderId, paymentId, signature);
+        
+        if (isValid) {
+            // Only if valid, record the payment in DB
+            feeManagementService.processOnlinePayment(
+                allocationId, 
+                null, 
+                amount, 
+                "ONLINE", 
+                paymentId, 
+                "Verified Signature"
+            );
+            return ResponseEntity.ok("Payment Verified & Recorded Successfully!");
+        } else {
+            return ResponseEntity.status(HttpStatus.BAD_REQUEST).body("Invalid Payment Signature!");
+        }
     }
 }

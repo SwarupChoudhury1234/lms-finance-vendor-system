@@ -286,4 +286,7 @@ public interface FeeService {
     
     // Payment history per student
     List<StudentFeePayment> getPaymentHistory(Long userId);
+ // Add inside FeeService interface
+    String createRazorpayOrder(Long allocationId, BigDecimal amount);
+    boolean verifyRazorpayPayment(String orderId, String paymentId, String signature);
 }
