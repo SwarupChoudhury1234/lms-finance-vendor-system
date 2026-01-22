@@ -51,7 +51,6 @@ import jakarta.validation.Valid;
 
 @RestController
 @RequestMapping("/api/fee-management")
-
 public class FeeController {
 
     @Autowired
@@ -877,7 +876,7 @@ public class FeeController {
     @PostMapping("/refunds/{refundId}/process")
     @PreAuthorize("hasRole('ADMIN')")
     public ResponseEntity<FeeRefund> processRefund(
-            @PathVariable Long refundId,
+            @RequestParam Long refundId,
             @RequestParam String refundMode,
             @RequestParam String transactionRef) {
         FeeRefund processed = feeManagementService.processRefund(refundId, refundMode, transactionRef);
@@ -1315,7 +1314,8 @@ public class FeeController {
         Map<String, Object> summary = feeManagementService.getOverallFinancialSummary();
         return ResponseEntity.ok(summary);
     }
- // 1. INITIATE PAYMENT (Get Order ID)
+
+    // 1. INITIATE PAYMENT (Get Order ID)
     @PostMapping("/payments/initiate")
     public ResponseEntity<Map<String, String>> initiatePayment(
             @RequestParam Long allocationId, 
@@ -1329,13 +1329,15 @@ public class FeeController {
     }
 
     // 2. VERIFY PAYMENT (Complete the Transaction)
+    // UPDATED: Added installmentPlanId as optional param to support Advance Payments (null ID)
     @PostMapping("/payments/verify")
     public ResponseEntity<String> verifyPayment(
             @RequestParam String orderId,
             @RequestParam String paymentId,
             @RequestParam String signature,
             @RequestParam Long allocationId,
-            @RequestParam BigDecimal amount) {
+            @RequestParam BigDecimal amount,
+            @RequestParam(required = false) Long installmentPlanId) {
         
         boolean isValid = feeManagementService.verifyRazorpayPayment(orderId, paymentId, signature);
         
@@ -1343,7 +1345,7 @@ public class FeeController {
             // Only if valid, record the payment in DB
             feeManagementService.processOnlinePayment(
                 allocationId, 
-                null, 
+                installmentPlanId, // Now passing the variable (can be null for Advance or ID for Installment)
                 amount, 
                 "ONLINE", 
                 paymentId, 

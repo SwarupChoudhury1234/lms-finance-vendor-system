@@ -2525,3 +2525,51 @@ This generated password is for development use only. Your security configuration
 2026-01-21 18:15:31.421 [Thread-79] INFO  o.s.o.j.LocalContainerEntityManagerFactoryBean - Closing JPA EntityManagerFactory for persistence unit 'default'
 2026-01-21 18:15:31.423 [Thread-79] INFO  com.zaxxer.hikari.HikariDataSource - HikariPool-21 - Shutdown initiated...
 2026-01-21 18:15:31.424 [Thread-79] INFO  com.zaxxer.hikari.HikariDataSource - HikariPool-21 - Shutdown completed.
+2026-01-21 18:15:31.583 [restartedMain] INFO  c.g.l.LmsFinanceVendorSystemApplication - Starting LmsFinanceVendorSystemApplication using Java 21.0.9 with PID 10400 (C:\Users\ACER\eclipse-workspace\lms-finance-vendor-system\target\classes started by ACER in C:\Users\ACER\eclipse-workspace\lms-finance-vendor-system)
+2026-01-21 18:15:31.583 [restartedMain] DEBUG c.g.l.LmsFinanceVendorSystemApplication - Running with Spring Boot v3.2.0, Spring v6.1.1
+2026-01-21 18:15:31.583 [restartedMain] INFO  c.g.l.LmsFinanceVendorSystemApplication - The following 1 profile is active: "dev"
+2026-01-21 18:15:31.954 [restartedMain] INFO  o.s.d.r.c.RepositoryConfigurationDelegate - Bootstrapping Spring Data JPA repositories in DEFAULT mode.
+2026-01-21 18:15:32.060 [restartedMain] INFO  o.s.d.r.c.RepositoryConfigurationDelegate - Finished Spring Data repository scanning in 105 ms. Found 39 JPA repository interfaces.
+2026-01-21 18:15:32.304 [restartedMain] INFO  o.s.b.w.e.tomcat.TomcatWebServer - Tomcat initialized with port 8080 (http)
+2026-01-21 18:15:32.304 [restartedMain] INFO  o.a.coyote.http11.Http11NioProtocol - Initializing ProtocolHandler ["http-nio-8080"]
+2026-01-21 18:15:32.305 [restartedMain] INFO  o.a.catalina.core.StandardService - Starting service [Tomcat]
+2026-01-21 18:15:32.305 [restartedMain] INFO  o.a.catalina.core.StandardEngine - Starting Servlet engine: [Apache Tomcat/10.1.16]
+2026-01-21 18:15:32.335 [restartedMain] INFO  o.a.c.c.C.[Tomcat-4].[localhost].[/] - Initializing Spring embedded WebApplicationContext
+2026-01-21 18:15:32.336 [restartedMain] INFO  o.s.b.w.s.c.ServletWebServerApplicationContext - Root WebApplicationContext: initialization completed in 751 ms
+2026-01-21 18:15:32.632 [restartedMain] DEBUG c.g.l.s.JwtAuthenticationFilter - Filter 'jwtAuthenticationFilter' configured for use
+2026-01-21 18:15:32.632 [restartedMain] DEBUG c.graphy.lms.config.HeaderRoleFilter - Filter 'headerRoleFilter' configured for use
+2026-01-21 18:15:32.696 [restartedMain] INFO  com.zaxxer.hikari.HikariDataSource - HikariPool-22 - Starting...
+2026-01-21 18:15:32.702 [restartedMain] INFO  com.zaxxer.hikari.pool.HikariPool - HikariPool-22 - Added connection com.mysql.cj.jdbc.ConnectionImpl@23abd481
+2026-01-21 18:15:32.702 [restartedMain] INFO  com.zaxxer.hikari.HikariDataSource - HikariPool-22 - Start completed.
+2026-01-21 18:15:32.722 [restartedMain] INFO  org.flywaydb.core.FlywayExecutor - Database: jdbc:mysql://localhost:3306/lms_fee_dev (MySQL 8.0)
+2026-01-21 18:15:32.776 [restartedMain] INFO  o.f.core.internal.command.DbValidate - Successfully validated 0 migrations (execution time 00:00.005s)
+2026-01-21 18:15:32.776 [restartedMain] WARN  o.f.core.internal.command.DbValidate - No migrations found. Are your locations set up correctly?
+2026-01-21 18:15:32.788 [restartedMain] INFO  o.f.core.internal.command.DbMigrate - Current version of schema `lms_fee_dev`: << Empty Schema >>
+2026-01-21 18:15:32.789 [restartedMain] INFO  o.f.core.internal.command.DbMigrate - Schema `lms_fee_dev` is up to date. No migration necessary.
+2026-01-21 18:15:32.851 [restartedMain] INFO  o.h.jpa.internal.util.LogHelper - HHH000204: Processing PersistenceUnitInfo [name: default]
+2026-01-21 18:15:32.854 [restartedMain] INFO  o.h.c.i.RegionFactoryInitiator - HHH000026: Second-level cache disabled
+2026-01-21 18:15:32.859 [restartedMain] INFO  o.s.o.j.p.SpringPersistenceUnitInfo - No LoadTimeWeaver setup: ignoring JPA class transformer
+2026-01-21 18:15:32.860 [restartedMain] WARN  org.hibernate.orm.deprecation - HHH90000025: MySQL8Dialect does not need to be specified explicitly using 'hibernate.dialect' (remove the property setting and it will be selected by default)
+2026-01-21 18:15:32.860 [restartedMain] WARN  org.hibernate.orm.deprecation - HHH90000026: MySQL8Dialect has been deprecated; use org.hibernate.dialect.MySQLDialect instead
+2026-01-21 18:15:33.583 [restartedMain] INFO  o.h.e.t.j.p.i.JtaPlatformInitiator - HHH000489: No JTA platform available (set 'hibernate.transaction.jta.platform' to enable JTA platform integration)
+2026-01-21 18:15:33.697 [restartedMain] INFO  o.s.o.j.LocalContainerEntityManagerFactoryBean - Initialized JPA EntityManagerFactory for persistence unit 'default'
+2026-01-21 18:15:35.224 [restartedMain] WARN  o.s.b.a.o.j.JpaBaseConfiguration$JpaWebConfiguration - spring.jpa.open-in-view is enabled by default. Therefore, database queries may be performed during view rendering. Explicitly configure spring.jpa.open-in-view to disable this warning
+2026-01-21 18:15:35.257 [restartedMain] WARN  o.s.b.a.s.s.UserDetailsServiceAutoConfiguration - 
+
+Using generated security password: 0d917eda-4b3e-4f69-b90d-b2d389766353
+
+This generated password is for development use only. Your security configuration must be updated before running your application in production.
+
+2026-01-21 18:15:35.558 [restartedMain] INFO  o.s.b.a.e.web.EndpointLinksResolver - Exposing 1 endpoint(s) beneath base path '/actuator'
+2026-01-21 18:15:35.607 [restartedMain] INFO  o.s.s.web.DefaultSecurityFilterChain - Will secure any request with [org.springframework.security.web.session.DisableEncodeUrlFilter@7ed67a0a, org.springframework.security.web.context.request.async.WebAsyncManagerIntegrationFilter@dc8d5fc, org.springframework.security.web.context.SecurityContextHolderFilter@4788f025, org.springframework.security.web.header.HeaderWriterFilter@1415e16b, org.springframework.security.web.authentication.logout.LogoutFilter@7dd9853e, com.graphy.lms.security.JwtAuthenticationFilter@3b31ed3a, com.graphy.lms.config.HeaderRoleFilter@35073966, org.springframework.security.web.savedrequest.RequestCacheAwareFilter@58242cff, org.springframework.security.web.servletapi.SecurityContextHolderAwareRequestFilter@38bd99ed, org.springframework.security.web.authentication.AnonymousAuthenticationFilter@235c98b3, org.springframework.security.web.session.SessionManagementFilter@58eb7243, org.springframework.security.web.access.ExceptionTranslationFilter@684da2dc, org.springframework.security.web.access.intercept.AuthorizationFilter@73b59b45]
+2026-01-21 18:15:36.009 [restartedMain] INFO  o.s.b.d.a.OptionalLiveReloadServer - LiveReload server is running on port 35729
+2026-01-21 18:15:36.036 [restartedMain] INFO  o.a.coyote.http11.Http11NioProtocol - Starting ProtocolHandler ["http-nio-8080"]
+2026-01-21 18:15:36.039 [restartedMain] INFO  o.s.b.w.e.tomcat.TomcatWebServer - Tomcat started on port 8080 (http) with context path ''
+2026-01-21 18:15:36.047 [restartedMain] INFO  c.g.l.LmsFinanceVendorSystemApplication - Started LmsFinanceVendorSystemApplication in 4.49 seconds (process running for 11839.865)
+2026-01-21 18:15:36.050 [restartedMain] INFO  o.s.b.d.a.ConditionEvaluationDeltaLoggingListener - Condition evaluation unchanged
+2026-01-21 18:53:47.249 [HikariPool-22 housekeeper] WARN  com.zaxxer.hikari.pool.HikariPool - HikariPool-22 - Thread starvation or clock leap detected (housekeeper delta=2m2s201ms653µs200ns).
+2026-01-21 19:30:28.640 [RMI TCP Connection(266)-127.0.0.1] INFO  o.s.b.a.SpringApplicationAdminMXBeanRegistrar$SpringApplicationAdmin - Application shutdown requested.
+2026-01-21 19:30:28.764 [RMI TCP Connection(266)-127.0.0.1] INFO  o.a.coyote.http11.Http11NioProtocol - Stopping ProtocolHandler ["http-nio-8080"]
+2026-01-21 19:30:28.826 [RMI TCP Connection(266)-127.0.0.1] INFO  o.s.o.j.LocalContainerEntityManagerFactoryBean - Closing JPA EntityManagerFactory for persistence unit 'default'
+2026-01-21 19:30:28.849 [RMI TCP Connection(266)-127.0.0.1] INFO  com.zaxxer.hikari.HikariDataSource - HikariPool-22 - Shutdown initiated...
+2026-01-21 19:30:28.858 [RMI TCP Connection(266)-127.0.0.1] INFO  com.zaxxer.hikari.HikariDataSource - HikariPool-22 - Shutdown completed.
