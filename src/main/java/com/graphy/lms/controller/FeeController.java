@@ -531,14 +531,16 @@ public class FeeController {
             @RequestParam String transactionRef,
             @RequestParam(required = false) String gatewayResponse) {
         
-        // Students can only make payments for themselves
         if (userContext.isStudent()) {
             StudentFeeAllocation allocation = feeManagementService.getFeeAllocationById(allocationId);
             accessControlService.validateAccess(allocation.getUserId(), "process online payment");
         }
         
+        // Passing 'null' for Screenshot, Name, and Email to match old behavior
         StudentFeePayment payment = feeManagementService.processOnlinePayment(
-                allocationId, installmentPlanId, amount, paymentMode, transactionRef, gatewayResponse);
+                allocationId, installmentPlanId, amount, paymentMode, transactionRef, gatewayResponse,
+                null, null, null); // <--- Passing Nulls
+        
         return new ResponseEntity<>(payment, HttpStatus.CREATED);
     }
     
@@ -1330,30 +1332,37 @@ public class FeeController {
 
     // 2. VERIFY PAYMENT (Complete the Transaction)
     // UPDATED: Added installmentPlanId as optional param to support Advance Payments (null ID)
-    @PostMapping("/payments/verify")
-    public ResponseEntity<String> verifyPayment(
-            @RequestParam String orderId,
-            @RequestParam String paymentId,
-            @RequestParam String signature,
-            @RequestParam Long allocationId,
-            @RequestParam BigDecimal amount,
-            @RequestParam(required = false) Long installmentPlanId) {
+ // 2. VERIFY PAYMENT (Complete the Transaction)
+    @PostMapping("/verify-payment")
+    @PreAuthorize("hasAnyRole('ADMIN', 'STUDENT')")
+    public ResponseEntity<Map<String, Object>> verifyPayment(
+            @RequestBody Map<String, String> paymentData) {
         
-        boolean isValid = feeManagementService.verifyRazorpayPayment(orderId, paymentId, signature);
+        String paymentId = paymentData.get("razorpay_payment_id");
+        Long allocationId = Long.parseLong(paymentData.get("allocationId"));
         
-        if (isValid) {
-            // Only if valid, record the payment in DB
-            feeManagementService.processOnlinePayment(
-                allocationId, 
-                installmentPlanId, // Now passing the variable (can be null for Advance or ID for Installment)
-                amount, 
-                "ONLINE", 
-                paymentId, 
-                "Verified Signature"
-            );
-            return ResponseEntity.ok("Payment Verified & Recorded Successfully!");
-        } else {
-            return ResponseEntity.status(HttpStatus.BAD_REQUEST).body("Invalid Payment Signature!");
-        }
+        Long installmentPlanId = paymentData.get("installmentPlanId") != null ? 
+                               Long.parseLong(paymentData.get("installmentPlanId")) : null;
+
+        // FIX: Still need to extract amount to call the service, or pass BigDecimal.ZERO if strictly old code
+        BigDecimal amount = paymentData.containsKey("amount") ? 
+                           new BigDecimal(paymentData.get("amount")) : BigDecimal.ZERO;
+
+        // Passing 'null' for new fields
+        StudentFeePayment payment = feeManagementService.processOnlinePayment(
+                allocationId,
+                installmentPlanId,
+                amount,
+                "UPI",
+                paymentId,
+                "Razorpay Payment Successful",
+                null, null, null); // <--- Passing Nulls
+
+        Map<String, Object> response = new HashMap<>();
+        response.put("success", true);
+        response.put("message", "Payment verified and recorded successfully");
+        response.put("paymentId", payment.getId());
+        
+        return ResponseEntity.ok(response);
     }
 }

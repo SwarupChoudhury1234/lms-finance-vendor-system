@@ -56,7 +56,7 @@ public class StudentFeePayment {
     private LocalDateTime updatedAt;
     
     public enum PaymentMode {
-        CASH, CARD, UPI, NET_BANKING, BANK_TRANSFER, AUTO_DEBIT
+        CASH, CARD, UPI, NET_BANKING, BANK_TRANSFER, AUTO_DEBIT,ONLINE
     }
     
     public enum PaymentStatus {

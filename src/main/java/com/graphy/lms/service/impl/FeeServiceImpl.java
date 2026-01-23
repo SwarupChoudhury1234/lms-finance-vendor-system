@@ -49,7 +49,14 @@ public class FeeServiceImpl implements FeeService {
     @Autowired private CurrencyRateRepository currencyRateRepository;
     @Autowired private AuditLogRepository auditLogRepository;
     @Autowired private CertificateBlockListRepository certificateBlockListRepository;
- // Inside the class:
+    
+    @Autowired
+    private EmailService emailService;
+    @Autowired
+    private PDFReceiptService pdfReceiptService;
+   
+    // REMOVED: private UserRepository userRepository; (To fix "User cannot be resolved" error)
+
     @Autowired
     private RazorpayClient razorpayClient;
 
@@ -72,8 +79,6 @@ public class FeeServiceImpl implements FeeService {
         return saved;
     }
 
-    
-
     @Override
     public FeeType getFeeTypeById(Long id) {
         return feeTypeRepository.findById(id)
@@ -95,7 +100,6 @@ public class FeeServiceImpl implements FeeService {
         FeeType existing = getFeeTypeById(id);
         String oldValue = existing.toString();
         
-        // Update only provided fields
         if (feeType.getName() != null) existing.setName(feeType.getName());
         if (feeType.getDescription() != null) existing.setDescription(feeType.getDescription());
         if (feeType.getIsActive() != null) existing.setIsActive(feeType.getIsActive());
@@ -244,10 +248,23 @@ public class FeeServiceImpl implements FeeService {
     public StudentFeeAllocation createStudentFeeAllocation(StudentFeeAllocation allocation) {
         // Auto-calculate payable amount if discounts exist
         if (allocation.getFeeStructureId() != null && allocation.getUserId() != null) {
+            
+            // 🔴 FIX: Fetch the structure first so we can use it
+            FeeStructure structure = getFeeStructureById(allocation.getFeeStructureId());
+            
+            // 1. Set Original Amount explicitly
+            allocation.setOriginalAmount(structure.getTotalAmount());
+
+            // 2. Calculate Payable
             BigDecimal payableAmount = calculatePayableAmount(allocation.getUserId(), allocation.getFeeStructureId());
+            
+            // 3. Calculate and Set Total Discount
+            BigDecimal discountAmount = structure.getTotalAmount().subtract(payableAmount);
+            allocation.setTotalDiscount(discountAmount); 
+            
             allocation.setPayableAmount(payableAmount);
             
-            // Calculate remaining amount after advance payment
+            // 4. Calculate remaining amount after advance payment
             BigDecimal advancePayment = allocation.getAdvancePayment() != null ? 
                                        allocation.getAdvancePayment() : BigDecimal.ZERO;
             allocation.setRemainingAmount(payableAmount.subtract(advancePayment));
@@ -336,7 +353,8 @@ public class FeeServiceImpl implements FeeService {
         // Ensure payable amount is not negative
         return payableAmount.compareTo(BigDecimal.ZERO) < 0 ? BigDecimal.ZERO : payableAmount;
     }
- // ============================================
+ 
+    // ============================================
     // 5. PAYMENT ALTERNATIVES CRUD
     // ============================================
     
@@ -558,7 +576,8 @@ public class FeeServiceImpl implements FeeService {
     public List<StudentInstallmentPlan> getOverdueInstallments() {
         return studentInstallmentPlanRepository.findOverdueInstallments(LocalDate.now());
     }
- // ============================================
+    
+    // ============================================
     // 7. STUDENT FEE PAYMENTS CRUD + BUSINESS LOGIC
     // ============================================
     
@@ -632,69 +651,82 @@ public class FeeServiceImpl implements FeeService {
     @Transactional
     public StudentFeePayment processOnlinePayment(Long allocationId, Long installmentPlanId, 
                                                   BigDecimal amount, String paymentMode, 
-                                                  String transactionRef, String gatewayResponse) {
-        logger.info("Processing online payment - Allocation ID: {}, Amount: {}", allocationId, amount);
+                                                  String transactionRef, String gatewayResponse,
+                                                  String screenshotUrl, String studentName,   // 🔴 Using Param
+                                                  String studentEmail) { // <--- Screenshot Included
         
-        try {
-            // 1. Create and Save the Payment Record
-            StudentFeePayment payment = new StudentFeePayment();
-            payment.setStudentFeeAllocationId(allocationId);
-            payment.setStudentInstallmentPlanId(installmentPlanId); // Can be NULL (Advance)
-            payment.setPaidAmount(amount);
-            payment.setPaymentDate(LocalDateTime.now());
-            payment.setPaymentMode(StudentFeePayment.PaymentMode.valueOf(paymentMode));
-            payment.setPaymentStatus(StudentFeePayment.PaymentStatus.SUCCESS);
-            payment.setTransactionReference(transactionRef);
-            payment.setGatewayResponse(gatewayResponse);
-            
-            // NOTE: We use repository.save() directly to avoid hidden logic in createPayment()
-            StudentFeePayment saved = studentFeePaymentRepository.save(payment);
+        logger.info("Processing online payment. AllocID: {}, Amount: {}", allocationId, amount);
+        
+        // 1. Validate & Save Payment
+        StudentFeePayment payment = new StudentFeePayment();
+        payment.setStudentFeeAllocationId(allocationId);
+        payment.setStudentInstallmentPlanId(installmentPlanId);
+        payment.setPaidAmount(amount);
+        payment.setPaymentDate(LocalDateTime.now());
+        payment.setPaymentMode(StudentFeePayment.PaymentMode.valueOf(paymentMode));
+        payment.setPaymentStatus(StudentFeePayment.PaymentStatus.SUCCESS);
+        payment.setTransactionReference(transactionRef);
+        payment.setGatewayResponse(gatewayResponse);
+        payment.setScreenshotUrl(screenshotUrl); // <--- 🔴 SAVING SCREENSHOT
+        
+        StudentFeePayment savedPayment = studentFeePaymentRepository.save(payment);
 
-            // ====================================================================
-            // LOGIC A: Handle Installment Status (If this is NOT an Advance Payment)
-            // ====================================================================
-            if (installmentPlanId != null) {
-                updateInstallmentStatus(installmentPlanId, amount);
-            }
-
-            // ====================================================================
-            // LOGIC B: Update the Parent Allocation Balance (Your Fix)
-            // ====================================================================
-            StudentFeeAllocation allocation = getFeeAllocationById(allocationId);
-            
-            // 1. Calculate New Remaining Amount
-            BigDecimal newRemaining = allocation.getRemainingAmount().subtract(amount);
-            allocation.setRemainingAmount(newRemaining);
-            
-            // 2. Check if fully paid
-            if (newRemaining.compareTo(BigDecimal.ZERO) <= 0) {
-                allocation.setStatus(StudentFeeAllocation.AllocationStatus.COMPLETED);
-                // Bonus: Auto-unblock certificate if they were blocked
-                try {
-                    unblockCertificate(allocation.getUserId());
-                } catch (Exception e) {
-                    // Ignore error if user wasn't blocked, don't stop the payment flow
-                    logger.warn("Could not auto-unblock user: " + e.getMessage());
-                }
-            }
-            
-            // 3. Save Allocation
-            studentFeeAllocationRepository.save(allocation);
-
-            // ====================================================================
-            // LOGIC C: Finalize
-            // ====================================================================
-            
-            // Generate Receipt
-            generateReceipt(saved.getId());
-            
-            logger.info("Online payment processed successfully - Payment ID: {}", saved.getId());
-            return saved;
-            
-        } catch (Exception e) {
-            logger.error("Failed to process online payment for allocation {}: {}", allocationId, e.getMessage());
-            throw e;
+        // 2. Update Allocation (Reduce Remaining Amount)
+        StudentFeeAllocation allocation = getFeeAllocationById(allocationId);
+        BigDecimal newRemaining = allocation.getRemainingAmount().subtract(amount);
+        allocation.setRemainingAmount(newRemaining.max(BigDecimal.ZERO));
+        
+        // Logic: If fully paid, mark Active
+        if (allocation.getRemainingAmount().compareTo(BigDecimal.ZERO) == 0) {
+            allocation.setStatus(StudentFeeAllocation.AllocationStatus.ACTIVE); 
         }
+        studentFeeAllocationRepository.save(allocation);
+
+        // 3. Update Installment Plan (If applicable)
+        if (installmentPlanId != null) {
+            StudentInstallmentPlan plan = getInstallmentPlanById(installmentPlanId);
+            plan.setStatus(StudentInstallmentPlan.InstallmentStatus.PAID);
+            
+            // 🔴 REMOVED: plan.setPaidDate(LocalDate.now()); (Does not exist in entity)
+            
+            studentInstallmentPlanRepository.save(plan);
+        }
+
+        // =================================================================================
+        // 🔴 NEW: TRIGGER EMAIL & PDF RECEIPT (The "Glue" Code)
+        // =================================================================================
+        try {
+            String receiptNumber = "REC-" + savedPayment.getId();
+            
+            // B. Generate PDF Receipt
+            byte[] pdfBytes = pdfReceiptService.generateReceiptPDF(
+            		receiptNumber,
+                    studentName,          // 🔴 Using passed name
+                    allocation.getUserId(), 
+                    savedPayment.getPaidAmount(),
+                    "INR",
+                    savedPayment.getPaymentMode().toString(),
+                    savedPayment.getTransactionReference(),
+                    savedPayment.getPaymentDate()
+            );
+            
+            // C. Send Email with Attachment
+            emailService.sendPaymentSuccessEmail(
+            		studentEmail,         // 🔴 Using passed email
+                    studentName,          // 🔴 Using passed name
+                    receiptNumber,
+                    savedPayment.getPaidAmount(),
+                    "INR",
+                    pdfBytes
+            );
+            
+            logger.info("✅ Receipt Email Sent Successfully to {}", studentEmail);
+
+        } catch (Exception e) {
+            logger.error("❌ Failed to send receipt email: {}", e.getMessage());
+        }
+
+        return savedPayment;
     }
 
     @Override
@@ -1008,7 +1040,8 @@ public class FeeServiceImpl implements FeeService {
         
         return createAttendancePenalty(penalty);
     }
- // ============================================
+    
+    // ============================================
     // 11. EXAM FEE LINKAGE CRUD + AUTO LINKING
     // ============================================
     
@@ -1233,6 +1266,7 @@ public class FeeServiceImpl implements FeeService {
         
         return feeRefundRepository.save(refund);
     }
+    
     @Override
     public FeeRefund rejectRefund(Long refundId, Long rejectedBy, String reason) {
         FeeRefund refund = getRefundById(refundId);
@@ -1438,7 +1472,8 @@ public class FeeServiceImpl implements FeeService {
         
         System.out.println("Email sent to: " + email + " - " + message);
     }
- // ============================================
+ 
+    // ============================================
     // 15. AUTO DEBIT CONFIG CRUD
     // ============================================
     
@@ -1528,13 +1563,17 @@ public class FeeServiceImpl implements FeeService {
                         // For now, simulate successful auto-debit
                         String transactionRef = "AUTO-" + System.currentTimeMillis();
                         
+                        // 🔴 UPDATED CALL: Added new arguments (null/placeholder)
                         processOnlinePayment(
                             config.getStudentFeeAllocationId(),
                             nextInstallment.getId(),
                             amountToDebit,
                             "AUTO_DEBIT",
                             transactionRef,
-                            "Auto-debit successful via " + config.getPaymentGateway()
+                            "Auto-debit successful via " + config.getPaymentGateway(),
+                            null,               // screenshotUrl
+                            "AutoDebit User",   // studentName (Placeholder)
+                            "student@lms.com"   // studentEmail (Placeholder)
                         );
                         
                         System.out.println("Auto-debit successful for user: " + config.getUserId() + 
@@ -1899,10 +1938,17 @@ public class FeeServiceImpl implements FeeService {
             totalStudents += allocations.size();
             
             for (StudentFeeAllocation allocation : allocations) {
+                // 🔴 UPDATED: Sum up Expected & Pending directly from DB (Correctly updated by processRefund)
                 totalExpected = totalExpected.add(allocation.getPayableAmount());
-                BigDecimal paid = studentFeePaymentRepository.getTotalPaidByAllocationId(allocation.getId());
-                totalCollected = totalCollected.add(paid != null ? paid : BigDecimal.ZERO);
                 totalPending = totalPending.add(allocation.getRemainingAmount());
+                
+                // 🔴 NEW LOGIC: Calculate Collected as (Payable - Remaining)
+                // This replaces the old database call that summed up payment rows.
+                // It ensures we count the "Net Kept" amount (e.g. 30k) even if rows are REFUNDED.
+                BigDecimal collectedFromStudent = allocation.getPayableAmount()
+                        .subtract(allocation.getRemainingAmount());
+                
+                totalCollected = totalCollected.add(collectedFromStudent);
             }
         }
         
@@ -1911,6 +1957,8 @@ public class FeeServiceImpl implements FeeService {
         report.put("totalExpected", totalExpected);
         report.put("totalCollected", totalCollected);
         report.put("totalPending", totalPending);
+        
+        // 🔴 UPDATED: Safe Percentage Calculation
         report.put("collectionPercentage", totalExpected.compareTo(BigDecimal.ZERO) > 0 ? 
                    totalCollected.multiply(BigDecimal.valueOf(100)).divide(totalExpected, 2, RoundingMode.HALF_UP) : 
                    BigDecimal.ZERO);
@@ -1997,17 +2045,22 @@ public class FeeServiceImpl implements FeeService {
     public Map<String, Object> getOverallFinancialSummary() {
         List<StudentFeeAllocation> allAllocations = getAllFeeAllocations();
         
-        BigDecimal totalExpected = allAllocations.stream()
-                .map(StudentFeeAllocation::getPayableAmount)
-                .reduce(BigDecimal.ZERO, BigDecimal::add);
-        
+        BigDecimal totalExpected = BigDecimal.ZERO;
         BigDecimal totalCollected = BigDecimal.ZERO;
         BigDecimal totalPending = BigDecimal.ZERO;
         
         for (StudentFeeAllocation allocation : allAllocations) {
-            BigDecimal paid = studentFeePaymentRepository.getTotalPaidByAllocationId(allocation.getId());
-            totalCollected = totalCollected.add(paid != null ? paid : BigDecimal.ZERO);
+            // 🔴 UPDATED: Sum up Expected & Pending directly
+            totalExpected = totalExpected.add(allocation.getPayableAmount());
             totalPending = totalPending.add(allocation.getRemainingAmount());
+            
+            // 🔴 NEW LOGIC: Collected = Payable - Remaining
+            // This guarantees the CEO sees the "Net Realized" revenue (Advance + Settled Amounts)
+            // instead of "0" for refunded students.
+            BigDecimal collectedFromStudent = allocation.getPayableAmount()
+                    .subtract(allocation.getRemainingAmount());
+            
+            totalCollected = totalCollected.add(collectedFromStudent);
         }
         
         Map<String, Object> summary = new HashMap<>();
@@ -2050,6 +2103,14 @@ public class FeeServiceImpl implements FeeService {
         } catch (RazorpayException e) {
             throw new RuntimeException("Razorpay Error: " + e.getMessage());
         }
+    }
+ // In FeeServiceImpl.java
+
+    @Override
+    public FeeRefund getRefundByTransactionRef(String transactionRef) {
+        // This will now work because you updated the Repository in Step 1
+        return feeRefundRepository.findByTransactionReference(transactionRef)
+                .orElseThrow(() -> new RuntimeException("Refund not found with Reference: " + transactionRef));
     }
 
     @Override

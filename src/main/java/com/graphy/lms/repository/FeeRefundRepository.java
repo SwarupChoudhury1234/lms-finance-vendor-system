@@ -12,4 +12,5 @@ public interface FeeRefundRepository extends JpaRepository<FeeRefund, Long> {
     List<FeeRefund> findByRefundStatus(FeeRefund.RefundStatus refundStatus);
     List<FeeRefund> findByStudentFeeAllocationId(Long studentFeeAllocationId);
     List<FeeRefund> findByStudentFeePaymentId(Long studentFeePaymentId);
+    java.util.Optional<FeeRefund> findByTransactionReference(String transactionReference);
 }

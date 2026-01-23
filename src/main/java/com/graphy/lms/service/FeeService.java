@@ -97,10 +97,15 @@ public interface FeeService {
     void deletePayment(Long id);
     
     // Process online payment
-    StudentFeePayment processOnlinePayment(Long allocationId, Long installmentPlanId, 
-                                           BigDecimal amount, String paymentMode, 
-                                           String transactionRef, String gatewayResponse);
-    
+    StudentFeePayment processOnlinePayment(Long allocationId, 
+            Long installmentPlanId, 
+            BigDecimal amount, 
+            String paymentMode, 
+            String transactionRef, 
+            String gatewayResponse,
+            String screenshotUrl,
+            String studentName,   // New Param
+            String studentEmail); // New Param
     // Record manual payment
     StudentFeePayment recordManualPayment(Long allocationId, Long installmentPlanId, 
                                          BigDecimal amount, String paymentMode, 
@@ -289,4 +294,5 @@ public interface FeeService {
  // Add inside FeeService interface
     String createRazorpayOrder(Long allocationId, BigDecimal amount);
     boolean verifyRazorpayPayment(String orderId, String paymentId, String signature);
+    FeeRefund getRefundByTransactionRef(String transactionRef);
 }
