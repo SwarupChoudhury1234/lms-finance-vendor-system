@@ -1,6 +1,6 @@
-2026-01-23 17:50:28.482 [http-nio-8080-exec-2] ERROR o.h.e.jdbc.spi.SqlExceptionHelper - Data truncated for column 'payment_mode' at row 1
-2026-01-23 17:51:35.199 [http-nio-8080-exec-2] ERROR o.h.e.jdbc.spi.SqlExceptionHelper - Data truncated for column 'payment_mode' at row 1
-2026-01-23 17:55:42.816 [http-nio-8080-exec-3] ERROR c.g.lms.service.impl.FeeServiceImpl - ❌ Failed to send receipt email: Authentication failed
-2026-01-23 18:20:47.115 [http-nio-8080-exec-1] ERROR c.g.lms.service.impl.FeeServiceImpl - ❌ Failed to send receipt email: Authentication failed
-2026-01-23 18:31:36.560 [http-nio-8080-exec-2] ERROR c.g.lms.service.impl.FeeServiceImpl - ❌ Failed to send receipt email: Authentication failed
-2026-01-23 18:47:55.548 [http-nio-8080-exec-1] ERROR c.g.lms.service.impl.FeeServiceImpl - ❌ Failed to send receipt email: Authentication failed
+2026-01-24 00:56:42.717 [http-nio-8080-exec-8] ERROR c.g.lms.service.PDFReceiptService - Failed to generate PDF receipt: null
+2026-01-24 00:56:42.726 [http-nio-8080-exec-8] ERROR c.g.lms.service.impl.FeeServiceImpl - ❌ Failed to send receipt email: Failed to generate PDF receipt: null
+2026-01-24 11:26:00.758 [http-nio-8080-exec-9] ERROR c.g.lms.service.PDFReceiptService - Failed to generate PDF receipt: null
+2026-01-24 11:26:00.760 [http-nio-8080-exec-9] ERROR c.g.lms.service.impl.FeeServiceImpl - ❌ Failed to send receipt email: Failed to generate PDF receipt: null
+2026-01-24 13:23:53.008 [http-nio-8080-exec-2] ERROR c.g.lms.service.PDFReceiptService - Failed to generate PDF receipt: null
+2026-01-24 13:23:53.009 [http-nio-8080-exec-2] ERROR c.g.lms.service.impl.FeeServiceImpl - ❌ Failed to send receipt email: Failed to generate PDF receipt: null

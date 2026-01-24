@@ -46,6 +46,12 @@ public class PaymentController {
         Long allocationId = Long.parseLong(paymentData.get("allocationId"));
         BigDecimal amount = new BigDecimal(paymentData.get("amount")); 
         
+        boolean isValid = feeManagementService.verifyRazorpayPayment(orderId, paymentId, signature);
+        
+        if (!isValid) {
+            throw new RuntimeException("PAYMENT FAILED: Invalid Signature! Potential tampering detected.");
+        }
+        
         Long installmentPlanId = null;
         if (paymentData.get("installmentPlanId") != null && !paymentData.get("installmentPlanId").equals("null")) {
              installmentPlanId = Long.parseLong(paymentData.get("installmentPlanId"));

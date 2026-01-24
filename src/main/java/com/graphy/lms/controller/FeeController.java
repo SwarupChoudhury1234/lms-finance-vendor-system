@@ -496,6 +496,7 @@ public class FeeController {
         }
         
         List<StudentFeePayment> payments = feeManagementService.getPaymentHistory(userId);
+        List<Map<String, Object>> history = feeManagementService.getStudentTransactionHistory(userId);
         return ResponseEntity.ok(payments);
     }
     
@@ -504,6 +505,7 @@ public class FeeController {
     public ResponseEntity<List<StudentFeePayment>> getMyPaymentHistory() {
         Long userId = userContext.getCurrentUserId();
         List<StudentFeePayment> payments = feeManagementService.getPaymentHistory(userId);
+        List<Map<String, Object>> history = feeManagementService.getStudentTransactionHistory(userId);
         return ResponseEntity.ok(payments);
     }
     

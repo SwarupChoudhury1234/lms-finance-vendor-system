@@ -1,0 +1,6 @@
+2026-01-23 17:50:28.482 [http-nio-8080-exec-2] ERROR o.h.e.jdbc.spi.SqlExceptionHelper - Data truncated for column 'payment_mode' at row 1
+2026-01-23 17:51:35.199 [http-nio-8080-exec-2] ERROR o.h.e.jdbc.spi.SqlExceptionHelper - Data truncated for column 'payment_mode' at row 1
+2026-01-23 17:55:42.816 [http-nio-8080-exec-3] ERROR c.g.lms.service.impl.FeeServiceImpl - ❌ Failed to send receipt email: Authentication failed
+2026-01-23 18:20:47.115 [http-nio-8080-exec-1] ERROR c.g.lms.service.impl.FeeServiceImpl - ❌ Failed to send receipt email: Authentication failed
+2026-01-23 18:31:36.560 [http-nio-8080-exec-2] ERROR c.g.lms.service.impl.FeeServiceImpl - ❌ Failed to send receipt email: Authentication failed
+2026-01-23 18:47:55.548 [http-nio-8080-exec-1] ERROR c.g.lms.service.impl.FeeServiceImpl - ❌ Failed to send receipt email: Authentication failed

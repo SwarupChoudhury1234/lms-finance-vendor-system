@@ -691,6 +691,7 @@ public class FeeServiceImpl implements FeeService {
             
             studentInstallmentPlanRepository.save(plan);
         }
+        generateReceipt(savedPayment.getId());
 
         // =================================================================================
         // 🔴 NEW: TRIGGER EMAIL & PDF RECEIPT (The "Glue" Code)
@@ -1227,7 +1228,7 @@ public class FeeServiceImpl implements FeeService {
             throw new RuntimeException("Refund must be approved before processing");
         }
         
-        // 1. Mark Refund as PROCESSED
+        // 1. Mark Refund Request as PROCESSED
         refund.setRefundStatus(FeeRefund.RefundStatus.PROCESSED);
         refund.setProcessedDate(LocalDate.now());
         refund.setRefundMode(refundMode);
@@ -1237,31 +1238,47 @@ public class FeeServiceImpl implements FeeService {
         StudentFeeAllocation allocation = getFeeAllocationById(refund.getStudentFeeAllocationId());
         StudentFeePayment paymentToRefund = getPaymentById(refund.getStudentFeePaymentId());
         
-        // 3. LOGIC FIX: Calculate the "Net Realized" Amount for this Student
-        // Formula: Advance + (All Successful Payments) - (This Refund Amount)
-        // We do this BEFORE marking the payment as REFUNDED
+        // 3. SETTLEMENT LOGIC (Forced Block / Final Settlement)
+        // We calculate exactly what the institute keeps (Advance + Net Payments)
         
-        BigDecimal advance = allocation.getAdvancePayment() != null ? 
-                             allocation.getAdvancePayment() : BigDecimal.ZERO;
+        // A. Calculate Total "Net" Paid so far (Adjusting for this refund)
+        BigDecimal currentTotalPaid = studentFeePaymentRepository.getTotalPaidByAllocationId(allocation.getId());
+        if (currentTotalPaid == null) currentTotalPaid = BigDecimal.ZERO;
         
-        // Get total paid via installments (Sum of all SUCCESS payments)
-        BigDecimal totalInstallmentsPaid = studentFeePaymentRepository
-                .getTotalPaidByAllocationId(allocation.getId());
-        if (totalInstallmentsPaid == null) totalInstallmentsPaid = BigDecimal.ZERO;
+        // The real money we have in bank after this refund
+        BigDecimal advance = allocation.getAdvancePayment() != null ? allocation.getAdvancePayment() : BigDecimal.ZERO;
+        BigDecimal finalNetCollection = currentTotalPaid.add(advance).subtract(refund.getRefundAmount());
+        
+        // B. Update Allocation to "Settled"
+        allocation.setPayableAmount(finalNetCollection); // Payable shrinks to match EXACTLY what we kept
+        allocation.setRemainingAmount(BigDecimal.ZERO);  // Pending is WIPED OUT (0)
+        allocation.setStatus(StudentFeeAllocation.AllocationStatus.REFUNDED); // BLOCKED (Student cannot pay anymore)
+        
+        // 4. Update the Payment Record (Visual Correction for Reports)
+        // We reduce the payment amount in DB so reports show the "Net" valid money.
+        BigDecimal originalAmount = paymentToRefund.getPaidAmount();
+        BigDecimal refundAmount = refund.getRefundAmount();
+        BigDecimal newNetAmount = originalAmount.subtract(refundAmount);
+        
+        // Update the amount in the database
+        paymentToRefund.setPaidAmount(newNetAmount);
+        
+        // Update Status: Keep 'SUCCESS' if money remains, else 'REFUNDED'
+        if (newNetAmount.compareTo(BigDecimal.ZERO) > 0) {
+            paymentToRefund.setPaymentStatus(StudentFeePayment.PaymentStatus.SUCCESS);
+            
+            // Mark reference to show it was adjusted
+            String oldRef = paymentToRefund.getTransactionReference();
+            if (oldRef != null && !oldRef.contains("(Partially Refunded)")) {
+                paymentToRefund.setTransactionReference(oldRef + " (Partially Refunded " + refundAmount + ")");
+            }
+        } else {
+            // If amount becomes 0 (or less), mark as fully Refunded
+            paymentToRefund.setPaymentStatus(StudentFeePayment.PaymentStatus.REFUNDED);
+        }
 
-        // The "Net" amount the institute keeps = Advance + Paid - Refunded Amount
-        BigDecimal netKeptAmount = advance.add(totalInstallmentsPaid).subtract(refund.getRefundAmount());
-
-        // 4. Update Allocation to Reflect the "Final Settlement"
-        // We shrink the "Payable" amount to match exactly what we kept.
-        allocation.setPayableAmount(netKeptAmount); 
-        allocation.setRemainingAmount(BigDecimal.ZERO); // Pending becomes 0
-        allocation.setStatus(StudentFeeAllocation.AllocationStatus.REFUNDED);
+        // Save Everything
         studentFeeAllocationRepository.save(allocation);
-        
-        // 5. Update Payment Status
-        // We still mark it REFUNDED to indicate the transaction was reversed/adjusted
-        paymentToRefund.setPaymentStatus(StudentFeePayment.PaymentStatus.REFUNDED);
         studentFeePaymentRepository.save(paymentToRefund);
         
         return feeRefundRepository.save(refund);
@@ -2091,6 +2108,20 @@ public class FeeServiceImpl implements FeeService {
     }
     @Override
     public String createRazorpayOrder(Long allocationId, BigDecimal amount) {
+        // 1. SECURITY CHECK: Is the student allowed to pay?
+        StudentFeeAllocation allocation = getFeeAllocationById(allocationId);
+        
+        if (allocation.getStatus() == StudentFeeAllocation.AllocationStatus.REFUNDED) {
+            throw new RuntimeException("PAYMENT BLOCKED: This student has been refunded and cannot make further payments.");
+        }
+        if (allocation.getStatus() == StudentFeeAllocation.AllocationStatus.CANCELLED) {
+            throw new RuntimeException("PAYMENT BLOCKED: Admission cancelled.");
+        }
+        if (allocation.getRemainingAmount().compareTo(BigDecimal.ZERO) <= 0) {
+             throw new RuntimeException("PAYMENT BLOCKED: No pending fees. Current Pending: " + allocation.getRemainingAmount());
+        }
+
+        // 2. Proceed with Razorpay Logic
         try {
             JSONObject orderRequest = new JSONObject();
             // Convert amount to paise (multiply by 100)
@@ -2112,6 +2143,96 @@ public class FeeServiceImpl implements FeeService {
         return feeRefundRepository.findByTransactionReference(transactionRef)
                 .orElseThrow(() -> new RuntimeException("Refund not found with Reference: " + transactionRef));
     }
+ // ... inside FeeServiceImpl class ...
+
+    // 1. IMPLEMENT THE NEW METHOD
+    @Override
+    public List<Map<String, Object>> getStudentTransactionHistory(Long userId) {
+        // Fetch raw payments (Online + Offline)
+        List<StudentFeePayment> rawPayments = getPaymentHistory(userId);
+        
+        // Transform them into your "Perfect JSON" format (With Refunds & Labels)
+        return transformPaymentsForReport(rawPayments);
+    }
+
+    // 2. UPDATE THE TRANSFORMER (To handle Offline & Clear Descriptions)
+    private List<Map<String, Object>> transformPaymentsForReport(List<StudentFeePayment> payments) {
+        List<Map<String, Object>> historyList = new ArrayList<>();
+
+        for (StudentFeePayment payment : payments) {
+            
+            // --- A. HANDLE PAYMENTS (Online & Offline) ---
+            
+            // 1. Find refunds linked to this payment
+            List<FeeRefund> linkedRefunds = feeRefundRepository.findByStudentFeePaymentId(payment.getId());
+            
+            BigDecimal totalRefunded = BigDecimal.ZERO;
+            List<FeeRefund> processedRefunds = new ArrayList<>();
+
+            for(FeeRefund r : linkedRefunds) {
+                if(r.getRefundStatus() == FeeRefund.RefundStatus.PROCESSED) {
+                    totalRefunded = totalRefunded.add(r.getRefundAmount());
+                    processedRefunds.add(r);
+                }
+            }
+
+            // 2. Restore Original Amount (Gross)
+            BigDecimal originalAmount = payment.getPaidAmount().add(totalRefunded);
+
+            Map<String, Object> paymentMap = new HashMap<>();
+            paymentMap.put("id", payment.getId());
+            paymentMap.put("amount", originalAmount); 
+            paymentMap.put("paymentDate", payment.getPaymentDate());
+            paymentMap.put("paymentMode", payment.getPaymentMode());
+            
+            // Clean up reference (remove "Partially Refunded" text for display if preferred)
+            String cleanRef = payment.getTransactionReference() != null ? 
+                              payment.getTransactionReference().replace(" (Partially Refunded " + totalRefunded + ")", "") : "N/A";
+            paymentMap.put("transactionRef", cleanRef);
+
+            // 3. SMART DESCRIPTION LOGIC (Online vs Offline)
+            String baseDesc = "";
+            if (payment.getStudentInstallmentPlanId() == null) {
+                baseDesc = "Advance Fee Payment";
+                paymentMap.put("paymentStatus", "ADVANCE_PAYMENT");
+            } else {
+                baseDesc = "Installment #" + payment.getStudentInstallmentPlanId();
+                paymentMap.put("paymentStatus", "SUCCESS"); // Show SUCCESS even if partially refunded
+            }
+
+            // Add "(Offline)" tag if it was Manual
+            if (payment.getPaymentMode() == StudentFeePayment.PaymentMode.CASH || 
+                payment.getPaymentMode() == StudentFeePayment.PaymentMode.BANK_TRANSFER) {
+                baseDesc += " (Offline)";
+            }
+            paymentMap.put("description", baseDesc);
+
+            historyList.add(paymentMap);
+
+            // --- B. HANDLE REFUNDS (Separate Entity) ---
+            for (FeeRefund refund : processedRefunds) {
+                Map<String, Object> refundMap = new HashMap<>();
+                refundMap.put("id", "REF-" + refund.getId()); // String ID
+                refundMap.put("amount", refund.getRefundAmount().negate()); // Negative Amount
+                refundMap.put("paymentDate", refund.getProcessedDate()); 
+                refundMap.put("paymentMode", "REFUND_ADJUSTMENT");
+                refundMap.put("transactionRef", refund.getTransactionReference());
+                refundMap.put("paymentStatus", "REFUNDED");
+                refundMap.put("description", "Refund for " + baseDesc); // e.g., "Refund for Installment #1"
+                
+                historyList.add(refundMap);
+            }
+        }
+        
+        // Sort Chronologically
+        historyList.sort((m1, m2) -> {
+            String d1 = m1.get("paymentDate").toString();
+            String d2 = m2.get("paymentDate").toString();
+            return d1.compareTo(d2);
+        });
+
+        return historyList;
+    }
 
     @Override
     public boolean verifyRazorpayPayment(String orderId, String paymentId, String signature) {
@@ -2129,30 +2250,74 @@ public class FeeServiceImpl implements FeeService {
  // ============================================
     // HELPER: Transform Payment List for Reports
     // ============================================
+ // ============================================
+    // UPDATED HELPER: Mix Payments AND Refunds for History
+    // ============================================
+ // ============================================
+    // UPDATED HELPER: Generates "Gross" History + Refund Lines
+    // ============================================
     private List<Map<String, Object>> transformPaymentsForReport(List<StudentFeePayment> payments) {
-        return payments.stream().map(payment -> {
-            Map<String, Object> map = new HashMap<>();
+        List<Map<String, Object>> historyList = new ArrayList<>();
+
+        for (StudentFeePayment payment : payments) {
             
-            // 1. Copy Basic Fields
-            map.put("id", payment.getId());
-            map.put("amount", payment.getPaidAmount());
-            map.put("paymentDate", payment.getPaymentDate());
-            map.put("paymentMode", payment.getPaymentMode());
-            map.put("transactionRef", payment.getTransactionReference());
-            map.put("studentInstallmentPlanId", payment.getStudentInstallmentPlanId());
+            // 1. Find refunds linked to this payment
+            List<FeeRefund> linkedRefunds = feeRefundRepository.findByStudentFeePaymentId(payment.getId());
             
-            // 2. THE VISUAL FIX: Logic for Advance Payment Status
+            BigDecimal totalRefunded = BigDecimal.ZERO;
+            List<FeeRefund> processedRefunds = new ArrayList<>();
+
+            for(FeeRefund r : linkedRefunds) {
+                if(r.getRefundStatus() == FeeRefund.RefundStatus.PROCESSED) {
+                    totalRefunded = totalRefunded.add(r.getRefundAmount());
+                    processedRefunds.add(r);
+                }
+            }
+
+            // 2. RESTORE Original Amount (Database has Net 10k, we display Gross 20k)
+            BigDecimal originalAmount = payment.getPaidAmount().add(totalRefunded);
+
+            // --- BUILD PAYMENT ROW ---
+            Map<String, Object> paymentMap = new HashMap<>();
+            paymentMap.put("id", payment.getId());
+            paymentMap.put("amount", originalAmount); // Shows 20,000.00
+            paymentMap.put("paymentDate", payment.getPaymentDate());
+            paymentMap.put("paymentMode", payment.getPaymentMode());
+            paymentMap.put("transactionRef", payment.getTransactionReference().replace(" (Partially Refunded " + totalRefunded + ")", "")); // Clean ref
+            
+            // Fix Label Logic (Advance vs Installment)
             if (payment.getStudentInstallmentPlanId() == null) {
-                // Force the status to show "ADVANCE_PAYMENT" to avoid confusion
-                map.put("paymentStatus", "ADVANCE_PAYMENT");
-                map.put("description", "Advance Fee Payment");
+                paymentMap.put("paymentStatus", "ADVANCE_PAYMENT");
+                paymentMap.put("description", "Advance Fee Payment");
             } else {
-                // Keep original status for normal installments
-                map.put("paymentStatus", payment.getPaymentStatus());
-                map.put("description", "Installment #" + payment.getStudentInstallmentPlanId());
+                paymentMap.put("paymentStatus", "SUCCESS"); // Force SUCCESS for display
+                paymentMap.put("description", "Installment #" + payment.getStudentInstallmentPlanId());
             }
             
-            return map;
-        }).collect(Collectors.toList());
+            historyList.add(paymentMap);
+
+            // --- BUILD SEPARATE REFUND ROWS ---
+            for (FeeRefund refund : processedRefunds) {
+                Map<String, Object> refundMap = new HashMap<>();
+                refundMap.put("id", "REF-" + refund.getId()); // Unique String ID
+                refundMap.put("amount", refund.getRefundAmount().negate()); // Shows -10,000.00
+                refundMap.put("paymentDate", refund.getProcessedDate()); // Refund Date
+                refundMap.put("paymentMode", "REFUND_ADJUSTMENT");
+                refundMap.put("transactionRef", refund.getTransactionReference()); // Ref of refund
+                refundMap.put("paymentStatus", "REFUNDED");
+                refundMap.put("description", "Partial Refund for Payment #" + payment.getId());
+                
+                historyList.add(refundMap);
+            }
+        }
+        
+        // 3. Sort by Date so they appear chronologically
+        historyList.sort((m1, m2) -> {
+            String d1 = m1.get("paymentDate").toString();
+            String d2 = m2.get("paymentDate").toString();
+            return d1.compareTo(d2);
+        });
+
+        return historyList;
     }
 }

@@ -122,6 +122,7 @@ public interface FeeService {
     List<LateFeeConfig> getAllLateFeeConfigs();
     List<LateFeeConfig> getActiveLateFeeConfigs();
     LateFeeConfig updateLateFeeConfig(Long id, LateFeeConfig config);
+    
     void deleteLateFeeConfig(Long id);
     
     // ============================================
@@ -184,6 +185,17 @@ public interface FeeService {
     FeeRefund approveRefund(Long refundId, Long approvedBy);
     FeeRefund processRefund(Long refundId, String refundMode, String transactionRef);
     FeeRefund rejectRefund(Long refundId, Long rejectedBy, String reason);
+    
+ // ... existing code ...
+
+    // Payment history per student (Raw)
+    List<StudentFeePayment> getPaymentHistory(Long userId);
+
+    // 🔴 ADD THIS: Transformed History (Includes Online, Offline, Refunds & Labels)
+    List<Map<String, Object>> getStudentTransactionHistory(Long userId);
+
+    // ... existing code ...
+}
     
     // ============================================
     // 13. FEE RECEIPTS (AUTO-GENERATED - READ ONLY)
