@@ -546,6 +546,8 @@ public class FeeController {
         return new ResponseEntity<>(payment, HttpStatus.CREATED);
     }
     
+ // Inside FeeController.java
+
     @PostMapping("/payments/record-manual")
     @PreAuthorize("hasRole('ADMIN')")
     public ResponseEntity<StudentFeePayment> recordManualPayment(
@@ -554,9 +556,17 @@ public class FeeController {
             @RequestParam BigDecimal amount,
             @RequestParam String paymentMode,
             @RequestParam String transactionRef,
-            @RequestParam Long recordedBy) {
+            @RequestParam(required = false) String screenshotUrl,
+            @RequestParam Long recordedBy,
+            // 🔴 ADD THESE TWO PARAMETERS
+            @RequestParam(required = false) String studentName, 
+            @RequestParam(required = false) String studentEmail) {
+        
         StudentFeePayment payment = feeManagementService.recordManualPayment(
-                allocationId, installmentPlanId, amount, paymentMode, transactionRef, recordedBy);
+                allocationId, installmentPlanId, amount, paymentMode, 
+                transactionRef, screenshotUrl, recordedBy, 
+                studentName, studentEmail); // <--- Pass them here
+        
         return new ResponseEntity<>(payment, HttpStatus.CREATED);
     }
 
@@ -803,6 +813,27 @@ public class FeeController {
             @RequestParam BigDecimal examFeeAmount) {
         ExamFeeLinkage linkage = feeManagementService.linkExamFeeToStudent(examId, userId, allocationId, examFeeAmount);
         return new ResponseEntity<>(linkage, HttpStatus.CREATED);
+    }
+ // ... inside FeeController ...
+
+    @PostMapping("/exam-fee-linkages/bulk-link")
+    @PreAuthorize("hasRole('ADMIN')")
+    public ResponseEntity<Map<String, Object>> linkExamFeeInBulk(
+            @RequestBody Map<String, Object> requestData) {
+        
+        Long examId = Long.parseLong(requestData.get("examId").toString());
+        BigDecimal amount = new BigDecimal(requestData.get("amount").toString());
+        String type = requestData.get("type").toString(); // "BATCH" or "COURSE"
+        Long id = Long.parseLong(requestData.get("id").toString()); // The BatchID or CourseID
+
+        List<ExamFeeLinkage> linkedFees = feeManagementService.linkExamFeeInBulk(examId, amount, type, id);
+        
+        Map<String, Object> response = new HashMap<>();
+        response.put("message", "Exam Fee applied successfully to " + linkedFees.size() + " students.");
+        response.put("examId", examId);
+        response.put("totalStudents", linkedFees.size());
+        
+        return ResponseEntity.ok(response);
     }
 
     // ============================================
@@ -1141,9 +1172,10 @@ public class FeeController {
     // 17. AUDIT LOGS ENDPOINTS (READ ONLY)
     // ============================================
     
+ // Secure Code for Production
     @GetMapping("/audit-logs/{id}")
-    @PreAuthorize("hasRole('ADMIN')")
-    public ResponseEntity<AuditLog> getAuditLogById(@PathVariable Long id) {
+    @PreAuthorize("hasRole('ADMIN')") // <--- Checks for exact string in token
+    public ResponseEntity<AuditLog> getAuditLogById(@PathVariable Long id){
         AuditLog log = feeManagementService.getAuditLogById(id);
         return ResponseEntity.ok(log);
     }
@@ -1335,6 +1367,36 @@ public class FeeController {
     // 2. VERIFY PAYMENT (Complete the Transaction)
     // UPDATED: Added installmentPlanId as optional param to support Advance Payments (null ID)
  // 2. VERIFY PAYMENT (Complete the Transaction)
+ // ... inside FeeController ...
+
+    // 1. Single Allocation + Instant Discount
+    
+
+    // 2. Bulk Allocation (Batch/Course) + Instant Discount
+    @PostMapping("/fee-allocations/bulk")
+    @PreAuthorize("hasRole('ADMIN')")
+    public ResponseEntity<List<StudentFeeAllocation>> createBulkAllocation(
+            @RequestBody Map<String, Object> requestData) {
+        
+        // 1. Get List of Student IDs
+        // The Frontend sends the list of IDs belonging to the selected Batch or Course
+        List<Integer> rawIds = (List<Integer>) requestData.get("userIds");
+        List<Long> userIds = rawIds.stream().map(Long::valueOf).collect(Collectors.toList());
+        
+        Long feeStructureId = Long.parseLong(requestData.get("feeStructureId").toString());
+        
+        // 2. Get Discount Data (Applied to everyone in the list)
+        BigDecimal discountValue = requestData.containsKey("discountValue") ? 
+                new BigDecimal(requestData.get("discountValue").toString()) : BigDecimal.ZERO;
+        
+        String discountType = requestData.getOrDefault("discountType", "FLAT").toString();
+        String discountReason = requestData.getOrDefault("discountReason", "Bulk Group Discount").toString();
+
+        List<StudentFeeAllocation> createdList = feeManagementService.createBulkAllocation(
+                userIds, feeStructureId, discountValue, discountType, discountReason);
+        
+        return new ResponseEntity<>(createdList, HttpStatus.CREATED);
+    }
     @PostMapping("/verify-payment")
     @PreAuthorize("hasAnyRole('ADMIN', 'STUDENT')")
     public ResponseEntity<Map<String, Object>> verifyPayment(
@@ -1366,5 +1428,85 @@ public class FeeController {
         response.put("paymentId", payment.getId());
         
         return ResponseEntity.ok(response);
+    }
+    @PostMapping("/allocations/create-with-discount")
+    @PreAuthorize("hasRole('ADMIN')")
+    public ResponseEntity<StudentFeeAllocation> createAllocationWithDiscount(
+            @RequestBody Map<String, Object> requestData) {
+        
+        // 1. Extract Basic IDs
+        Long userId = Long.parseLong(requestData.get("userId").toString());
+        Long feeStructureId = Long.parseLong(requestData.get("feeStructureId").toString());
+        
+        StudentFeeAllocation allocation = new StudentFeeAllocation();
+        allocation.setUserId(userId);
+        allocation.setFeeStructureId(feeStructureId);
+        
+        // 🔴 2. CAPTURE ADMIN'S ROADMAP INPUTS
+        
+        // A. Original Fee Override (e.g., 150000)
+        if (requestData.containsKey("originalAmount") && requestData.get("originalAmount") != null) {
+            allocation.setOriginalAmount(new BigDecimal(requestData.get("originalAmount").toString()));
+        }
+
+        // B. Planned Advance Payment (e.g., 20000 - Just for the Roadmap View)
+        if (requestData.containsKey("advancePayment") && requestData.get("advancePayment") != null) {
+            allocation.setAdvancePayment(new BigDecimal(requestData.get("advancePayment").toString()));
+        }
+
+        // 3. Extract Discount
+        BigDecimal discountValue = requestData.containsKey("discountValue") 
+                ? new BigDecimal(requestData.get("discountValue").toString()) 
+                : BigDecimal.ZERO;
+                
+        String discountType = requestData.getOrDefault("discountType", "FLAT").toString();
+        String discountReason = requestData.getOrDefault("discountReason", "Manual Discount").toString();
+
+        // 4. Call Service
+        StudentFeeAllocation saved = feeManagementService.createAllocationWithDiscount(
+                allocation, discountValue, discountType, discountReason
+        );
+        
+        return ResponseEntity.ok(saved);
+    }
+ // ... inside FeeController ...
+
+    @PostMapping("/notifications/send-due-reminder")
+    public ResponseEntity<String> sendDueReminder(
+            @RequestParam Long userId,
+            @RequestParam Long installmentId,
+            @RequestParam String email) {
+        
+        // This calls your specific "DUE_REMINDER" logic in FeeServiceImpl
+        feeManagementService.sendDueReminderNotification(userId, installmentId, email);
+        
+        return ResponseEntity.ok("Reminder Sent Successfully");
+    }
+ // ... inside FeeController ...
+
+    @PostMapping("/auto-debit/trigger-manual")
+    public ResponseEntity<String> triggerAutoDebitManual() {
+        feeManagementService.processAutoDebit();
+        return ResponseEntity.ok("Auto-Debit Process Triggered Successfully");
+    }
+ // Inside FeeController.java
+
+    @PostMapping("/auto-debit/trigger-single")
+    @PreAuthorize("hasRole('ADMIN')")
+    public ResponseEntity<String> triggerAutoDebitForSingleUser(
+            @RequestParam Long userId,
+            @RequestParam String studentName,
+            @RequestParam String studentEmail) {
+        
+        // Call the new service method
+        feeManagementService.processAutoDebitForUser(userId, studentName, studentEmail);
+        
+        return ResponseEntity.ok("Auto-Debit Processed for " + studentName + ". Receipt sent to " + studentEmail);
+    }
+    @PostMapping("/certificate-blocks/run-auto-scan")
+    @PreAuthorize("hasRole('ADMIN')")
+    public ResponseEntity<String> triggerAutoBlockScan() {
+        feeManagementService.runAutoBlockCheck();
+        return ResponseEntity.ok("Auto-Block Scan Completed Successfully.");
     }
 }

@@ -1,6 +1,6 @@
 package com.graphy.lms.controller;
 
-import com.graphy.lms.security.*;
+import com.graphy.lms.security.JwtUtil;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
@@ -16,40 +16,41 @@ public class AuthController {
     @Autowired
     private JwtUtil jwtUtil;
 
-    /**
-     * Generate JWT token for testing
-     * In production, this would authenticate against user database
-     */
-    @PostMapping("/generate-token")
-    public ResponseEntity<Map<String, String>> generateToken(@RequestBody Map<String, Object> request) {
-        Long userId = Long.valueOf(request.get("userId").toString());
-        String role = request.get("role").toString(); // ADMIN, FACULTY, STUDENT, PARENT
-
-        String token = jwtUtil.generateToken(userId, role);
-
-        Map<String, String> response = new HashMap<>();
-        response.put("token", token);
-        response.put("userId", userId.toString());
-        response.put("role", role);
-
-        return ResponseEntity.ok(response);
-    }
+    // ❌ REMOVED: /generate-token 
+    // Reason: You are a Resource Server. You strictly consume Santosh's tokens. 
+    // Do not generate them locally.
 
     /**
-     * Validate token
+     * Validate token (Debug Endpoint)
+     * Use this to check if Santosh's token is valid in your system.
      */
     @PostMapping("/validate-token")
     public ResponseEntity<Map<String, Object>> validateToken(@RequestHeader("Authorization") String authHeader) {
+        Map<String, Object> response = new HashMap<>();
+
+        // 1. Check Header Format
+        if (authHeader == null || !authHeader.startsWith("Bearer ")) {
+            response.put("valid", false);
+            response.put("error", "Invalid Header Format");
+            return ResponseEntity.ok(response);
+        }
+
         String token = authHeader.substring(7);
 
-        boolean isValid = jwtUtil.validateToken(token) && !jwtUtil.isTokenExpired(token);
-
-        Map<String, Object> response = new HashMap<>();
+        // 2. Validate (Checks Signature & Expiration internally)
+        boolean isValid = jwtUtil.validateToken(token);
         response.put("valid", isValid);
 
         if (isValid) {
+            // 3. Extract Info using the NEW methods (Lists)
             response.put("userId", jwtUtil.extractUserId(token));
-            response.put("role", jwtUtil.extractRole(token));
+            response.put("email", jwtUtil.extractEmail(token));
+            
+            // Santosh sends a LIST of roles, not a single role
+            response.put("roles", jwtUtil.extractRoles(token)); 
+            
+            // Extract permissions if needed
+            response.put("permissions", jwtUtil.extractPermissions(token));
         }
 
         return ResponseEntity.ok(response);

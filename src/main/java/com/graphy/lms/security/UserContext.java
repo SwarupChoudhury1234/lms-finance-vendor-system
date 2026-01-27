@@ -1,6 +1,7 @@
 package com.graphy.lms.security;
 
 import org.springframework.security.core.Authentication;
+import org.springframework.security.core.GrantedAuthority;
 import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.stereotype.Component;
 
@@ -10,20 +11,29 @@ public class UserContext {
     // Get current authenticated user ID
     public Long getCurrentUserId() {
         Authentication authentication = SecurityContextHolder.getContext().getAuthentication();
-        if (authentication != null && authentication.isAuthenticated()) {
+        if (authentication != null && authentication.isAuthenticated() && authentication.getPrincipal() instanceof Long) {
             return (Long) authentication.getPrincipal();
         }
-        throw new RuntimeException("User not authenticated");
+        throw new RuntimeException("User not authenticated or invalid principal type");
     }
 
-    // Get current user role
+    // Get current user role (Safely finds the ROLE_ entry)
     public String getCurrentUserRole() {
         Authentication authentication = SecurityContextHolder.getContext().getAuthentication();
-        if (authentication != null && authentication.getAuthorities() != null && !authentication.getAuthorities().isEmpty()) {
-            String authority = authentication.getAuthorities().iterator().next().getAuthority();
-            return authority.replace("ROLE_", ""); // Remove "ROLE_" prefix
+        
+        if (authentication != null && authentication.getAuthorities() != null) {
+            // Loop through all authorities to find the one that starts with "ROLE_"
+            // This ignores PERMISSIONS (which don't start with ROLE_) and finds the actual Role.
+            for (GrantedAuthority auth : authentication.getAuthorities()) {
+                String authority = auth.getAuthority();
+                if (authority.startsWith("ROLE_")) {
+                    return authority.replace("ROLE_", ""); // Found it! Return "ADMIN"
+                }
+            }
         }
-        throw new RuntimeException("User role not found");
+        
+        // Fallback or Exception if no role is found (but user might still be authenticated)
+        throw new RuntimeException("User role not found in security context");
     }
 
     // Check if current user is Admin

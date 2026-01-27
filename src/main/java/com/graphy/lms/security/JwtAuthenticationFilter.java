@@ -1,4 +1,4 @@
-package com.graphy.lms.security;
+package com.graphy.lms.security; // Keep your package name
 
 import jakarta.servlet.FilterChain;
 import jakarta.servlet.ServletException;
@@ -13,7 +13,8 @@ import org.springframework.stereotype.Component;
 import org.springframework.web.filter.OncePerRequestFilter;
 
 import java.io.IOException;
-import java.util.Collections;
+import java.util.ArrayList;
+import java.util.List;
 
 @Component
 public class JwtAuthenticationFilter extends OncePerRequestFilter {
@@ -31,28 +32,56 @@ public class JwtAuthenticationFilter extends OncePerRequestFilter {
             String token = authHeader.substring(7);
 
             try {
-                if (jwtUtil.validateToken(token) && !jwtUtil.isTokenExpired(token)) {
-                    Long userId = jwtUtil.extractUserId(token);
-                    String role = jwtUtil.extractRole(token);
+                // 1. Validate the Token Signature (Stateless check)
+                if (jwtUtil.validateToken(token)) {
 
-                    // Create authentication object
+                    // 2. Extract Claims directly from Token (No Database Call needed)
+                    Long userId = jwtUtil.extractUserId(token);
+                    String email = jwtUtil.extractEmail(token);
+                    List<String> roles = jwtUtil.extractRoles(token);
+                    List<String> permissions = jwtUtil.extractPermissions(token);
+
+                    // 3. Build Authorities (Roles + Permissions)
+                    List<SimpleGrantedAuthority> authorities = new ArrayList<>();
+
+                    // Handle Roles
+                    if (roles != null) {
+                        for (String role : roles) {
+                            // Ensure "ROLE_" prefix exists (Standard Spring Security)
+                            String authRole = role.startsWith("ROLE_") ? role : "ROLE_" + role;
+                            authorities.add(new SimpleGrantedAuthority(authRole));
+                        }
+                    }
+
+                    // Handle Permissions
+                    if (permissions != null) {
+                        for (String perm : permissions) {
+                            authorities.add(new SimpleGrantedAuthority(perm));
+                        }
+                    }
+
+                    // 4. Create Authentication Object
                     UsernamePasswordAuthenticationToken authentication = new UsernamePasswordAuthenticationToken(
-                            userId,
-                            null,
-                            Collections.singletonList(new SimpleGrantedAuthority("ROLE_" + role))
+                            userId, // Principal is User ID
+                            null,   // No credentials needed
+                            authorities
                     );
 
                     authentication.setDetails(new WebAuthenticationDetailsSource().buildDetails(request));
 
-                    // Set authentication in security context
+                    // 5. Log User In (Set Context)
                     SecurityContextHolder.getContext().setAuthentication(authentication);
 
-                    // Store userId and role in request attributes for easy access
+                    // 6. Set Request Attributes for Controllers
                     request.setAttribute("userId", userId);
-                    request.setAttribute("role", role);
+                    request.setAttribute("userEmail", email);
+                    // Legacy support: set simple "role" attribute (e.g. "ADMIN")
+                    if (roles != null && !roles.isEmpty()) {
+                        request.setAttribute("role", roles.get(0).replace("ROLE_", ""));
+                    }
                 }
             } catch (Exception e) {
-                logger.error("JWT Authentication failed: " + e.getMessage());
+                logger.error("Authentication Error: " + e.getMessage());
             }
         }
 

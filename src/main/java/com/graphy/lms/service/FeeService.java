@@ -107,9 +107,6 @@ public interface FeeService {
             String studentName,   // New Param
             String studentEmail); // New Param
     // Record manual payment
-    StudentFeePayment recordManualPayment(Long allocationId, Long installmentPlanId, 
-                                         BigDecimal amount, String paymentMode, 
-                                         String transactionRef, Long recordedBy);
     
     // Update payment status after installment payment
     void updateInstallmentStatus(Long installmentPlanId, BigDecimal paidAmount);
@@ -163,6 +160,10 @@ public interface FeeService {
     ExamFeeLinkage getExamFeeLinkageById(Long id);
     List<ExamFeeLinkage> getAllExamFeeLinkages();
     List<ExamFeeLinkage> getExamFeeLinkagesByUserId(Long userId);
+ // ... inside FeeService interface ...
+
+    // Bulk Link Exam Fees (Batch / Course)
+    List<ExamFeeLinkage> linkExamFeeInBulk(Long examId, BigDecimal amount, String type, Long typeId);
     ExamFeeLinkage updateExamFeeLinkage(Long id, ExamFeeLinkage linkage);
     void deleteExamFeeLinkage(Long id);
     
@@ -189,13 +190,13 @@ public interface FeeService {
  // ... existing code ...
 
     // Payment history per student (Raw)
-    List<StudentFeePayment> getPaymentHistory(Long userId);
+    
 
     // 🔴 ADD THIS: Transformed History (Includes Online, Offline, Refunds & Labels)
     List<Map<String, Object>> getStudentTransactionHistory(Long userId);
 
     // ... existing code ...
-}
+
     
     // ============================================
     // 13. FEE RECEIPTS (AUTO-GENERATED - READ ONLY)
@@ -235,7 +236,7 @@ public interface FeeService {
     void deleteAutoDebitConfig(Long id);
     
     // Process auto-debit
-    void processAutoDebit();
+    
     
     // ============================================
     // 16. CURRENCY RATES CRUD
@@ -246,8 +247,26 @@ public interface FeeService {
     CurrencyRate updateCurrencyRate(Long id, CurrencyRate rate);
     void deleteCurrencyRate(Long id);
     
+    void runAutoBlockCheck();
+    
     // Convert currency
     BigDecimal convertCurrency(BigDecimal amount, String fromCurrency, String toCurrency, LocalDate date);
+    
+    StudentFeeAllocation createAllocationWithDiscount(
+            StudentFeeAllocation allocation, 
+            BigDecimal discountValue, 
+            String discountType, // "PERCENTAGE" or "FLAT"
+            String discountReason
+        );
+
+        // 2. Bulk Allocation (For Batch/Course/List of Students)
+        List<StudentFeeAllocation> createBulkAllocation(
+            List<Long> userIds,       // The list of students (from a Batch or Course)
+            Long feeStructureId,      // The fee to apply
+            BigDecimal discountValue, // The discount for everyone
+            String discountType,      // "PERCENTAGE" or "FLAT"
+            String discountReason
+        );
     
     // ============================================
     // 17. AUDIT LOGS (AUTO-GENERATED - READ ONLY)
@@ -307,4 +326,18 @@ public interface FeeService {
     String createRazorpayOrder(Long allocationId, BigDecimal amount);
     boolean verifyRazorpayPayment(String orderId, String paymentId, String signature);
     FeeRefund getRefundByTransactionRef(String transactionRef);
+ // Inside FeeService.java
+
+    StudentFeePayment recordManualPayment(Long allocationId, Long installmentPlanId, 
+            BigDecimal amount, String paymentMode, 
+            String transactionRef, String screenshotUrl,
+            Long recordedBy,
+            String studentName, String studentEmail); // <--- Add these types
+ // Inside FeeService.java interface
+
+    // Existing method
+    void processAutoDebit(); 
+
+    // 🔴 NEW METHOD: Trigger for specific user with Email params
+    void processAutoDebitForUser(Long userId, String studentName, String studentEmail);
 }
