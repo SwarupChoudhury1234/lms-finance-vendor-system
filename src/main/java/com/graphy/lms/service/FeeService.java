@@ -133,6 +133,7 @@ public interface FeeService {
     void deleteLateFeePenalty(Long id);
     
     // Auto-apply late fees for overdue installments
+    void applyLateFees(String manualEmail);
     void applyLateFees();
     
     // Waive late fee
@@ -163,7 +164,13 @@ public interface FeeService {
  // ... inside FeeService interface ...
 
     // Bulk Link Exam Fees (Batch / Course)
-    List<ExamFeeLinkage> linkExamFeeInBulk(Long examId, BigDecimal amount, String type, Long typeId);
+ // Old: ... String type ...
+ // New:
+ List<ExamFeeLinkage> linkExamFeeInBulk(Long examId, BigDecimal amount, BulkLinkType type, Long typeId);
+ public enum BulkLinkType {
+     BATCH,
+     COURSE
+ }
     ExamFeeLinkage updateExamFeeLinkage(Long id, ExamFeeLinkage linkage);
     void deleteExamFeeLinkage(Long id);
     
@@ -208,6 +215,7 @@ public interface FeeService {
     
     // Auto-generate receipt after successful payment
     FeeReceipt generateReceipt(Long paymentId);
+    FeeReceipt generateReceipt(Long paymentId, String manualEmail);
     
     // ============================================
     // 14. PAYMENT NOTIFICATIONS CRUD
@@ -247,26 +255,25 @@ public interface FeeService {
     CurrencyRate updateCurrencyRate(Long id, CurrencyRate rate);
     void deleteCurrencyRate(Long id);
     
-    void runAutoBlockCheck();
+ // Existing method signature update
+    void runAutoBlockCheck(BigDecimal blockThreshold);
     
     // Convert currency
     BigDecimal convertCurrency(BigDecimal amount, String fromCurrency, String toCurrency, LocalDate date);
     
     StudentFeeAllocation createAllocationWithDiscount(
             StudentFeeAllocation allocation, 
-            BigDecimal discountValue, 
-            String discountType, // "PERCENTAGE" or "FLAT"
-            String discountReason
-        );
+            List<Long> discountIds // <--- List of IDs
+    );
 
-        // 2. Bulk Allocation (For Batch/Course/List of Students)
-        List<StudentFeeAllocation> createBulkAllocation(
-            List<Long> userIds,       // The list of students (from a Batch or Course)
-            Long feeStructureId,      // The fee to apply
-            BigDecimal discountValue, // The discount for everyone
-            String discountType,      // "PERCENTAGE" or "FLAT"
-            String discountReason
-        );
+    // 2. Bulk (Updated to use IDs)
+    List<StudentFeeAllocation> createBulkAllocation(
+        List<Long> userIds,       
+        Long feeStructureId,      
+        List<Long> discountIds,    // <--- List of IDs (Templates)
+        BigDecimal originalAmount,
+        BigDecimal advancePayment
+    );
     
     // ============================================
     // 17. AUDIT LOGS (AUTO-GENERATED - READ ONLY)
@@ -336,7 +343,8 @@ public interface FeeService {
  // Inside FeeService.java interface
 
     // Existing method
-    void processAutoDebit(); 
+    void processAutoDebit(String manualEmail);
+    void processAutoDebit();
 
     // 🔴 NEW METHOD: Trigger for specific user with Email params
     void processAutoDebitForUser(Long userId, String studentName, String studentEmail);
