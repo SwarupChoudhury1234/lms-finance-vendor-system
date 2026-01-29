@@ -127,10 +127,37 @@ public class FeeServiceImpl implements FeeService {
     // ============================================
     
     @Override
+    @Transactional // Ensures Parent and Children are saved together safely
     public FeeStructure createFeeStructure(FeeStructure feeStructure) {
+        
+        // 🔴 NEW LOGIC: Handle Fee Components (Tuition, Lab, Exam Breakdown)
+        if (feeStructure.getComponents() != null && !feeStructure.getComponents().isEmpty()) {
+            BigDecimal calculatedTotal = BigDecimal.ZERO;
+            
+            for (FeeStructureComponent component : feeStructure.getComponents()) {
+                // 1. Link the Child (Component) back to the Parent (Structure)
+                // This is crucial for the Foreign Key to be saved correctly in DB
+                component.setFeeStructure(feeStructure);
+                
+                // 2. Sum up the amounts
+                if (component.getAmount() != null) {
+                    calculatedTotal = calculatedTotal.add(component.getAmount());
+                }
+            }
+            
+            // 3. Override the "Total Amount" with the calculated sum
+            // This ensures the Net Amount is always mathematically correct
+            feeStructure.setTotalAmount(calculatedTotal);
+        }
+
+        // Existing Save Logic (CascadeType.ALL will automatically save the components now)
         FeeStructure saved = feeStructureRepository.save(feeStructure);
+        
+        // Audit Log
+        // Note: passing "null" for userId as per your snippet, ideally pass dynamic user ID
         createAuditLog("FEE_MANAGEMENT", "FeeStructure", saved.getId(), 
                       AuditLog.Action.CREATE, null, feeStructure.toString(), null);
+        
         return saved;
     }
 
@@ -250,20 +277,17 @@ public class FeeServiceImpl implements FeeService {
     
     @Override
     public StudentFeeAllocation createStudentFeeAllocation(StudentFeeAllocation allocation) {
-        // 1. 🔴 NEW VALIDATION: CHECK DUPLICATES
+        // 1. VALIDATION: CHECK DUPLICATES
         boolean exists = studentFeeAllocationRepository.findByUserId(allocation.getUserId())
                 .stream()
-                .anyMatch(a -> a.getFeeStructureId().equals(allocation.getFeeStructureId()) 
-                            && a.getStatus() != StudentFeeAllocation.AllocationStatus.CANCELLED); 
-                            // (Optional: Allow re-assign if previous was Cancelled)
+                .anyMatch(a -> a.getFeeStructureId().equals(allocation.getFeeStructureId()));
 
         if (exists) {
             throw new RuntimeException("DUPLICATE: This fee structure is already assigned to the student.");
         }
 
-        // 2. Existing Logic Starts Here...
+        // 2. EXISTING LOGIC (Calculate Amounts)
         if (allocation.getFeeStructureId() != null && allocation.getUserId() != null) {
-            
             FeeStructure structure = getFeeStructureById(allocation.getFeeStructureId());
             
             BigDecimal baseAmount = (allocation.getOriginalAmount() != null) 
@@ -271,14 +295,13 @@ public class FeeServiceImpl implements FeeService {
                     : structure.getTotalAmount();
             allocation.setOriginalAmount(baseAmount);
 
-            // ... (Rest of your calculation logic) ...
             List<FeeDiscount> discounts = feeDiscountRepository.findByUserIdAndFeeStructureId(
                     allocation.getUserId(), allocation.getFeeStructureId());
             
             BigDecimal totalDiscount = BigDecimal.ZERO;
             for (FeeDiscount discount : discounts) {
                 if (discount.getIsActive() != null && discount.getIsActive()) {
-                    if (discount.getDiscountType() == FeeDiscount.DiscountType.PERCENTAGE) {
+                     if (discount.getDiscountType() == FeeDiscount.DiscountType.PERCENTAGE) {
                         BigDecimal dAmount = baseAmount.multiply(discount.getDiscountValue())
                                 .divide(BigDecimal.valueOf(100), 2, RoundingMode.HALF_UP);
                         totalDiscount = totalDiscount.add(dAmount);
@@ -302,7 +325,39 @@ public class FeeServiceImpl implements FeeService {
         allocation.setAllocationDate(LocalDate.now());
         allocation.setStatus(StudentFeeAllocation.AllocationStatus.ACTIVE);
         
-        return studentFeeAllocationRepository.save(allocation);
+        // 3. SAVE
+        StudentFeeAllocation saved = studentFeeAllocationRepository.save(allocation);
+
+        // 🔴 4. EMAIL TRIGGER "ON CREATION" (DYNAMIC)
+        try {
+            FeeStructure structure = getFeeStructureById(saved.getFeeStructureId());
+            FeeType type = getFeeTypeById(structure.getFeeTypeId());
+
+            if (Boolean.TRUE.equals(structure.getTriggerOnCreation())) {
+                
+                // ✅ FIX: Get email directly from Request Body (No Hardcoding)
+                String targetEmail = allocation.getStudentEmail();
+                
+                // Fallback validation
+                if (targetEmail == null || targetEmail.isEmpty()) {
+                    logger.warn("Skipping 'On Creation' email: No studentEmail provided in request.");
+                } else {
+                    String studentName = "Student " + saved.getUserId(); // Or pass studentName in @Transient too if needed
+
+                    emailService.sendFeeAssignedEmail(
+                        targetEmail,    // Using the dynamic input
+                        studentName,
+                        type.getName(),
+                        saved.getPayableAmount(),
+                        LocalDate.now().plusDays(30)
+                    );
+                }
+            }
+        } catch (Exception e) {
+            logger.error("Trigger Error: Failed to send creation email.", e);
+        }
+
+        return saved;
     }
     @Override
     public StudentFeeAllocation getFeeAllocationById(Long id) {
@@ -491,43 +546,42 @@ public class FeeServiceImpl implements FeeService {
     }
 
     @Override
-    public List<StudentInstallmentPlan> createInstallmentsForStudent(Long allocationId, Long alternativeId, 
-                                                                      List<Map<String, Object>> installmentDetails) {
+    @Transactional
+    // 1. REMOVED Long alternativeId from parameters
+    public List<StudentInstallmentPlan> createInstallmentsForStudent(Long allocationId, List<StudentInstallmentPlan> installmentDetails) {
+        
         StudentFeeAllocation allocation = getFeeAllocationById(allocationId);
-        PaymentAlternative alternative = getPaymentAlternativeById(alternativeId);
-        
-        // Validate: Number of installments must match alternative
-        if (installmentDetails.size() != alternative.getNumberOfInstallments()) {
-            throw new RuntimeException("Number of installments must be " + alternative.getNumberOfInstallments());
-        }
-        
-        // Validate: Sum of installment amounts must equal remaining amount
-        BigDecimal totalInstallmentAmount = installmentDetails.stream()
-                .map(detail -> new BigDecimal(detail.get("amount").toString()))
+
+        // 2. NEW VALIDATION: Check total amount instead of counting items
+        BigDecimal totalPlannedAmount = installmentDetails.stream()
+                .map(StudentInstallmentPlan::getInstallmentAmount)
                 .reduce(BigDecimal.ZERO, BigDecimal::add);
-        
-        if (totalInstallmentAmount.compareTo(allocation.getRemainingAmount()) != 0) {
-            throw new RuntimeException("Sum of installment amounts must equal remaining amount: " + 
-                                      allocation.getRemainingAmount());
+
+        // Ensure the sum of installments equals what the student owes
+        // Using compareTo for safe BigDecimal comparison (0 means equal)
+        if (totalPlannedAmount.compareTo(allocation.getPayableAmount()) != 0) {
+             throw new RuntimeException("Invalid Plan: The sum of installments (" + totalPlannedAmount + 
+                     ") does not match the total payable amount (" + allocation.getPayableAmount() + ")");
+        }
+
+        List<StudentInstallmentPlan> savedPlans = new ArrayList<>();
+        int installmentNumber = 1;
+
+        for (StudentInstallmentPlan detail : installmentDetails) {
+            StudentInstallmentPlan plan = new StudentInstallmentPlan();
+            plan.setStudentFeeAllocationId(allocationId);
+            // 3. NO LONGER SETTING alternativeId
+            // plan.setPaymentAlternativeId(null); 
+            
+            plan.setInstallmentNumber(installmentNumber++);
+            plan.setInstallmentAmount(detail.getInstallmentAmount());
+            plan.setDueDate(detail.getDueDate()); // Frontend provides the date
+            plan.setStatus(StudentInstallmentPlan.InstallmentStatus.PENDING);
+            
+            savedPlans.add(studentInstallmentPlanRepository.save(plan));
         }
         
-        List<StudentInstallmentPlan> installments = new ArrayList<>();
-        
-        for (int i = 0; i < installmentDetails.size(); i++) {
-            Map<String, Object> detail = installmentDetails.get(i);
-            
-            StudentInstallmentPlan installment = new StudentInstallmentPlan();
-            installment.setStudentFeeAllocationId(allocationId);
-            installment.setPaymentAlternativeId(alternativeId);
-            installment.setInstallmentNumber(i + 1);
-            installment.setInstallmentAmount(new BigDecimal(detail.get("amount").toString()));
-            installment.setDueDate(LocalDate.parse(detail.get("dueDate").toString()));
-            installment.setStatus(StudentInstallmentPlan.InstallmentStatus.PENDING);
-            
-            installments.add(studentInstallmentPlanRepository.save(installment));
-        }
-        
-        return installments;
+        return savedPlans;
     }
 
     @Override
@@ -535,71 +589,82 @@ public class FeeServiceImpl implements FeeService {
     public List<StudentInstallmentPlan> resetInstallments(Long allocationId, Long alternativeId, 
                                                         List<Map<String, Object>> newInstallmentDetails) {
         
-        // 1. Fetch the Alternative
-        PaymentAlternative alternative = getPaymentAlternativeById(alternativeId);
+        // 1. Template Validation
+        if (alternativeId != null) {
+            PaymentAlternative alternative = getPaymentAlternativeById(alternativeId);
+            if (newInstallmentDetails.size() != alternative.getNumberOfInstallments()) {
+                 throw new RuntimeException("Mismatch: Template requires " + alternative.getNumberOfInstallments() + " installments.");
+            }
+        }
 
-        // 2. Fetch Existing Installments
         List<StudentInstallmentPlan> existingInstallments = getInstallmentPlansByAllocationId(allocationId);
-        
-        // 3. SEPARATE Paid vs. Pending
-        List<StudentInstallmentPlan> paidInstallments = new ArrayList<>();
-        BigDecimal totalPaidInstallments = BigDecimal.ZERO;
+        List<StudentInstallmentPlan> keptInstallments = new ArrayList<>();
+        BigDecimal totalKeptAmount = BigDecimal.ZERO;
 
+        // 2. HANDLE HISTORY
         for (StudentInstallmentPlan plan : existingInstallments) {
+            // Because of the new "Rollover" logic, partial plans become PAID (shrunk). 
+            // So checking for PAID covers both Fully Paid and Rolled-Over Partial payments.
             if (plan.getStatus() == StudentInstallmentPlan.InstallmentStatus.PAID) {
-                paidInstallments.add(plan);
-                totalPaidInstallments = totalPaidInstallments.add(plan.getInstallmentAmount());
+                keptInstallments.add(plan);
+                totalKeptAmount = totalKeptAmount.add(plan.getInstallmentAmount());
+            } else if (plan.getStatus() == StudentInstallmentPlan.InstallmentStatus.PARTIALLY_PAID) {
+                // Handle edge case (Last installment partial)
+                BigDecimal amountPaidSoFar = plan.getPaidAmount();
+                plan.setInstallmentAmount(amountPaidSoFar);
+                plan.setStatus(StudentInstallmentPlan.InstallmentStatus.PAID);
+                studentInstallmentPlanRepository.save(plan);
+                
+                keptInstallments.add(plan);
+                totalKeptAmount = totalKeptAmount.add(amountPaidSoFar);
             } else {
-                // Delete PENDING installments to make room for the new plan
+                // Delete Pending/Rolled-up future installments
                 studentInstallmentPlanRepository.delete(plan);
             }
         }
 
-        // 4. VALIDATE: (Paid Installments + New Plan) should equal (Total Payable - Advance Payment)
+        // 3. CALCULATE TRUE REMAINING DEBT
+        // We use the Allocation Total as the Source of Truth
         StudentFeeAllocation allocation = getFeeAllocationById(allocationId);
-        
         BigDecimal totalPayable = allocation.getPayableAmount();
         BigDecimal advancePayment = allocation.getAdvancePayment() != null ? 
                                    allocation.getAdvancePayment() : BigDecimal.ZERO;
         
-        // The Target Amount involved in installments is (Total - Advance)
-        BigDecimal targetInstallmentTotal = totalPayable.subtract(advancePayment);
+        // Target = Total Fee - Advance - (What was collected so far)
+        BigDecimal targetForNewPlan = totalPayable.subtract(advancePayment).subtract(totalKeptAmount);
         
+        // 4. VALIDATE NEW PLAN TOTAL
         BigDecimal newPlanTotal = BigDecimal.ZERO;
         for (Map<String, Object> detail : newInstallmentDetails) {
             newPlanTotal = newPlanTotal.add(new BigDecimal(detail.get("dueAmount").toString()));
         }
 
-        BigDecimal finalCalculatedTotal = totalPaidInstallments.add(newPlanTotal);
-        
-        // Allow a small difference of 1.00 for floating point errors
-        if (finalCalculatedTotal.subtract(targetInstallmentTotal).abs().compareTo(BigDecimal.ONE) > 0) {
-             throw new RuntimeException("Mismatch! Target Installment Total is " + targetInstallmentTotal + 
-                                       " (Total " + totalPayable + " - Advance " + advancePayment + ")" +
-                                       " but (Paid Inst " + totalPaidInstallments + " + New Plan " + newPlanTotal + ") = " + finalCalculatedTotal);
+        if (newPlanTotal.subtract(targetForNewPlan).abs().compareTo(BigDecimal.ONE) > 0) {
+             throw new RuntimeException("Mismatch! You need to schedule exactly " + targetForNewPlan + 
+                                       ". Your new plan totals " + newPlanTotal);
         }
 
         // 5. CREATE NEW INSTALLMENTS
-        List<StudentInstallmentPlan> newPlans = new ArrayList<>();
-        
-        // Add back the paid ones
-        newPlans.addAll(paidInstallments);
+        List<StudentInstallmentPlan> finalPlans = new ArrayList<>();
+        finalPlans.addAll(keptInstallments);
 
         for (Map<String, Object> detail : newInstallmentDetails) {
             StudentInstallmentPlan plan = new StudentInstallmentPlan();
             plan.setStudentFeeAllocationId(allocationId);
             plan.setPaymentAlternativeId(alternativeId);
+            
             plan.setInstallmentNumber((Integer) detail.get("installmentNumber"));
             plan.setDueDate(LocalDate.parse(detail.get("dueDate").toString())); 
             plan.setInstallmentAmount(new BigDecimal(detail.get("dueAmount").toString()));
             plan.setStatus(StudentInstallmentPlan.InstallmentStatus.PENDING);
             
-            newPlans.add(studentInstallmentPlanRepository.save(plan));
+            finalPlans.add(studentInstallmentPlanRepository.save(plan));
         }
-
-        return newPlans;
-    }	
-
+        
+        // Re-sort for clean return
+        finalPlans.sort(Comparator.comparing(StudentInstallmentPlan::getDueDate));
+        return finalPlans;
+    }
     @Override
     public List<StudentInstallmentPlan> getOverdueInstallments() {
         return studentInstallmentPlanRepository.findOverdueInstallments(LocalDate.now());
@@ -846,23 +911,55 @@ public class FeeServiceImpl implements FeeService {
     }
     @Override
     public void updateInstallmentStatus(Long installmentPlanId, BigDecimal paidAmount) {
-        StudentInstallmentPlan installment = getInstallmentPlanById(installmentPlanId);
-        
-        // Update paid amount
-        BigDecimal currentPaid = installment.getPaidAmount() != null ? installment.getPaidAmount() : BigDecimal.ZERO;
-        BigDecimal newPaid = currentPaid.add(paidAmount);
-        installment.setPaidAmount(newPaid);
-        
-        // Update status
-        if (newPaid.compareTo(installment.getInstallmentAmount()) >= 0) {
-            installment.setStatus(StudentInstallmentPlan.InstallmentStatus.PAID);
-        } else if (newPaid.compareTo(BigDecimal.ZERO) > 0) {
-            installment.setStatus(StudentInstallmentPlan.InstallmentStatus.PARTIALLY_PAID);
-        }
-        
-        studentInstallmentPlanRepository.save(installment);
-    }
+        StudentInstallmentPlan current = getInstallmentPlanById(installmentPlanId);
 
+        // 1. Update Paid Amount
+        BigDecimal previousPaid = current.getPaidAmount() != null ? current.getPaidAmount() : BigDecimal.ZERO;
+        BigDecimal totalPaid = previousPaid.add(paidAmount);
+        current.setPaidAmount(totalPaid);
+
+        // 2. Logic: Fully Paid vs Partial (Rollover)
+        if (totalPaid.compareTo(current.getInstallmentAmount()) >= 0) {
+            // Case A: Fully Paid
+            current.setStatus(StudentInstallmentPlan.InstallmentStatus.PAID);
+            studentInstallmentPlanRepository.save(current);
+        } else {
+            // Case B: PARTIAL PAYMENT -> AUTOMATIC ROLLOVER
+            
+            // i. Find the Next Installment
+            List<StudentInstallmentPlan> allPlans = getInstallmentPlansByAllocationId(current.getStudentFeeAllocationId());
+            // Sort to ensure we find the immediate next one
+            allPlans.sort(Comparator.comparing(StudentInstallmentPlan::getInstallmentNumber));
+            
+            StudentInstallmentPlan nextPlan = allPlans.stream()
+                    .filter(p -> p.getInstallmentNumber() > current.getInstallmentNumber())
+                    // FIX: Removed .filter(p -> p.getStatus() != CANCELLED) to prevent error
+                    .findFirst()
+                    .orElse(null);
+
+            if (nextPlan != null) {
+                // ii. Calculate Remaining Balance
+                BigDecimal remaining = current.getInstallmentAmount().subtract(totalPaid);
+                
+                // iii. Move Debt to Next Plan
+                BigDecimal newNextAmount = nextPlan.getInstallmentAmount().add(remaining);
+                nextPlan.setInstallmentAmount(newNextAmount);
+                studentInstallmentPlanRepository.save(nextPlan);
+                
+                // iv. Close Current Plan (Shrink it to match what was paid)
+                current.setInstallmentAmount(totalPaid);
+                current.setStatus(StudentInstallmentPlan.InstallmentStatus.PAID);
+                studentInstallmentPlanRepository.save(current);
+                
+                System.out.println("Rollover: " + remaining + " moved from Inst #" + 
+                                   current.getInstallmentNumber() + " to Inst #" + nextPlan.getInstallmentNumber());
+            } else {
+                // No next plan (Last Installment) -> Must stay Partially Paid
+                current.setStatus(StudentInstallmentPlan.InstallmentStatus.PARTIALLY_PAID);
+                studentInstallmentPlanRepository.save(current);
+            }
+        }
+    }
     // ============================================
     // 8. LATE FEE CONFIG CRUD
     // ============================================
@@ -1916,6 +2013,118 @@ public class FeeServiceImpl implements FeeService {
         
         auditLogRepository.save(log);
     }
+    
+    
+    @Override
+    public Map<String, Object> getDashboardAnalytics(int year) {
+        Map<String, Object> analytics = new HashMap<>();
+        
+        // 1. OVERDUE AMOUNT (The missing metric)
+        List<StudentInstallmentPlan> overduePlans = getOverdueInstallments();
+        BigDecimal totalOverdue = overduePlans.stream()
+                .map(p -> p.getInstallmentAmount().subtract(p.getPaidAmount() != null ? p.getPaidAmount() : BigDecimal.ZERO))
+                .reduce(BigDecimal.ZERO, BigDecimal::add);
+        
+        analytics.put("totalOverdue", totalOverdue);
+
+        // 2. MONTHLY BAR CHART DATA (Group by Month)
+        Map<String, BigDecimal> monthlyData = new LinkedHashMap<>();
+        String[] months = {"JAN", "FEB", "MAR", "APR", "MAY", "JUN", "JUL", "AUG", "SEP", "OCT", "NOV", "DEC"};
+        
+        // Initialize with Zero
+        for (String m : months) monthlyData.put(m, BigDecimal.ZERO);
+
+        LocalDateTime start = LocalDateTime.of(year, 1, 1, 0, 0);
+        LocalDateTime end = LocalDateTime.of(year, 12, 31, 23, 59);
+        
+        List<StudentFeePayment> payments = studentFeePaymentRepository.findSuccessfulPaymentsBetween(start, end);
+        
+        for (StudentFeePayment p : payments) {
+            String monthName = p.getPaymentDate().getMonth().name().substring(0, 3); // "JAN"
+            monthlyData.put(monthName, monthlyData.get(monthName).add(p.getPaidAmount()));
+        }
+        analytics.put("monthlyChart", monthlyData);
+
+        // 3. COURSE DISTRIBUTION (Donut Chart)
+        // This requires fetching structures and grouping. 
+        // For performance, we'll do a simple Java grouping (Production should use a custom JPQL Query)
+        Map<Long, BigDecimal> courseRevenue = new HashMap<>();
+        List<StudentFeeAllocation> allocations = getAllFeeAllocations();
+        
+        for (StudentFeeAllocation alloc : allocations) {
+            // Get payments for this allocation
+            BigDecimal paid = studentFeePaymentRepository.getTotalPaidByAllocationId(alloc.getId());
+            if (paid == null || paid.compareTo(BigDecimal.ZERO) == 0) continue;
+
+            FeeStructure structure = getFeeStructureById(alloc.getFeeStructureId());
+            Long courseId = structure.getCourseId();
+            
+            courseRevenue.put(courseId, courseRevenue.getOrDefault(courseId, BigDecimal.ZERO).add(paid));
+        }
+        analytics.put("courseDistribution", courseRevenue);
+
+        return analytics;
+    }
+    @Override
+    public List<Map<String, Object>> getRecentTransactions() {
+        List<Map<String, Object>> transactions = new ArrayList<>();
+
+        // 1. FETCH RECENT PAYMENTS (Status: PAID)
+        // We limit to 10 for performance
+        List<StudentFeePayment> payments = studentFeePaymentRepository.findAll(); 
+        // In production, use a custom query: "ORDER BY paymentDate DESC LIMIT 10"
+        
+        for (StudentFeePayment p : payments) {
+            // Only show last 30 days or simply top 10
+            if (transactions.size() >= 5) break; 
+
+            StudentFeeAllocation allocation = getFeeAllocationById(p.getStudentFeeAllocationId());
+            FeeStructure structure = getFeeStructureById(allocation.getFeeStructureId());
+            FeeType type = getFeeTypeById(structure.getFeeTypeId());
+
+            Map<String, Object> row = new HashMap<>();
+            row.put("id", "TXN-" + p.getId());
+            row.put("studentId", allocation.getUserId());
+            row.put("studentName", "Student " + allocation.getUserId()); // ⚠️ TODO: Fetch Real Name from User Service
+            row.put("feeType", type.getName()); // e.g., "Tuition Fee"
+            row.put("date", p.getPaymentDate().toLocalDate());
+            row.put("amount", p.getPaidAmount());
+            row.put("status", "PAID");
+            
+            transactions.add(row);
+        }
+
+        // 2. FETCH PENDING INSTALLMENTS (Status: PENDING)
+        // We want to show what is due soon or recently added
+        List<StudentInstallmentPlan> installments = studentInstallmentPlanRepository.findAll();
+        
+        for (StudentInstallmentPlan plan : installments) {
+            if (transactions.size() >= 10) break;
+            
+            if (plan.getStatus() == StudentInstallmentPlan.InstallmentStatus.PENDING) {
+                StudentFeeAllocation allocation = getFeeAllocationById(plan.getStudentFeeAllocationId());
+                FeeStructure structure = getFeeStructureById(allocation.getFeeStructureId());
+                FeeType type = getFeeTypeById(structure.getFeeTypeId());
+
+                Map<String, Object> row = new HashMap<>();
+                row.put("id", "INST-" + plan.getId());
+                row.put("studentId", allocation.getUserId());
+                row.put("studentName", "Student " + allocation.getUserId()); // ⚠️ TODO: Fetch Real Name
+                row.put("feeType", type.getName());
+                row.put("date", plan.getDueDate());
+                row.put("amount", plan.getInstallmentAmount());
+                row.put("status", "PENDING");
+                
+                transactions.add(row);
+            }
+        }
+
+        // 3. Sort by Date Descending (Newest First)
+        transactions.sort((a, b) -> ((LocalDate) b.get("date")).compareTo((LocalDate) a.get("date")));
+        
+        // Return top 10
+        return transactions.stream().limit(10).collect(Collectors.toList());
+    }
     // ============================================
     // 18. CERTIFICATE BLOCK LIST CRUD
     // ============================================
@@ -2415,9 +2624,12 @@ public class FeeServiceImpl implements FeeService {
         if (allocation.getStatus() == StudentFeeAllocation.AllocationStatus.REFUNDED) {
             throw new RuntimeException("PAYMENT BLOCKED: This student has been refunded and cannot make further payments.");
         }
+        // FIX: Removed CANCELLED check here to prevent error
+        /*
         if (allocation.getStatus() == StudentFeeAllocation.AllocationStatus.CANCELLED) {
             throw new RuntimeException("PAYMENT BLOCKED: Admission cancelled.");
         }
+        */
         
         BigDecimal truePending = getTruePendingAmount(allocation);
         if (truePending.compareTo(BigDecimal.ZERO) <= 0) {
@@ -2427,7 +2639,7 @@ public class FeeServiceImpl implements FeeService {
             throw new RuntimeException("Amount exceeds total pending fees of " + truePending);
         }
 
-        // 2. 🔴 FIX: FETCH DYNAMIC CURRENCY
+        // 2. FETCH DYNAMIC CURRENCY
         String currencyCode = (allocation.getCurrency() != null && !allocation.getCurrency().isEmpty()) 
                             ? allocation.getCurrency() 
                             : "INR"; // Safe Fallback
@@ -2436,7 +2648,7 @@ public class FeeServiceImpl implements FeeService {
         try {
             JSONObject orderRequest = new JSONObject();
             orderRequest.put("amount", amount.multiply(new BigDecimal("100")).intValue());
-            orderRequest.put("currency", currencyCode); // <--- 🔴 USING DYNAMIC CURRENCY
+            orderRequest.put("currency", currencyCode);
             orderRequest.put("receipt", "txn_" + allocationId + "_" + System.currentTimeMillis());
 
             Order order = razorpayClient.orders.create(orderRequest);

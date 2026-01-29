@@ -84,7 +84,7 @@ CREATE TABLE payment_alternatives (
 CREATE TABLE student_installment_plans (
     id BIGINT PRIMARY KEY AUTO_INCREMENT,
     student_fee_allocation_id BIGINT NOT NULL,
-    payment_alternative_id BIGINT NOT NULL,
+    payment_alternative_id BIGINT,  -- 🔴 UPDATED: Removed NOT NULL to allow Ad-Hoc plans
     installment_number INT NOT NULL,
     installment_amount DECIMAL(12,2) NOT NULL,
     due_date DATE NOT NULL,
@@ -297,6 +297,14 @@ CREATE TABLE certificate_block_list (
     is_active BOOLEAN DEFAULT TRUE,
     created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
     updated_at TIMESTAMP NULL ON UPDATE CURRENT_TIMESTAMP
+);
+CREATE TABLE fee_structure_components (
+    id BIGINT AUTO_INCREMENT PRIMARY KEY,
+    fee_structure_id BIGINT NOT NULL,
+    fee_type_id BIGINT NOT NULL,
+    amount DECIMAL(10,2) NOT NULL,
+    FOREIGN KEY (fee_structure_id) REFERENCES fee_structures(id) ON DELETE CASCADE,
+    FOREIGN KEY (fee_type_id) REFERENCES fee_types(id)
 );
 
 -- ============================================

@@ -426,9 +426,14 @@ public class FeeController {
     @PreAuthorize("hasRole('ADMIN')")
     public ResponseEntity<List<StudentInstallmentPlan>> createInstallmentsForStudent(
             @RequestParam Long allocationId,
-            @RequestParam Long alternativeId,
-            @RequestBody List<Map<String, Object>> installmentDetails) {
-        List<StudentInstallmentPlan> plans = feeManagementService.createInstallmentsForStudent(allocationId, alternativeId, installmentDetails);
+            // ❌ Removed @RequestParam Long alternativeId
+            @RequestBody List<StudentInstallmentPlan> installmentDetails) { // <--- Changed Map to POJO
+        
+        List<StudentInstallmentPlan> plans = feeManagementService.createInstallmentsForStudent(
+                allocationId, 
+                installmentDetails // <--- Passed directly
+        );
+        
         return new ResponseEntity<>(plans, HttpStatus.CREATED);
     }
     
@@ -436,10 +441,29 @@ public class FeeController {
     @PreAuthorize("hasRole('ADMIN')")
     public ResponseEntity<List<StudentInstallmentPlan>> resetInstallments(
             @RequestParam Long allocationId,
-            @RequestParam Long alternativeId,
+            // 🔴 UPDATE: Add required=false so it accepts NULL for Ad-Hoc plans
+            @RequestParam(required = false) Long alternativeId,
             @RequestBody List<Map<String, Object>> newInstallmentDetails) {
-        List<StudentInstallmentPlan> plans = feeManagementService.resetInstallments(allocationId, alternativeId, newInstallmentDetails);
+        
+        List<StudentInstallmentPlan> plans = feeManagementService.resetInstallments(
+                allocationId, 
+                alternativeId, 
+                newInstallmentDetails
+        );
         return ResponseEntity.ok(plans);
+    }
+    @GetMapping("/analytics/dashboard")
+    @PreAuthorize("hasRole('ADMIN')")
+    public ResponseEntity<Map<String, Object>> getDashboardAnalytics(@RequestParam int year) {
+        Map<String, Object> data = feeManagementService.getDashboardAnalytics(year);
+        return ResponseEntity.ok(data);
+    }
+    
+    @GetMapping("/analytics/recent-transactions")
+    @PreAuthorize("hasRole('ADMIN')")
+    public ResponseEntity<List<Map<String, Object>>> getRecentTransactions() {
+        List<Map<String, Object>> data = feeManagementService.getRecentTransactions();
+        return ResponseEntity.ok(data);
     }
 
     // ============================================

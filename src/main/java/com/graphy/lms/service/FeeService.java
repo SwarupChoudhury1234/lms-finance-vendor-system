@@ -76,13 +76,13 @@ public interface FeeService {
     void deleteInstallmentPlan(Long id);
     
     // Create multiple installments for a student
-    List<StudentInstallmentPlan> createInstallmentsForStudent(Long allocationId, Long alternativeId, 
-                                                               List<Map<String, Object>> installmentDetails);
-    
+ // Create multiple installments for a student (Ad-Hoc / Custom Plan)
+    List<StudentInstallmentPlan> createInstallmentsForStudent(
+            Long allocationId, 
+            List<StudentInstallmentPlan> installmentDetails // <--- Updated Type & Removed alternativeId
+    );
     // Reset installments
-    List<StudentInstallmentPlan> resetInstallments(Long allocationId, Long alternativeId, 
-                                                    List<Map<String, Object>> newInstallmentDetails);
-    
+    List<StudentInstallmentPlan> resetInstallments(Long allocationId, Long alternativeId, List<Map<String, Object>> newInstallmentDetails);
     // Get overdue installments
     List<StudentInstallmentPlan> getOverdueInstallments();
     
@@ -326,6 +326,10 @@ public interface FeeService {
     
     // Overall collection and pending
     Map<String, Object> getOverallFinancialSummary();
+    
+    Map<String, Object> getDashboardAnalytics(int year);
+ // Dashboard: Recent Transactions Table
+    List<Map<String, Object>> getRecentTransactions();
     
     // Payment history per student
     List<StudentFeePayment> getPaymentHistory(Long userId);

@@ -1,4 +1,5 @@
 package com.graphy.lms.entity;
+import jakarta.persistence.Transient;
 
 import jakarta.persistence.*;
 import java.math.BigDecimal;
@@ -8,7 +9,7 @@ import lombok.ToString;
 
 @Entity
 @Table(name = "student_fee_allocations")
-@ToString
+@ToString	
 public class StudentFeeAllocation {
     
     @Id
@@ -175,4 +176,8 @@ public class StudentFeeAllocation {
     public void setUpdatedAt(LocalDateTime updatedAt) {
         this.updatedAt = updatedAt;
     }
+    @Transient
+    private String studentEmail;
+    public String getStudentEmail() { return studentEmail; }
+    public void setStudentEmail(String studentEmail) { this.studentEmail = studentEmail; }
 }

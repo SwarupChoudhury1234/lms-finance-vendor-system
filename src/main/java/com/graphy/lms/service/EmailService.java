@@ -54,6 +54,45 @@ public class EmailService {
             throw new RuntimeException("Failed to send email: " + e.getMessage());
         }
     }
+    /**
+     * Send email when a new fee is assigned (Trigger: On Creation)
+     */
+    public void sendFeeAssignedEmail(String toEmail, String studentName, String feeType, 
+                                     BigDecimal amount, LocalDate dueDate) {
+        try {
+            jakarta.mail.internet.MimeMessage message = mailSender.createMimeMessage();
+            org.springframework.mail.javamail.MimeMessageHelper helper = 
+                new org.springframework.mail.javamail.MimeMessageHelper(message, true);
+
+            helper.setTo(toEmail);
+            helper.setSubject("New Fee Assigned: " + feeType);
+            
+            String emailBody = "<html>" +
+                    "<body style='font-family: Arial, sans-serif;'>" +
+                    "<div style='max-width: 600px; margin: 0 auto; padding: 20px; border: 1px solid #ddd;'>" +
+                    "<h2 style='color: #007bff;'>New Fee Assigned</h2>" +
+                    "<p>Dear " + studentName + ",</p>" +
+                    "<p>A new fee has been assigned to your account.</p>" +
+                    "<div style='background-color: #f8f9fa; padding: 15px; margin: 20px 0; border-radius: 5px;'>" +
+                    "<p><strong>Fee Type:</strong> " + feeType + "</p>" +
+                    "<p><strong>Amount:</strong> ₹" + amount + "</p>" +
+                    "<p><strong>Due Date:</strong> " + dueDate + "</p>" +
+                    "</div>" +
+                    "<p>Please login to your portal to view details and make a payment.</p>" +
+                    "<hr style='margin-top: 30px;'>" +
+                    "<p style='color: #666; font-size: 12px;'>This is an automated email.</p>" +
+                    "</div>" +
+                    "</body>" +
+                    "</html>";
+
+            helper.setText(emailBody, true);
+            mailSender.send(message);
+            
+            logger.info("Fee assignment email sent to {}", toEmail);
+        } catch (Exception e) {
+            logger.error("Failed to send fee assignment email: {}", e.getMessage());
+        }
+    }
 
     /**
      * Send payment failed notification
