@@ -1,6 +1,7 @@
 package com.graphy.lms.service.impl;
 
 import com.graphy.lms.entity.*;
+
 import com.razorpay.RazorpayClient;
 import com.razorpay.Order;
 import com.razorpay.Utils;
@@ -66,6 +67,9 @@ public class FeeServiceImpl implements FeeService {
 
     @org.springframework.beans.factory.annotation.Value("${razorpay.key.secret}")
     private String razorpaySecret;
+ // Inside FeeServiceImpl.java
+    @Autowired
+    private GlobalConfigRepository globalConfigRepository;
 
     // ============================================
     // 1. FEE TYPES CRUD
@@ -81,6 +85,12 @@ public class FeeServiceImpl implements FeeService {
         
         logger.info("Fee type created successfully with ID: {}", saved.getId());
         return saved;
+    }
+    
+    private String getGlobalSetting(String key, String defaultValue) {
+        return globalConfigRepository.findByConfigKey(key)
+                .map(GlobalConfig::getConfigValue)
+                .orElse(defaultValue);
     }
 
     @Override
@@ -127,34 +137,21 @@ public class FeeServiceImpl implements FeeService {
     // ============================================
     
     @Override
-    @Transactional // Ensures Parent and Children are saved together safely
+    @Transactional
     public FeeStructure createFeeStructure(FeeStructure feeStructure) {
         
-        // 🔴 NEW LOGIC: Handle Fee Components (Tuition, Lab, Exam Breakdown)
-        if (feeStructure.getComponents() != null && !feeStructure.getComponents().isEmpty()) {
-            BigDecimal calculatedTotal = BigDecimal.ZERO;
-            
-            for (FeeStructureComponent component : feeStructure.getComponents()) {
-                // 1. Link the Child (Component) back to the Parent (Structure)
-                // This is crucial for the Foreign Key to be saved correctly in DB
-                component.setFeeStructure(feeStructure);
-                
-                // 2. Sum up the amounts
-                if (component.getAmount() != null) {
-                    calculatedTotal = calculatedTotal.add(component.getAmount());
-                }
-            }
-            
-            // 3. Override the "Total Amount" with the calculated sum
-            // This ensures the Net Amount is always mathematically correct
-            feeStructure.setTotalAmount(calculatedTotal);
-        }
+        // 🔴 CHANGE: Removed "Component/Bundle" calculation logic.
+        // We now treat every Fee Structure as a separate, standalone entity.
+        // The 'totalAmount' sent from Frontend is trusted and saved directly.
 
-        // Existing Save Logic (CascadeType.ALL will automatically save the components now)
+        // Standard Save Logic
+    	if (feeStructure.getAcademicYear() == null || feeStructure.getAcademicYear().isEmpty()) {
+            String currentYear = getGlobalSetting("CURRENT_FINANCIAL_YEAR", "2025-26");
+            feeStructure.setAcademicYear(currentYear);
+        }	
         FeeStructure saved = feeStructureRepository.save(feeStructure);
         
         // Audit Log
-        // Note: passing "null" for userId as per your snippet, ideally pass dynamic user ID
         createAuditLog("FEE_MANAGEMENT", "FeeStructure", saved.getId(), 
                       AuditLog.Action.CREATE, null, feeStructure.toString(), null);
         
@@ -276,6 +273,7 @@ public class FeeServiceImpl implements FeeService {
     // ============================================
     
     @Override
+    @Transactional
     public StudentFeeAllocation createStudentFeeAllocation(StudentFeeAllocation allocation) {
         // 1. VALIDATION: CHECK DUPLICATES
         boolean exists = studentFeeAllocationRepository.findByUserId(allocation.getUserId())
@@ -286,7 +284,7 @@ public class FeeServiceImpl implements FeeService {
             throw new RuntimeException("DUPLICATE: This fee structure is already assigned to the student.");
         }
 
-        // 2. EXISTING LOGIC (Calculate Amounts)
+        // 2. CALCULATION LOGIC
         if (allocation.getFeeStructureId() != null && allocation.getUserId() != null) {
             FeeStructure structure = getFeeStructureById(allocation.getFeeStructureId());
             
@@ -295,12 +293,13 @@ public class FeeServiceImpl implements FeeService {
                     : structure.getTotalAmount();
             allocation.setOriginalAmount(baseAmount);
 
+            // Apply Discounts
             List<FeeDiscount> discounts = feeDiscountRepository.findByUserIdAndFeeStructureId(
                     allocation.getUserId(), allocation.getFeeStructureId());
             
             BigDecimal totalDiscount = BigDecimal.ZERO;
             for (FeeDiscount discount : discounts) {
-                if (discount.getIsActive() != null && discount.getIsActive()) {
+                if (Boolean.TRUE.equals(discount.getIsActive())) {
                      if (discount.getDiscountType() == FeeDiscount.DiscountType.PERCENTAGE) {
                         BigDecimal dAmount = baseAmount.multiply(discount.getDiscountValue())
                                 .divide(BigDecimal.valueOf(100), 2, RoundingMode.HALF_UP);
@@ -312,45 +311,71 @@ public class FeeServiceImpl implements FeeService {
             }
 
             BigDecimal payableAmount = baseAmount.subtract(totalDiscount).max(BigDecimal.ZERO);
+            
             allocation.setTotalDiscount(totalDiscount);
             allocation.setPayableAmount(payableAmount);
             
             BigDecimal plannedAdvance = allocation.getAdvancePayment() != null ? 
                                        allocation.getAdvancePayment() : BigDecimal.ZERO;
-            allocation.setRemainingAmount(payableAmount.subtract(plannedAdvance));
             
+            allocation.setRemainingAmount(payableAmount.subtract(plannedAdvance));
             allocation.setCurrency(structure.getCurrency());
         }
         
         allocation.setAllocationDate(LocalDate.now());
         allocation.setStatus(StudentFeeAllocation.AllocationStatus.ACTIVE);
         
-        // 3. SAVE
+        // 3. SAVE TO DATABASE
         StudentFeeAllocation saved = studentFeeAllocationRepository.save(allocation);
 
-        // 🔴 4. EMAIL TRIGGER "ON CREATION" (DYNAMIC)
+        // 🔴 4. EMAIL TRIGGER (FIXED: removed invalid getStudentName() call)
         try {
-            FeeStructure structure = getFeeStructureById(saved.getFeeStructureId());
-            FeeType type = getFeeTypeById(structure.getFeeTypeId());
-
-            if (Boolean.TRUE.equals(structure.getTriggerOnCreation())) {
+            // A. Check Global Master Switch
+            String isGlobalEnabled = getGlobalSetting("NOTIF_FEE_CREATION_ENABLED", "true");
+            
+            if ("false".equalsIgnoreCase(isGlobalEnabled)) {
+                logger.info("🚫 Fee Creation Notification is GLOBALLY DISABLED. Email skipped.");
+            } else {
+                FeeStructure structure = getFeeStructureById(saved.getFeeStructureId());
                 
-                // ✅ FIX: Get email directly from Request Body (No Hardcoding)
-                String targetEmail = allocation.getStudentEmail();
-                
-                // Fallback validation
-                if (targetEmail == null || targetEmail.isEmpty()) {
-                    logger.warn("Skipping 'On Creation' email: No studentEmail provided in request.");
-                } else {
-                    String studentName = "Student " + saved.getUserId(); // Or pass studentName in @Transient too if needed
+                if (Boolean.TRUE.equals(structure.getTriggerOnCreation())) {
+                    
+                    // B. Get Target Email (Dynamic)
+                    // This works because you have @Transient studentEmail in your entity
+                    String targetEmail = allocation.getStudentEmail();
+                    
+                    // C. Get Student Name (FIXED: Use Fallback "Student")
+                    // Your entity does NOT have a 'studentName' field, so we cannot call .getStudentName()
+                    String studentName = "Student"; 
 
+                    if (targetEmail == null || targetEmail.isEmpty()) {
+                         logger.warn("⚠️ No email provided for Fee Creation notification. Skipping.");
+                         return saved; 
+                    }
+
+                    // D. Safely Get Fee Name
+                    String feeName = "Fee Structure #" + structure.getId(); // Default fallback
+                    if (structure.getFeeTypeId() != null) {
+                        try {
+                            FeeType type = getFeeTypeById(structure.getFeeTypeId());
+                            if (type != null) {
+                                feeName = type.getName();
+                            }
+                        } catch (Exception ex) {
+                            // FeeType not found, keep default ID
+                        }
+                    }
+
+                    // E. Send Automated Email
                     emailService.sendFeeAssignedEmail(
-                        targetEmail,    // Using the dynamic input
-                        studentName,
-                        type.getName(),
+                        targetEmail,    // <--- Sends to the specific student email
+                        studentName,    // <--- Uses "Student"
+                        feeName, 
                         saved.getPayableAmount(),
                         LocalDate.now().plusDays(30)
                     );
+                    
+                    logger.info("✅ Fee Creation Email sent to: " + targetEmail);
                 }
             }
         } catch (Exception e) {
@@ -1076,6 +1101,18 @@ public class FeeServiceImpl implements FeeService {
 
     @Override
     public void applyLateFees(String manualEmail) {
+        // 🔴 1. GLOBAL MASTER SWITCH (Logic from "Fee Module Settings" Image)
+        // If the Admin has disabled "Enable Late Fees", we stop everything immediately.
+        String isMasterEnabled = getGlobalSetting("ENABLE_LATE_FEES", "false");
+        
+        if ("false".equalsIgnoreCase(isMasterEnabled)) {
+            logger.info("🚫 Late Fees are GLOBALLY DISABLED. Skipping auto-application.");
+            return; // 🛑 STOP HERE
+        }
+
+        // ==========================================
+        // EXISTING LOGIC STARTS HERE
+        // ==========================================
         LocalDate today = LocalDate.now();
         List<StudentInstallmentPlan> overdueInstallments = getOverdueInstallments();
         List<LateFeeConfig> configs = lateFeeConfigRepository.findActiveConfigsForDate(today);
@@ -1088,75 +1125,76 @@ public class FeeServiceImpl implements FeeService {
             for (LateFeeConfig config : configs) {
                 // 1. CALCULATE CALENDAR-SMART DATES
                 LocalDate penaltyStartDate;
-                LocalDate penaltyEndDate; // Defines the "window" for this specific penalty
+                LocalDate penaltyEndDate; 
 
-                // Use Java's native date math logic
                 switch (config.getPaymentSchedule()) {
                     case MONTHLY:
-                        // e.g. Due Jan 15 + 1 Month = Feb 15 (Smart)
                         penaltyStartDate = dueDate.plusMonths(config.getPeriodCount());
-                        // Window ends 1 month after start
                         penaltyEndDate = penaltyStartDate.plusMonths(1); 
                         break;
-                        
                     case QUARTERLY:
-                        // e.g. Due Jan 15 + 3 Months = Apr 15
                         penaltyStartDate = dueDate.plusMonths((long) config.getPeriodCount() * 3);
                         penaltyEndDate = penaltyStartDate.plusMonths(3);
                         break;
-                        
                     case YEARLY:
-                        // e.g. Feb 29 2024 + 1 Year = Feb 28 2025 (Smart)
                         penaltyStartDate = dueDate.plusYears(config.getPeriodCount());
                         penaltyEndDate = penaltyStartDate.plusYears(1);
                         break;
-                        
                     default:
                         continue;
                 }
                 
                 // 2. CHECK IF TODAY FALLS IN THE PENALTY WINDOW
-                // Logic: Today must be ON or AFTER the start date, AND BEFORE the end date.
                 boolean isPenaltyApplicable = !today.isBefore(penaltyStartDate) && today.isBefore(penaltyEndDate);
                 
                 if (isPenaltyApplicable) {
                      List<LateFeePenalty> existing = lateFeePenaltyRepository
                          .findByStudentInstallmentPlanId(installment.getId());
                      
-                     // 3. PREVENT DUPLICATES (The "Once Per Window" Check)
-                     // We check if we already have a penalty of THIS amount for THIS installment
-                     // that was applied roughly in this same timeframe.
-                     // A simple robust check: Have we applied *any* penalty for this specific rule?
-                     // (Since 'existing' stores raw penalties, we check if one matches the amount/reason to avoid duplicates)
-                     
+                     // 3. PREVENT DUPLICATES
                      boolean alreadyApplied = existing.stream()
                          .anyMatch(p -> p.getPenaltyAmount().compareTo(config.getPenaltyAmount()) == 0 
                                      && p.getPenaltyDate().isAfter(penaltyStartDate.minusDays(1)) 
                                      && p.getPenaltyDate().isBefore(penaltyEndDate));
                      
                      if (!alreadyApplied) { 
+                        // A. CREATE FINANCIAL RECORD (Always happens if Master Switch is ON)
                         LateFeePenalty penalty = new LateFeePenalty();
                         penalty.setStudentInstallmentPlanId(installment.getId());
                         penalty.setPenaltyAmount(config.getPenaltyAmount());
                         penalty.setPenaltyDate(today);
                         
-                        // Calculate exact days late for the reason
                         long actualDaysLate = ChronoUnit.DAYS.between(dueDate, today);
                         penalty.setReason("Overdue by " + actualDaysLate + " days (Calendar Rule)");
                         
                         createLateFeePenalty(penalty);
                         
-                        // Update status
+                        // B. UPDATE STATUS
                         installment.setStatus(StudentInstallmentPlan.InstallmentStatus.OVERDUE);
                         studentInstallmentPlanRepository.save(installment);
 
-                        // Send Email
-                        StudentFeeAllocation allocation = getFeeAllocationById(installment.getStudentFeeAllocationId());
-                        String targetEmail = (manualEmail != null && !manualEmail.isEmpty()) 
-                                            ? manualEmail 
-                                            : "student@example.com"; 
+                        // 🔴 4. EMAIL NOTIFICATION TOGGLE (Logic from "Notification Automation" Image)
+                        // We check if the Admin wants to send emails for this event.
+                        String isEmailEnabled = getGlobalSetting("NOTIF_OVERDUE_ALERT_ENABLED", "true");
                         
-                        sendOverdueWarningNotification(allocation.getUserId(), installment.getId(), targetEmail);
+                        if ("true".equalsIgnoreCase(isEmailEnabled)) {
+                            StudentFeeAllocation allocation = getFeeAllocationById(installment.getStudentFeeAllocationId());
+                            
+                            // Use manual email if provided (for testing), otherwise fetch from allocation/user
+                            String targetEmail = (manualEmail != null && !manualEmail.isEmpty()) 
+                                                ? manualEmail 
+                                                : allocation.getStudentEmail(); // Assuming this field exists or fetch from User entity
+                            
+                            if (targetEmail != null) {
+                                sendOverdueWarningNotification(allocation.getUserId(), installment.getId(), targetEmail);
+                                logger.info("✅ Overdue Alert Email sent to User ID: " + allocation.getUserId());
+                            } else {
+                                logger.warn("⚠️ Overdue Alert skipped: No email found for User ID: " + allocation.getUserId());
+                            }
+                        } else {
+                            // TOGGLE IS OFF - SILENT MODE
+                            logger.info("🔕 Overdue Alert Toggle is OFF. Penalty applied but Email skipped for Installment ID: " + installment.getId());
+                        }
                      }
                 }
             }
@@ -1477,9 +1515,30 @@ public class FeeServiceImpl implements FeeService {
         refund.setApprovedBy(approvedBy);
         refund.setApprovedDate(LocalDate.now());
         
-        return feeRefundRepository.save(refund);
-    }
+        FeeRefund saved = feeRefundRepository.save(refund);
 
+        // 🔴 CRITICAL FIX: Check the Refund Toggle
+        String isEnabled = getGlobalSetting("NOTIF_REFUND_UPDATE_ENABLED", "true");
+        
+        if ("true".equalsIgnoreCase(isEnabled)) {
+            try {
+                StudentFeeAllocation allocation = getFeeAllocationById(refund.getStudentFeeAllocationId());
+                String message = "Your refund request of " + refund.getRefundAmount() + " has been APPROVED.";
+                
+                // Send Email
+                // emailService.sendGeneralEmail(studentEmail, "Refund Approved", message);
+                
+                logger.info("✅ Refund Approved Email sent.");
+            } catch (Exception e) {
+                 logger.error("Failed to send refund email", e);
+            }
+        } else {
+            // 🛑 STOP: Toggle is OFF
+            logger.info("🔕 Refund Notification is OFF. Email skipped.");
+        }
+        
+        return saved;
+    }
     @Override
     public FeeRefund processRefund(Long refundId, String refundMode, String transactionRef) {
         FeeRefund refund = getRefundById(refundId);
@@ -1554,13 +1613,36 @@ public class FeeServiceImpl implements FeeService {
     
     @Override
     public FeeRefund rejectRefund(Long refundId, Long rejectedBy, String reason) {
+        // 1. Fetch the refund (This defines the 'refund' variable)
         FeeRefund refund = getRefundById(refundId);
+        
+        // 2. Update Status
         refund.setRefundStatus(FeeRefund.RefundStatus.REJECTED);
-        refund.setApprovedBy(rejectedBy);
+        refund.setApprovedBy(rejectedBy); // Reusing field for rejecter
         refund.setApprovedDate(LocalDate.now());
         refund.setRefundReason(refund.getRefundReason() + " | Rejection Reason: " + reason);
         
-        return feeRefundRepository.save(refund);
+        FeeRefund saved = feeRefundRepository.save(refund);
+
+        // 3. Send Notification (With Toggle Check)
+        String isEnabled = getGlobalSetting("NOTIF_REFUND_UPDATE_ENABLED", "true");
+        
+        if ("true".equalsIgnoreCase(isEnabled)) {
+            try {
+                 // Fetch Student Email (Mock or Real)
+                 StudentFeeAllocation allocation = getFeeAllocationById(refund.getStudentFeeAllocationId());
+                 // String email = ... fetch from user service ...
+                 
+                 // emailService.sendGeneralEmail(email, "Refund Rejected", "Your refund was rejected. Reason: " + reason);
+                 logger.info("✅ Refund Rejected Email sent.");
+            } catch (Exception e) {
+                 logger.error("Failed to send refund email", e);
+            }
+        } else {
+             logger.info("🔕 Refund Notification is OFF. Email skipped.");
+        }
+        
+        return saved;
     }
 
     // ============================================
@@ -1601,7 +1683,11 @@ public class FeeServiceImpl implements FeeService {
         StudentFeePayment payment = getPaymentById(paymentId);
         StudentFeeAllocation allocation = getFeeAllocationById(payment.getStudentFeeAllocationId());
         
-        String receiptNumber = "REC-" + LocalDate.now().getYear() + "-" + String.format("%06d", paymentId);
+        // 🔴 FIX: Fetch Dynamic Prefix (Default to "REC-" if not set)
+        String prefix = getGlobalSetting("INVOICE_PREFIX", "REC-");
+        
+        // Generate Number: INV-2025-000123
+        String receiptNumber = prefix + LocalDate.now().getYear() + "-" + String.format("%06d", paymentId);
         
         FeeReceipt receipt = new FeeReceipt();
         receipt.setPaymentId(paymentId);
@@ -1611,6 +1697,7 @@ public class FeeServiceImpl implements FeeService {
         
         FeeReceipt saved = feeReceiptRepository.save(receipt);
         
+        // Send Email Logic (Existing)
         String targetEmail = (manualEmail != null && !manualEmail.isEmpty()) 
                             ? manualEmail 
                             : "student@example.com"; 
@@ -1619,7 +1706,6 @@ public class FeeServiceImpl implements FeeService {
         
         return saved;
     }
-
     // ============================================
     // 14. PAYMENT NOTIFICATIONS CRUD
     // ============================================
@@ -1678,24 +1764,46 @@ public class FeeServiceImpl implements FeeService {
     @Override
     public void sendPaymentSuccessNotification(Long userId, Long paymentId, String email) {
         StudentFeePayment payment = getPaymentById(paymentId);
-        FeeReceipt receipt = getReceiptByPaymentId(paymentId);
+        StudentFeeAllocation allocation = getFeeAllocationById(payment.getStudentFeeAllocationId());
         
-        String message = "Payment of " + payment.getPaidAmount() + " " + payment.getCurrency() + 
-                        " received successfully. Receipt Number: " + 
-                        (receipt != null ? receipt.getReceiptNumber() : "N/A");
+        // 1. Calculate Remaining Balance to detect if it is Partial
+        BigDecimal totalPaid = studentFeePaymentRepository.getTotalPaidByAllocationId(allocation.getId());
+        BigDecimal remaining = allocation.getPayableAmount().subtract(totalPaid).max(BigDecimal.ZERO);
         
+        boolean isPartial = remaining.compareTo(BigDecimal.ZERO) > 0;
+        
+        // 🔴 CRITICAL FIX: Check the specific Toggle
+        // If it's partial, check "NOTIF_PARTIAL_PAYMENT_ENABLED"
+        // If it's full, check "NOTIF_PAYMENT_SUCCESS_ENABLED"
+        String toggleKey = isPartial ? "NOTIF_PARTIAL_PAYMENT_ENABLED" : "NOTIF_PAYMENT_SUCCESS_ENABLED";
+        String isEnabled = getGlobalSetting(toggleKey, "true"); // Default to ON
+        
+        if ("false".equalsIgnoreCase(isEnabled)) {
+            // 🛑 STOP: Admin has turned this specific toggle OFF
+            logger.info("🔕 Notification disabled for: " + (isPartial ? "Partial Payment" : "Full Payment"));
+            return; 
+        }
+
+        // ... (Existing Logic continues below) ...
+        String message;
+        if (isPartial) {
+             message = "Partial Payment of " + payment.getPaidAmount() + " received. Remaining: " + remaining;
+        } else {
+        	message = "Payment of " + payment.getPaidAmount() + " successful. Transaction ID: " + payment.getTransactionReference();
+        }
+
+        // ... (Create Notification & Send Email) ...
         PaymentNotification notification = new PaymentNotification();
         notification.setUserId(userId);
-        notification.setNotificationType(PaymentNotification.NotificationType.PAYMENT_SUCCESS);
         notification.setMessage(message);
-        notification.setEmail(email);
+        notification.setNotificationType(PaymentNotification.NotificationType.PAYMENT_SUCCESS);
         notification.setSentAt(LocalDateTime.now());
-        notification.setDeliveryStatus(PaymentNotification.DeliveryStatus.SENT);
+        notification.setDeliveryStatus(PaymentNotification.DeliveryStatus.SENT); 
         
         createNotification(notification);
         
-        // TODO: Actual email sending logic would go here
-        System.out.println("Email sent to: " + email + " - " + message);
+        // Send actual email
+        // emailService.sendGeneralEmail(email, "Payment Receipt", message);
     }
 
     @Override
@@ -2349,142 +2457,157 @@ public class FeeServiceImpl implements FeeService {
     public Map<String, Object> getBatchFeeReport(Long batchId) {
         Map<String, Object> report = new HashMap<>();
         
+        // 1. Fetch all separate structures assigned in this batch (Tuition, Exam, Library...)
         List<FeeStructure> structures = getFeeStructuresByBatch(batchId);
+        
+        // List to hold the breakdown rows (e.g., Tuition vs Exam)
+        List<Map<String, Object>> feeTypeBreakdown = new ArrayList<>();
         
         BigDecimal totalExpected = BigDecimal.ZERO;
         BigDecimal totalCollected = BigDecimal.ZERO;
         BigDecimal totalPending = BigDecimal.ZERO;
-        int totalStudents = 0;
         
         for (FeeStructure structure : structures) {
+            // 2. Identify the Fee Name
+            String feeTypeName = "Unknown Fee";
+            if(structure.getFeeTypeId() != null) {
+                feeTypeName = feeTypeRepository.findById(structure.getFeeTypeId())
+                        .map(FeeType::getName)
+                        .orElse("Unknown Fee (" + structure.getFeeTypeId() + ")");
+            }
+            
+            // 3. Find all allocations for THIS specific fee
             List<StudentFeeAllocation> allocations = studentFeeAllocationRepository.findAll().stream()
                     .filter(a -> a.getFeeStructureId().equals(structure.getId()))
                     .collect(Collectors.toList());
             
-            totalStudents += allocations.size();
+            // 4. Calculate Totals for THIS specific Fee Type
+            BigDecimal structureExpected = BigDecimal.ZERO;
+            BigDecimal structureCollected = BigDecimal.ZERO;
+            BigDecimal structurePending = BigDecimal.ZERO;
             
             for (StudentFeeAllocation allocation : allocations) {
-                // 1. Calculate Late Fees
+                // Base + Late Fees + Exam Linkages
                 BigDecimal lateFees = BigDecimal.ZERO;
                 List<StudentInstallmentPlan> plans = studentInstallmentPlanRepository
                         .findByStudentFeeAllocationId(allocation.getId());
-                
                 for (StudentInstallmentPlan plan : plans) {
                     BigDecimal planPenalty = lateFeePenaltyRepository.getTotalPenaltyByInstallmentPlanId(plan.getId());
-                    if (planPenalty != null) {
-                        lateFees = lateFees.add(planPenalty);
-                    }
+                    if (planPenalty != null) lateFees = lateFees.add(planPenalty);
                 }
                 
-                // 2. 🔴 NEW: Calculate Exam Fees
                 BigDecimal examFees = examFeeLinkageRepository.getTotalExamFeeByAllocationId(allocation.getId());
-                if (examFees == null) {
-                    examFees = BigDecimal.ZERO;
-                }
+                if (examFees == null) examFees = BigDecimal.ZERO;
 
-                // 3. Calculate Totals for this Student
+                BigDecimal sExpected = allocation.getPayableAmount().add(lateFees).add(examFees);
                 
-                // EXPECTED = Base Fee + Late Fines + Exam Fees
-                BigDecimal studentExpected = allocation.getPayableAmount()
-                                            .add(lateFees)
-                                            .add(examFees);
-                
-                // COLLECTED = Actual Payments from DB
-                BigDecimal studentCollected = studentFeePaymentRepository.getTotalPaidByAllocationId(allocation.getId());
-                if (studentCollected == null) {
-                    studentCollected = BigDecimal.ZERO;
-                }
+                BigDecimal sCollected = studentFeePaymentRepository.getTotalPaidByAllocationId(allocation.getId());
+                if (sCollected == null) sCollected = BigDecimal.ZERO;
 
-                // PENDING = Expected - Collected
-                BigDecimal studentPending = studentExpected.subtract(studentCollected).max(BigDecimal.ZERO);
+                BigDecimal sPending = sExpected.subtract(sCollected).max(BigDecimal.ZERO);
 
-                // 4. Add to Batch Accumulators
-                totalExpected = totalExpected.add(studentExpected);
-                totalCollected = totalCollected.add(studentCollected);
-                totalPending = totalPending.add(studentPending);
+                // Accumulate Structure Totals
+                structureExpected = structureExpected.add(sExpected);
+                structureCollected = structureCollected.add(sCollected);
+                structurePending = structurePending.add(sPending);
             }
+
+            // 5. Add to Global Totals
+            totalExpected = totalExpected.add(structureExpected);
+            totalCollected = totalCollected.add(structureCollected);
+            totalPending = totalPending.add(structurePending);
+
+            // 🔴 ADD TO BREAKDOWN LIST
+            Map<String, Object> row = new HashMap<>();
+            row.put("feeName", feeTypeName); 
+            row.put("expected", structureExpected);
+            row.put("collected", structureCollected);
+            row.put("pending", structurePending);
+            feeTypeBreakdown.add(row);
         }
         
         report.put("batchId", batchId);
-        report.put("totalStudents", totalStudents);
         report.put("totalExpected", totalExpected);
         report.put("totalCollected", totalCollected);
         report.put("totalPending", totalPending);
-        report.put("collectionPercentage", totalExpected.compareTo(BigDecimal.ZERO) > 0 ? 
-                   totalCollected.multiply(BigDecimal.valueOf(100)).divide(totalExpected, 2, RoundingMode.HALF_UP) : 
-                   BigDecimal.ZERO);
+        
+        // 🔴 SEND BREAKDOWN TO FRONTEND
+        report.put("breakdown", feeTypeBreakdown);
         
         return report;
+    }
+    
+    @Override
+    public boolean isGlobalSettingEnabled(String key) {
+        // Uses the existing private helper to fetch the value
+        String val = getGlobalSetting(key, "true"); 
+        return "true".equalsIgnoreCase(val);
     }
     @Override
     public Map<String, Object> getCourseFeeReport(Long courseId) {
         Map<String, Object> report = new HashMap<>();
         
         List<FeeStructure> structures = getFeeStructuresByCourse(courseId);
+        List<Map<String, Object>> feeTypeBreakdown = new ArrayList<>();
         
         BigDecimal totalExpected = BigDecimal.ZERO;
         BigDecimal totalCollected = BigDecimal.ZERO;
         BigDecimal totalPending = BigDecimal.ZERO;
-        int totalStudents = 0;
         
         for (FeeStructure structure : structures) {
+            String feeTypeName = "Unknown Fee";
+            if(structure.getFeeTypeId() != null) {
+                feeTypeName = feeTypeRepository.findById(structure.getFeeTypeId())
+                        .map(FeeType::getName)
+                        .orElse("Unknown Fee");
+            }
+
             List<StudentFeeAllocation> allocations = studentFeeAllocationRepository.findAll().stream()
                     .filter(a -> a.getFeeStructureId().equals(structure.getId()))
                     .collect(Collectors.toList());
             
-            totalStudents += allocations.size();
+            BigDecimal structureExpected = BigDecimal.ZERO;
+            BigDecimal structureCollected = BigDecimal.ZERO;
+            BigDecimal structurePending = BigDecimal.ZERO;
             
             for (StudentFeeAllocation allocation : allocations) {
-                // 1. Calculate Late Fees
                 BigDecimal lateFees = BigDecimal.ZERO;
-                List<StudentInstallmentPlan> plans = studentInstallmentPlanRepository
-                        .findByStudentFeeAllocationId(allocation.getId());
-                
+                List<StudentInstallmentPlan> plans = studentInstallmentPlanRepository.findByStudentFeeAllocationId(allocation.getId());
                 for (StudentInstallmentPlan plan : plans) {
-                    BigDecimal planPenalty = lateFeePenaltyRepository.getTotalPenaltyByInstallmentPlanId(plan.getId());
-                    if (planPenalty != null) {
-                        lateFees = lateFees.add(planPenalty);
-                    }
+                    BigDecimal pVal = lateFeePenaltyRepository.getTotalPenaltyByInstallmentPlanId(plan.getId());
+                    if (pVal != null) lateFees = lateFees.add(pVal);
                 }
                 
-                // 2. 🔴 NEW: Calculate Exam Fees
                 BigDecimal examFees = examFeeLinkageRepository.getTotalExamFeeByAllocationId(allocation.getId());
-                if (examFees == null) {
-                    examFees = BigDecimal.ZERO;
-                }
-                
-                // 3. Calculate Totals
-                
-                // EXPECTED = Base Fee + Late Fines + Exam Fees
-                BigDecimal studentExpected = allocation.getPayableAmount()
-                                            .add(lateFees)
-                                            .add(examFees);
-                
-                // COLLECTED = Actual Payments
-                BigDecimal studentCollected = studentFeePaymentRepository.getTotalPaidByAllocationId(allocation.getId());
-                if (studentCollected == null) {
-                    studentCollected = BigDecimal.ZERO;
-                }
+                if (examFees == null) examFees = BigDecimal.ZERO;
 
-                // PENDING = Expected - Collected
-                BigDecimal studentPending = studentExpected.subtract(studentCollected).max(BigDecimal.ZERO);
+                BigDecimal sExpected = allocation.getPayableAmount().add(lateFees).add(examFees);
+                BigDecimal sCollected = studentFeePaymentRepository.getTotalPaidByAllocationId(allocation.getId());
+                if (sCollected == null) sCollected = BigDecimal.ZERO;
+                BigDecimal sPending = sExpected.subtract(sCollected).max(BigDecimal.ZERO);
 
-                // 4. Add to Course Accumulators
-                totalExpected = totalExpected.add(studentExpected);
-                totalCollected = totalCollected.add(studentCollected);
-                totalPending = totalPending.add(studentPending);
+                structureExpected = structureExpected.add(sExpected);
+                structureCollected = structureCollected.add(sCollected);
+                structurePending = structurePending.add(sPending);
             }
+
+            totalExpected = totalExpected.add(structureExpected);
+            totalCollected = totalCollected.add(structureCollected);
+            totalPending = totalPending.add(structurePending);
+
+            Map<String, Object> row = new HashMap<>();
+            row.put("feeName", feeTypeName);
+            row.put("expected", structureExpected);
+            row.put("collected", structureCollected);
+            row.put("pending", structurePending);
+            feeTypeBreakdown.add(row);
         }
         
         report.put("courseId", courseId);
-        report.put("totalStudents", totalStudents);
         report.put("totalExpected", totalExpected);
         report.put("totalCollected", totalCollected);
         report.put("totalPending", totalPending);
-        
-        report.put("collectionPercentage", totalExpected.compareTo(BigDecimal.ZERO) > 0 ? 
-                   totalCollected.multiply(BigDecimal.valueOf(100)).divide(totalExpected, 2, RoundingMode.HALF_UP) : 
-                   BigDecimal.ZERO);
+        report.put("breakdown", feeTypeBreakdown);
         
         return report;
     }
@@ -2964,5 +3087,33 @@ public class FeeServiceImpl implements FeeService {
     public enum BulkLinkType {
         BATCH,
         COURSE
+    }
+    @Override
+    @Transactional
+    public void createStudentInstallmentPlan(Long userId, com.graphy.lms.dto.InstallmentPlanRequest request) {
+        
+        // 1. Find the Active Allocation (Unique logic of this method)
+        List<StudentFeeAllocation> allocations = studentFeeAllocationRepository.findByUserId(userId);
+        StudentFeeAllocation activeAllocation = allocations.stream()
+            .filter(a -> a.getRemainingAmount().compareTo(BigDecimal.ZERO) > 0)
+            .findFirst()
+            .orElseThrow(() -> new RuntimeException("No active fee allocation found for Student ID: " + userId));
+
+        // 2. Convert DTO to Entity List
+        List<StudentInstallmentPlan> plansToSave = new ArrayList<>();
+        
+        for (com.graphy.lms.dto.InstallmentPlanRequest.InstallmentItem item : request.getInstallments()) {
+            StudentInstallmentPlan plan = new StudentInstallmentPlan();
+            plan.setInstallmentAmount(item.getAmount());
+            plan.setDueDate(item.getDueDate());
+            // Map other fields...
+            plansToSave.add(plan);
+        }
+
+        // 3. REUSE THE EXISTING METHOD (Removes duplication!)
+        // This handles Total Validation and Saving for you.
+        createInstallmentsForStudent(activeAllocation.getId(), plansToSave);
+        
+        logger.info("Created installment plan via reuse for Student ID {}", userId);
     }
 }

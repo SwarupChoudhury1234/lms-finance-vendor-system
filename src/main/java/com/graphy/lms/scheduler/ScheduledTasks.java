@@ -1,6 +1,7 @@
 package com.graphy.lms.scheduler;
 
 import com.graphy.lms.entity.*;
+import com.graphy.lms.repository.GlobalConfigRepository;
 import com.graphy.lms.service.*;
 
 import org.slf4j.Logger;
@@ -12,6 +13,7 @@ import org.springframework.stereotype.Component;
 import java.time.LocalDate;
 import java.util.List;
 
+
 @Component
 public class ScheduledTasks {
 
@@ -22,6 +24,9 @@ public class ScheduledTasks {
 
     @Autowired
     private EmailService emailService;
+    
+    @Autowired
+    private GlobalConfigRepository globalConfigRepository;
 
     /**
      * Apply late fees daily at 2:00 AM
@@ -54,11 +59,25 @@ public class ScheduledTasks {
     /**
      * Send due reminders 3 days before due date at 9:00 AM daily
      */
+    /**
+     * Send due reminders 3 days before due date at 9:00 AM daily
+     */
     @Scheduled(cron = "0 0 9 * * ?")
     public void sendDueReminders() {
         logger.info("Scheduled Task: Sending due reminders - Started");
+        
+        // 🔴 1. CHECK THE GLOBAL TOGGLE (Using the new Service Method)
+        if (!feeService.isGlobalSettingEnabled("NOTIF_PENDING_REMINDER_ENABLED")) {
+            logger.info("🔕 Pending Fee Reminders are globally DISABLED in Settings. Skipping task.");
+            return; // 🛑 STOP HERE
+        }
+
         try {
-            LocalDate reminderDate = LocalDate.now().plusDays(3);
+            // 🔴 2. GET DYNAMIC DAYS (Optional: You can also add a helper for this later)
+            // For now, we default to 3 days as per your requirement
+            int daysBefore = 3; 
+            
+            LocalDate reminderDate = LocalDate.now().plusDays(daysBefore);
             
             List<StudentInstallmentPlan> upcomingInstallments = feeService.getAllInstallmentPlans()
                     .stream()
@@ -68,18 +87,19 @@ public class ScheduledTasks {
 
             for (StudentInstallmentPlan installment : upcomingInstallments) {
                 try {
-                    // Get student allocation details
-                    var allocation = feeService.getFeeAllocationById(
-                            installment.getStudentFeeAllocationId());
+                    // 1. Fetch Allocation
+                    var allocation = feeService.getFeeAllocationById(installment.getStudentFeeAllocationId());
                     
-                    // Send reminder email
+                    // 2. 🔴 FIX: Use Real Email (Assuming allocation has it, or fetch from User Service)
+                    String realEmail = allocation.getStudentEmail(); // Ensure this getter exists
+                    if (realEmail == null) realEmail = "student@example.com"; // Safety Fallback
+
                     emailService.sendDueReminderEmail(
-                            "student@example.com", // TODO: Get actual email from user service
-                            "Student Name", // TODO: Get actual name from user service
+                            realEmail,  // <--- FIXED
+                            "Student",  // You can also fetch allocation.getStudentName() if available
                             installment.getInstallmentAmount(),
                             installment.getDueDate()
                     );
-                    
                     logger.debug("Due reminder sent for installment: {}", installment.getId());
                 } catch (Exception e) {
                     logger.error("Failed to send due reminder for installment {}: {}", 
@@ -89,11 +109,11 @@ public class ScheduledTasks {
 
             logger.info("Scheduled Task: Sending due reminders - Completed ({} reminders sent)", 
                        upcomingInstallments.size());
+                       
         } catch (Exception e) {
             logger.error("Scheduled Task: Sending due reminders - Failed: {}", e.getMessage());
         }
     }
-
     /**
      * Send overdue warnings daily at 10:00 AM
      */

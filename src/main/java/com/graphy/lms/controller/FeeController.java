@@ -1,6 +1,9 @@
 package com.graphy.lms.controller;
 
 import java.math.BigDecimal;
+import org.springframework.web.bind.annotation.CrossOrigin;
+import com.graphy.lms.entity.GlobalConfig;
+import com.graphy.lms.repository.GlobalConfigRepository;
 import java.time.LocalDate;
 import java.util.HashMap;
 import java.util.List;
@@ -48,12 +51,14 @@ import com.graphy.lms.security.UserContext;
 import com.graphy.lms.service.FeeService;
 
 
+
 import java.util.ArrayList;
 
 import jakarta.validation.Valid;
 
 @RestController
 @RequestMapping("/api/fee-management")
+@CrossOrigin(origins = "http://localhost:3000") // <--- ADD THIS LINE
 public class FeeController {
 
     @Autowired
@@ -61,6 +66,9 @@ public class FeeController {
 
     @Autowired
     private UserContext userContext;
+    
+    @Autowired
+    private GlobalConfigRepository globalConfigRepository;
 
     @Autowired
     private AccessControlService accessControlService;
@@ -464,6 +472,33 @@ public class FeeController {
     public ResponseEntity<List<Map<String, Object>>> getRecentTransactions() {
         List<Map<String, Object>> data = feeManagementService.getRecentTransactions();
         return ResponseEntity.ok(data);
+    }
+    
+ // ============================================
+    // 20. GLOBAL SETTINGS ENDPOINTS
+    // ============================================
+
+    @PostMapping("/settings")
+    @PreAuthorize("hasRole('ADMIN')")
+    public ResponseEntity<String> updateGlobalSetting(
+            @RequestParam String key, 
+            @RequestParam String value) {
+        
+        GlobalConfig config = new GlobalConfig();
+        config.setConfigKey(key);
+        config.setConfigValue(value);
+        
+        globalConfigRepository.save(config); // Save or Update
+        
+        return ResponseEntity.ok("Setting updated: " + key + " = " + value);
+    }
+
+    @GetMapping("/settings/{key}")
+    public ResponseEntity<String> getGlobalSetting(@PathVariable String key) {
+        String value = globalConfigRepository.findByConfigKey(key)
+                .map(GlobalConfig::getConfigValue)
+                .orElse(""); // Return empty if not found
+        return ResponseEntity.ok(value);
     }
 
     // ============================================
@@ -1547,5 +1582,32 @@ public class FeeController {
     public ResponseEntity<String> triggerAutoBlockScan(@RequestParam BigDecimal limit) {
         feeManagementService.runAutoBlockCheck(limit);
         return ResponseEntity.ok("Auto-Block Scan Completed. Blocked users with dues > " + limit);
+    }
+ // ============================================
+    // 25. INSTALLMENT PLAN ENDPOINTS
+    // ============================================
+
+    @PostMapping("/student/{studentId}/installments")
+    @PreAuthorize("hasRole('ADMIN')")
+    public ResponseEntity<Map<String, Object>> createStudentInstallmentPlan(
+            @PathVariable Long studentId,
+            @RequestBody com.graphy.lms.dto.InstallmentPlanRequest request) { // Use the DTO we created above
+
+        // Call Service
+        feeManagementService.createStudentInstallmentPlan(studentId, request);
+
+        // Success Response
+        Map<String, Object> response = new HashMap<>();
+        response.put("success", true);
+        response.put("message", "Installment plan created successfully");
+        
+        Map<String, Object> data = new HashMap<>();
+        data.put("studentId", studentId);
+        data.put("planType", request.getPlanType());
+        data.put("createdAt", java.time.LocalDateTime.now());
+        
+        response.put("data", data);
+
+        return ResponseEntity.ok(response);
     }
 }

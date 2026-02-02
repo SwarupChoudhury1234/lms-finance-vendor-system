@@ -331,6 +331,8 @@ public interface FeeService {
  // Dashboard: Recent Transactions Table
     List<Map<String, Object>> getRecentTransactions();
     
+    boolean isGlobalSettingEnabled(String key);
+    
     // Payment history per student
     List<StudentFeePayment> getPaymentHistory(Long userId);
  // Add inside FeeService interface
@@ -352,4 +354,6 @@ public interface FeeService {
 
     // 🔴 NEW METHOD: Trigger for specific user with Email params
     void processAutoDebitForUser(Long userId, String studentName, String studentEmail);
+ // Add inside FeeService interface
+    void createStudentInstallmentPlan(Long studentId, com.graphy.lms.dto.InstallmentPlanRequest request);
 }

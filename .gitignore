@@ -17,6 +17,12 @@ bin/
 !**/src/main/**/bin/
 !**/src/test/**/bin/
 
+
+/target/
+/logs/
+*.log
+
+
 ### IntelliJ IDEA ###
 .idea
 *.iws

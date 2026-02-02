@@ -46,9 +46,36 @@ public class InventoryController {
     }
     @PostMapping("/item")
     @PreAuthorize("hasRole('ADMIN')")
-    public InventoryItem createItem(@RequestBody InventoryItem item){
+    public InventoryItem createItem(@RequestBody InventoryItem item) {
+
+        // Mandatory validations (API gate)
+        if (item.getItemName() == null || item.getItemName().isBlank()) {
+            throw new RuntimeException("Item name is required");
+        }
+
+        if (item.getSku() == null || item.getSku().isBlank()) {
+            throw new RuntimeException("SKU is required");
+        }
+
+        if (item.getCategoryId() == null) {
+            throw new RuntimeException("Category is required");
+        }
+
+        if (item.getUnitOfMeasure() == null || item.getUnitOfMeasure().isBlank()) {
+            throw new RuntimeException("Unit of measure is required");
+        }
+
+        if (item.getIsTrackable() == null) {
+            throw new RuntimeException("isTrackable flag is required");
+        }
+
+        if (item.getIsConsumable() == null) {
+            throw new RuntimeException("isConsumable flag is required");
+        }
+
         return inventoryService.createItem(item);
     }
+
 
     @GetMapping("/item")
     @PreAuthorize("hasAnyRole('ADMIN','FACULTY')")
@@ -64,9 +91,16 @@ public class InventoryController {
 
     @PutMapping("/item/{id}")
     @PreAuthorize("hasRole('ADMIN')")
-    public InventoryItem updateItem(@PathVariable Long id,@RequestBody InventoryItem item){
-        return inventoryService.updateItem(id,item);
+    public InventoryItem updateItem(@PathVariable Long id,
+                                    @RequestBody InventoryItem item) {
+
+        if (item.getSku() == null || item.getSku().isBlank()) {
+            throw new RuntimeException("SKU must be provided and cannot be changed");
+        }
+
+        return inventoryService.updateItem(id, item);
     }
+
     @PostMapping("/assign")
     @PreAuthorize("hasRole('ADMIN')")
     public AssetsAssigned assign(@RequestBody AssetsAssigned a,
