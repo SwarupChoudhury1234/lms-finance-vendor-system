@@ -7,10 +7,12 @@ import java.nio.file.Paths;
 
 @Configuration
 public class WebConfig implements WebMvcConfigurer {
+
+    // This handles ONLY image loading. No CORS here (SecurityConfig handles CORS).
     @Override
     public void addResourceHandlers(ResourceHandlerRegistry registry) {
-        // Expose the "uploads" folder to the URL "/screenshots/**"
         String uploadPath = Paths.get("./uploads/screenshots").toFile().getAbsolutePath();
+        
         registry.addResourceHandler("/screenshots/**")
                 .addResourceLocations("file:/" + uploadPath + "/");
     }

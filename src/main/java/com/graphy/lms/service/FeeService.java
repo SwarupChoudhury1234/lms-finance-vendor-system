@@ -356,4 +356,7 @@ public interface FeeService {
     void processAutoDebitForUser(Long userId, String studentName, String studentEmail);
  // Add inside FeeService interface
     void createStudentInstallmentPlan(Long studentId, com.graphy.lms.dto.InstallmentPlanRequest request);
+ // Inside FeeService.java interface
+    void saveMasterSettings(com.graphy.lms.dto.MasterSettingsRequest settings);
+    com.graphy.lms.dto.MasterSettingsRequest getMasterSettings();
 }

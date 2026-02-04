@@ -44,6 +44,13 @@ public class FeeStructure {
     
     @Column(name = "updated_at")
     private LocalDateTime updatedAt;
+ // Inside FeeStructure.java
+    @Column(name = "structure_name") // Optional: specific DB column name
+    private String name; 
+
+    // Generate Getters and Setters for 'name'
+    public String getName() { return name; }
+    public void setName(String name) { this.name = name; }
     
     // 🔴 NEW: Configuration for Automation
     @Column(name = "trigger_on_creation")

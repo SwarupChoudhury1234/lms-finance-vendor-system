@@ -44,7 +44,7 @@ public class LateFeeConfig {
     private LocalDateTime updatedAt;
     
     public enum PaymentSchedule {
-        MONTHLY, QUARTERLY, YEARLY
+        MONTHLY, QUARTERLY, YEARLY,WEEKLY,ONE_TIME
     }
     
     @PrePersist

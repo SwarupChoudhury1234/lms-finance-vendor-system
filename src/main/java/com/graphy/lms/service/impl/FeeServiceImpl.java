@@ -1,6 +1,9 @@
 package com.graphy.lms.service.impl;
 
 import com.graphy.lms.entity.*;
+import java.time.temporal.ChronoUnit;
+import java.time.LocalDate;
+import java.util.List;
 
 import com.razorpay.RazorpayClient;
 import com.razorpay.Order;
@@ -11,6 +14,7 @@ import com.graphy.lms.service.*;
 import com.graphy.lms.repository.*;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.slf4j.Logger;
+import com.graphy.lms.security.UserContext;
 import org.slf4j.LoggerFactory;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -25,7 +29,6 @@ import java.time.LocalDateTime;
 import java.time.temporal.ChronoUnit;
 import java.util.*;
 import java.util.stream.Collectors;
-	
 
 @Service
 @Transactional
@@ -54,6 +57,10 @@ public class FeeServiceImpl implements FeeService {
     @Autowired private CurrencyRateRepository currencyRateRepository;
     @Autowired private AuditLogRepository auditLogRepository;
     @Autowired private CertificateBlockListRepository certificateBlockListRepository;
+    @Autowired private GlobalConfigRepository globalConfigRepository;
+    @Autowired private UserContext userContext;
+    
+    
     
     @Autowired
     private EmailService emailService;
@@ -68,8 +75,7 @@ public class FeeServiceImpl implements FeeService {
     @org.springframework.beans.factory.annotation.Value("${razorpay.key.secret}")
     private String razorpaySecret;
  // Inside FeeServiceImpl.java
-    @Autowired
-    private GlobalConfigRepository globalConfigRepository;
+    
 
     // ============================================
     // 1. FEE TYPES CRUD
@@ -189,6 +195,8 @@ public class FeeServiceImpl implements FeeService {
         FeeStructure existing = getFeeStructureById(id);
         String oldValue = existing.toString();
         
+        if (feeStructure.getName() != null) existing.setName(feeStructure.getName());
+        
         if (feeStructure.getFeeTypeId() != null) existing.setFeeTypeId(feeStructure.getFeeTypeId());
         if (feeStructure.getAcademicYear() != null) existing.setAcademicYear(feeStructure.getAcademicYear());
         if (feeStructure.getCourseId() != null) existing.setCourseId(feeStructure.getCourseId());
@@ -288,28 +296,37 @@ public class FeeServiceImpl implements FeeService {
         if (allocation.getFeeStructureId() != null && allocation.getUserId() != null) {
             FeeStructure structure = getFeeStructureById(allocation.getFeeStructureId());
             
+            // A. Determine Base Amount
             BigDecimal baseAmount = (allocation.getOriginalAmount() != null) 
                     ? allocation.getOriginalAmount() 
                     : structure.getTotalAmount();
             allocation.setOriginalAmount(baseAmount);
 
-            // Apply Discounts
-            List<FeeDiscount> discounts = feeDiscountRepository.findByUserIdAndFeeStructureId(
-                    allocation.getUserId(), allocation.getFeeStructureId());
-            
             BigDecimal totalDiscount = BigDecimal.ZERO;
-            for (FeeDiscount discount : discounts) {
-                if (Boolean.TRUE.equals(discount.getIsActive())) {
-                     if (discount.getDiscountType() == FeeDiscount.DiscountType.PERCENTAGE) {
-                        BigDecimal dAmount = baseAmount.multiply(discount.getDiscountValue())
-                                .divide(BigDecimal.valueOf(100), 2, RoundingMode.HALF_UP);
-                        totalDiscount = totalDiscount.add(dAmount);
-                    } else {
-                        totalDiscount = totalDiscount.add(discount.getDiscountValue());
+
+            // 🔴 FIX: TRUST FRONTEND FIRST
+            // If frontend sent a discount > 0, use it. Otherwise, calculate from DB.
+            if (allocation.getTotalDiscount() != null && allocation.getTotalDiscount().compareTo(BigDecimal.ZERO) > 0) {
+                totalDiscount = allocation.getTotalDiscount();
+            } else {
+                // FALLBACK: Calculate from Database Records
+                List<FeeDiscount> discounts = feeDiscountRepository.findByUserIdAndFeeStructureId(
+                        allocation.getUserId(), allocation.getFeeStructureId());
+                
+                for (FeeDiscount discount : discounts) {
+                    if (Boolean.TRUE.equals(discount.getIsActive())) {
+                         if (discount.getDiscountType() == FeeDiscount.DiscountType.PERCENTAGE) {
+                            BigDecimal dAmount = baseAmount.multiply(discount.getDiscountValue())
+                                    .divide(BigDecimal.valueOf(100), 2, RoundingMode.HALF_UP);
+                            totalDiscount = totalDiscount.add(dAmount);
+                        } else {
+                            totalDiscount = totalDiscount.add(discount.getDiscountValue());
+                        }
                     }
                 }
             }
 
+            // B. Final Calculations
             BigDecimal payableAmount = baseAmount.subtract(totalDiscount).max(BigDecimal.ZERO);
             
             allocation.setTotalDiscount(totalDiscount);
@@ -319,7 +336,11 @@ public class FeeServiceImpl implements FeeService {
                                        allocation.getAdvancePayment() : BigDecimal.ZERO;
             
             allocation.setRemainingAmount(payableAmount.subtract(plannedAdvance));
-            allocation.setCurrency(structure.getCurrency());
+            
+            // Fix: Fetch currency if missing
+            if (allocation.getCurrency() == null) {
+                allocation.setCurrency(structure.getCurrency());
+            }
         }
         
         allocation.setAllocationDate(LocalDate.now());
@@ -328,54 +349,31 @@ public class FeeServiceImpl implements FeeService {
         // 3. SAVE TO DATABASE
         StudentFeeAllocation saved = studentFeeAllocationRepository.save(allocation);
 
-        // 🔴 4. EMAIL TRIGGER (FIXED: removed invalid getStudentName() call)
+        // 4. EMAIL TRIGGER
         try {
-            // A. Check Global Master Switch
             String isGlobalEnabled = getGlobalSetting("NOTIF_FEE_CREATION_ENABLED", "true");
             
-            if ("false".equalsIgnoreCase(isGlobalEnabled)) {
-                logger.info("🚫 Fee Creation Notification is GLOBALLY DISABLED. Email skipped.");
-            } else {
+            if (!"false".equalsIgnoreCase(isGlobalEnabled)) {
                 FeeStructure structure = getFeeStructureById(saved.getFeeStructureId());
                 
                 if (Boolean.TRUE.equals(structure.getTriggerOnCreation())) {
-                    
-                    // B. Get Target Email (Dynamic)
-                    // This works because you have @Transient studentEmail in your entity
                     String targetEmail = allocation.getStudentEmail();
-                    
-                    // C. Get Student Name (FIXED: Use Fallback "Student")
-                    // Your entity does NOT have a 'studentName' field, so we cannot call .getStudentName()
                     String studentName = "Student"; 
 
-                    if (targetEmail == null || targetEmail.isEmpty()) {
-                         logger.warn("⚠️ No email provided for Fee Creation notification. Skipping.");
-                         return saved; 
-                    }
-
-                    // D. Safely Get Fee Name
-                    String feeName = "Fee Structure #" + structure.getId(); // Default fallback
-                    if (structure.getFeeTypeId() != null) {
-                        try {
-                            FeeType type = getFeeTypeById(structure.getFeeTypeId());
-                            if (type != null) {
-                                feeName = type.getName();
-                            }
-                        } catch (Exception ex) {
-                            // FeeType not found, keep default ID
+                    if (targetEmail != null && !targetEmail.isEmpty()) {
+                        String feeName = "Fee Structure #" + structure.getId(); 
+                        if (structure.getFeeTypeId() != null) {
+                            try {
+                                FeeType type = getFeeTypeById(structure.getFeeTypeId());
+                                if (type != null) feeName = type.getName();
+                            } catch (Exception ex) {}
                         }
-                    }
 
-                    // E. Send Automated Email
-                    emailService.sendFeeAssignedEmail(
-                        targetEmail,    // <--- Sends to the specific student email
-                        studentName,    // <--- Uses "Student"
-                        feeName, 
-                        saved.getPayableAmount(),
-                        LocalDate.now().plusDays(30)
-                    );
-                    
-                    logger.info("✅ Fee Creation Email sent to: " + targetEmail);
+                        emailService.sendFeeAssignedEmail(
+                            targetEmail, studentName, feeName, 
+                            saved.getPayableAmount(), LocalDate.now().plusDays(30)
+                        );
+                    }
                 }
             }
         } catch (Exception e) {
@@ -1099,103 +1097,120 @@ public class FeeServiceImpl implements FeeService {
         applyLateFees(null); // Just delegate with null email
     }
 
+ // In FeeServiceImpl.java
+
+ // Inside FeeServiceImpl.java
+
+ // In FeeServiceImpl.java
+
     @Override
     public void applyLateFees(String manualEmail) {
-        // 🔴 1. GLOBAL MASTER SWITCH (Logic from "Fee Module Settings" Image)
-        // If the Admin has disabled "Enable Late Fees", we stop everything immediately.
+        // 1. GLOBAL MASTER SWITCH
         String isMasterEnabled = getGlobalSetting("ENABLE_LATE_FEES", "false");
-        
         if ("false".equalsIgnoreCase(isMasterEnabled)) {
             logger.info("🚫 Late Fees are GLOBALLY DISABLED. Skipping auto-application.");
-            return; // 🛑 STOP HERE
+            return;
         }
 
-        // ==========================================
-        // EXISTING LOGIC STARTS HERE
-        // ==========================================
         LocalDate today = LocalDate.now();
         List<StudentInstallmentPlan> overdueInstallments = getOverdueInstallments();
+        // Fetch active configs (e.g., Weekly, Monthly)
         List<LateFeeConfig> configs = lateFeeConfigRepository.findActiveConfigsForDate(today);
-        
+
         for (StudentInstallmentPlan installment : overdueInstallments) {
             if (installment.getStatus() == StudentInstallmentPlan.InstallmentStatus.PAID) continue;
-            
+
             LocalDate dueDate = installment.getDueDate();
-            
+
             for (LateFeeConfig config : configs) {
-                // 1. CALCULATE CALENDAR-SMART DATES
-                LocalDate penaltyStartDate;
-                LocalDate penaltyEndDate; 
+                
+                // 2. LOGIC: Calculate All "Missed" Penalties (Recurring)
+                // We start checking from the Due Date and move forward in time
+                LocalDate nextPenaltyDate = dueDate; 
+                
+                // Determine the "Step" (1 Week, 1 Month, etc.)
+                long periodToAdd = (config.getPeriodCount() != null && config.getPeriodCount() > 0) 
+                                 ? config.getPeriodCount() : 1;
+                                 
+                boolean isRecurring = true;
 
                 switch (config.getPaymentSchedule()) {
+                    case WEEKLY:
+                        nextPenaltyDate = nextPenaltyDate.plusWeeks(periodToAdd);
+                        break;
                     case MONTHLY:
-                        penaltyStartDate = dueDate.plusMonths(config.getPeriodCount());
-                        penaltyEndDate = penaltyStartDate.plusMonths(1); 
+                        nextPenaltyDate = nextPenaltyDate.plusMonths(periodToAdd);
                         break;
                     case QUARTERLY:
-                        penaltyStartDate = dueDate.plusMonths((long) config.getPeriodCount() * 3);
-                        penaltyEndDate = penaltyStartDate.plusMonths(3);
+                        nextPenaltyDate = nextPenaltyDate.plusMonths(periodToAdd * 3);
                         break;
                     case YEARLY:
-                        penaltyStartDate = dueDate.plusYears(config.getPeriodCount());
-                        penaltyEndDate = penaltyStartDate.plusYears(1);
+                        nextPenaltyDate = nextPenaltyDate.plusYears(periodToAdd);
+                        break;
+                    case ONE_TIME:
+                        // One Time is Special: Starts Day+1, never repeats
+                        nextPenaltyDate = dueDate.plusDays(1);
+                        isRecurring = false; 
                         break;
                     default:
-                        continue;
+                        continue; // Skip unknown types
                 }
-                
-                // 2. CHECK IF TODAY FALLS IN THE PENALTY WINDOW
-                boolean isPenaltyApplicable = !today.isBefore(penaltyStartDate) && today.isBefore(penaltyEndDate);
-                
-                if (isPenaltyApplicable) {
-                     List<LateFeePenalty> existing = lateFeePenaltyRepository
-                         .findByStudentInstallmentPlanId(installment.getId());
-                     
-                     // 3. PREVENT DUPLICATES
-                     boolean alreadyApplied = existing.stream()
-                         .anyMatch(p -> p.getPenaltyAmount().compareTo(config.getPenaltyAmount()) == 0 
-                                     && p.getPenaltyDate().isAfter(penaltyStartDate.minusDays(1)) 
-                                     && p.getPenaltyDate().isBefore(penaltyEndDate));
-                     
-                     if (!alreadyApplied) { 
-                        // A. CREATE FINANCIAL RECORD (Always happens if Master Switch is ON)
+
+                // 3. LOOP: Apply penalties for every period passed until Today
+                // For ONE_TIME, this loop runs once. For WEEKLY, it runs for Week 1, Week 2, etc.
+                while (!nextPenaltyDate.isAfter(today)) {
+                    
+                    // A. Check for Duplicates (Has this specific date's penalty been applied?)
+                    LocalDate currentCheckDate = nextPenaltyDate;
+                    List<LateFeePenalty> existing = lateFeePenaltyRepository
+                            .findByStudentInstallmentPlanId(installment.getId());
+
+                    boolean alreadyApplied = existing.stream()
+                        .anyMatch(p -> p.getPenaltyAmount().compareTo(config.getPenaltyAmount()) == 0 
+                                    && p.getReason().contains(currentCheckDate.toString())); 
+                                    // We use Date in Reason to make it unique per week
+
+                    if (!alreadyApplied) {
+                        // B. CREATE PENALTY
                         LateFeePenalty penalty = new LateFeePenalty();
                         penalty.setStudentInstallmentPlanId(installment.getId());
                         penalty.setPenaltyAmount(config.getPenaltyAmount());
-                        penalty.setPenaltyDate(today);
+                        penalty.setPenaltyDate(today); // Applied Today
                         
-                        long actualDaysLate = ChronoUnit.DAYS.between(dueDate, today);
-                        penalty.setReason("Overdue by " + actualDaysLate + " days (Calendar Rule)");
-                        
+                        long daysLate = java.time.temporal.ChronoUnit.DAYS.between(dueDate, currentCheckDate);
+                        // Add Date to Reason so we don't apply it twice for the same week
+                        penalty.setReason("Late Fee for: " + currentCheckDate + " (" + daysLate + " days late)");
+
                         createLateFeePenalty(penalty);
                         
-                        // B. UPDATE STATUS
+                        // C. UPDATE STATUS
                         installment.setStatus(StudentInstallmentPlan.InstallmentStatus.OVERDUE);
                         studentInstallmentPlanRepository.save(installment);
 
-                        // 🔴 4. EMAIL NOTIFICATION TOGGLE (Logic from "Notification Automation" Image)
-                        // We check if the Admin wants to send emails for this event.
+                        // D. SEND EMAIL (Toggle Check)
                         String isEmailEnabled = getGlobalSetting("NOTIF_OVERDUE_ALERT_ENABLED", "true");
-                        
                         if ("true".equalsIgnoreCase(isEmailEnabled)) {
                             StudentFeeAllocation allocation = getFeeAllocationById(installment.getStudentFeeAllocationId());
-                            
-                            // Use manual email if provided (for testing), otherwise fetch from allocation/user
                             String targetEmail = (manualEmail != null && !manualEmail.isEmpty()) 
-                                                ? manualEmail 
-                                                : allocation.getStudentEmail(); // Assuming this field exists or fetch from User entity
+                                               ? manualEmail 
+                                               : allocation.getStudentEmail();
                             
                             if (targetEmail != null) {
                                 sendOverdueWarningNotification(allocation.getUserId(), installment.getId(), targetEmail);
-                                logger.info("✅ Overdue Alert Email sent to User ID: " + allocation.getUserId());
-                            } else {
-                                logger.warn("⚠️ Overdue Alert skipped: No email found for User ID: " + allocation.getUserId());
                             }
-                        } else {
-                            // TOGGLE IS OFF - SILENT MODE
-                            logger.info("🔕 Overdue Alert Toggle is OFF. Penalty applied but Email skipped for Installment ID: " + installment.getId());
                         }
-                     }
+                    }
+
+                    // E. PREPARE NEXT ITERATION
+                    if (!isRecurring) break; // Stop if One-Time
+                    
+                    // Move to next period (Week 2, Month 2...)
+                    switch (config.getPaymentSchedule()) {
+                        case WEEKLY: nextPenaltyDate = nextPenaltyDate.plusWeeks(periodToAdd); break;
+                        case MONTHLY: nextPenaltyDate = nextPenaltyDate.plusMonths(periodToAdd); break;
+                        case QUARTERLY: nextPenaltyDate = nextPenaltyDate.plusMonths(periodToAdd * 3); break;
+                        case YEARLY: nextPenaltyDate = nextPenaltyDate.plusYears(periodToAdd); break;
+                    }
                 }
             }
         }
@@ -2842,15 +2857,30 @@ public class FeeServiceImpl implements FeeService {
     }
  // ... inside FeeServiceImpl.java ...
 
+ // Inside FeeServiceImpl.java
+
     @Override
     @Transactional
     public List<StudentFeeAllocation> createBulkAllocation(
             List<Long> userIds, 
             Long feeStructureId, 
-            List<Long> discountIds, // <--- Accepting IDs [55, 56]
+            List<Long> discountIds, 
             BigDecimal originalAmount, 
             BigDecimal advancePayment) {
         
+        // 1. FETCH FEE STRUCTURE & TYPE TO VALIDATE
+        FeeStructure feeStructure = getFeeStructureById(feeStructureId);
+        FeeType feeType = getFeeTypeById(feeStructure.getFeeTypeId());
+
+        // 🔴 CRITICAL VALIDATION: BLOCK 'COURSE FEE' FOR BATCHES
+        // The Batch Module (Ganesh) handles Course Fees automatically. 
+        // Finance should not Bulk Assign it.
+        if ("Course Fee".equalsIgnoreCase(feeType.getName())) {
+            throw new RuntimeException("OPERATION BLOCKED: 'Course Fee' cannot be assigned to an entire batch from the Finance Module. " +
+                                     "It is managed automatically by the Batch Module. " +
+                                     "You can only assign Exam, Lab, Tuition, or Admission fees in bulk.");
+        }
+
         List<StudentFeeAllocation> results = new ArrayList<>();
 
         // A. Fetch the "Template" Discounts (Source of Truth)
@@ -2874,7 +2904,6 @@ public class FeeServiceImpl implements FeeService {
             if (exists) continue; 
 
             // 🔴 C. CLONE DISCOUNTS FOR THIS STUDENT
-            // We take the values from IDs 55, 56 and create NEW records for User B, User C, etc.
             if (!sourceDiscounts.isEmpty()) {
                 for (FeeDiscount source : sourceDiscounts) {
                     FeeDiscount newDiscount = new FeeDiscount();
@@ -3115,5 +3144,260 @@ public class FeeServiceImpl implements FeeService {
         createInstallmentsForStudent(activeAllocation.getId(), plansToSave);
         
         logger.info("Created installment plan via reuse for Student ID {}", userId);
+    }
+    @Override
+
+    @Transactional
+
+    public void saveMasterSettings(com.graphy.lms.dto.MasterSettingsRequest settings) {
+
+
+    // ==========================================
+
+    // 1. SAVE GENERAL SETTINGS (GlobalConfig)
+
+    // ==========================================
+
+    if (settings.getGeneral() != null) {
+
+    var gen = settings.getGeneral();
+
+    saveGlobalConfig("CURRENCY", gen.getCurrency());
+
+    saveGlobalConfig("CURRENCY_SYMBOL", gen.getCurrencySymbol());
+
+    saveGlobalConfig("TAX_NAME", gen.getTaxName());
+
+    saveGlobalConfig("TAX_PERCENTAGE", String.valueOf(gen.getTaxPercentage()));
+
+    saveGlobalConfig("INVOICE_PREFIX", gen.getInvoicePrefix());
+
+    saveGlobalConfig("CURRENT_FINANCIAL_YEAR", gen.getFinancialYear());
+
+    }
+
+
+
+    // ==========================================
+
+    // 2. SAVE NOTIFICATION SETTINGS (GlobalConfig)
+
+    // ==========================================
+
+    if (settings.getNotifications() != null) {
+
+    var notif = settings.getNotifications();
+
+    saveGlobalConfig("NOTIF_FEE_CREATION_ENABLED", String.valueOf(notif.getCreation()));
+
+    saveGlobalConfig("NOTIF_PENDING_REMINDER_ENABLED", String.valueOf(notif.getPending()));
+
+    saveGlobalConfig("NOTIF_OVERDUE_ALERT_ENABLED", String.valueOf(notif.getOverdue()));
+
+    saveGlobalConfig("NOTIF_PAYMENT_SUCCESS_ENABLED", String.valueOf(notif.getPaymentSuccess()));
+
+    saveGlobalConfig("NOTIF_PARTIAL_PAYMENT_ENABLED", String.valueOf(notif.getPartialPayment()));
+
+    saveGlobalConfig("NOTIF_REFUND_UPDATE_ENABLED", String.valueOf(notif.getRefundStatus()));
+
+    }
+
+
+
+    // ==========================================
+
+    // 3. SAVE LATE FEE SETTINGS (Hybrid)
+
+    // ==========================================
+
+    if (settings.getLateFee() != null) {
+
+    var lf = settings.getLateFee();
+
+
+    // A. Save the Master Toggle
+
+    saveGlobalConfig("ENABLE_LATE_FEES", String.valueOf(lf.getEnabled()));
+
+
+
+    // B. Create/Update the Rule in late_fee_configs table
+
+    // We create a new rule that matches the frontend's request
+
+    LateFeeConfig config = new LateFeeConfig();
+
+    config.setPenaltyAmount(lf.getAmount());
+
+    config.setIsActive(true);
+
+    Long currentUserId = userContext.getCurrentUserId(); // Assuming you have UserContext
+
+    config.setCreatedBy(currentUserId != null ? currentUserId : 1L); // Default Admin
+
+    config.setEffectiveFrom(LocalDate.now());
+
+
+
+    // C. MAP FREQUENCY (Frontend "weekly" -> Backend Enum)
+
+    if ("weekly".equalsIgnoreCase(lf.getFrequency())) {
+
+    config.setPaymentSchedule(LateFeeConfig.PaymentSchedule.WEEKLY);
+
+    config.setPeriodCount(1);
+
+    } else if ("monthly".equalsIgnoreCase(lf.getFrequency())) {
+
+    config.setPaymentSchedule(LateFeeConfig.PaymentSchedule.MONTHLY);
+
+    config.setPeriodCount(1);
+
+    } else {
+
+    // Default fallback for "fixed" or unknown types
+
+    config.setPaymentSchedule(LateFeeConfig.PaymentSchedule.ONE_TIME);
+
+    config.setPeriodCount(0);
+
+    }
+
+
+
+    // D. Deactivate old active configs to avoid conflicts
+
+    List<LateFeeConfig> oldConfigs = lateFeeConfigRepository.findByIsActive(true);
+
+    for (LateFeeConfig old : oldConfigs) {
+
+    old.setIsActive(false);
+
+    lateFeeConfigRepository.save(old);
+
+    }
+
+
+
+    // E. Save New Rule
+
+    LateFeeConfig savedConfig = lateFeeConfigRepository.save(config);
+
+
+
+    // 🔴🔴🔴 F. CREATE AUDIT LOG (The Fix) 🔴🔴🔴
+
+    createAuditLog(
+
+    "FEE_MANAGEMENT",
+
+    "LateFeeConfig",
+
+    savedConfig.getId(),
+
+    AuditLog.Action.UPDATE,
+
+    "Previous Rules Deactivated",
+
+    savedConfig.toString(),
+
+    currentUserId
+
+    );
+
+    }
+
+    }
+    // Helper method to save simpler Global Configs
+    private void saveGlobalConfig(String key, String value) {
+        if (value == null) return;
+        GlobalConfig config = new GlobalConfig();
+        config.setConfigKey(key);
+        config.setConfigValue(value);
+        globalConfigRepository.save(config);
+    }
+    @Override
+    public com.graphy.lms.dto.MasterSettingsRequest getMasterSettings() {
+        try {
+            com.graphy.lms.dto.MasterSettingsRequest response = new com.graphy.lms.dto.MasterSettingsRequest();
+
+            // 1. Fetch All Global Configs
+            List<GlobalConfig> configs = globalConfigRepository.findAll();
+            
+            // 🔴 CRASH-PROOF MAPPING (Handles Nulls safely)
+            Map<String, String> configMap = new HashMap<>();
+            if (configs != null) {
+                for (GlobalConfig config : configs) {
+                    // Only add if Key is not null. If Value is null, use empty string ""
+                    if (config.getConfigKey() != null) {
+                        configMap.put(config.getConfigKey(), 
+                            config.getConfigValue() != null ? config.getConfigValue() : "");
+                    }
+                }
+            }
+
+            // 2. Map GENERAL Settings
+            com.graphy.lms.dto.MasterSettingsRequest.GeneralSettings general = new com.graphy.lms.dto.MasterSettingsRequest.GeneralSettings();
+            general.setCurrency(configMap.getOrDefault("CURRENCY", "INR"));
+            general.setCurrencySymbol(configMap.getOrDefault("CURRENCY_SYMBOL", "₹"));
+            general.setTaxName(configMap.getOrDefault("TAX_NAME", "GST"));
+            
+            // Safe Double Parsing
+            String taxStr = configMap.getOrDefault("TAX_PERCENTAGE", "18");
+            try {
+                general.setTaxPercentage(Double.parseDouble(taxStr));
+            } catch (Exception e) {
+                general.setTaxPercentage(18.0);
+            }
+            
+            general.setInvoicePrefix(configMap.getOrDefault("INVOICE_PREFIX", "INV-"));
+            general.setFinancialYear(configMap.getOrDefault("CURRENT_FINANCIAL_YEAR", "2025-26"));
+            response.setGeneral(general);
+
+            // 3. Map NOTIFICATION Settings
+            com.graphy.lms.dto.MasterSettingsRequest.NotificationSettings notif = new com.graphy.lms.dto.MasterSettingsRequest.NotificationSettings();
+            notif.setCreation(Boolean.parseBoolean(configMap.getOrDefault("NOTIF_FEE_CREATION_ENABLED", "true")));
+            notif.setPending(Boolean.parseBoolean(configMap.getOrDefault("NOTIF_PENDING_REMINDER_ENABLED", "true")));
+            notif.setOverdue(Boolean.parseBoolean(configMap.getOrDefault("NOTIF_OVERDUE_ALERT_ENABLED", "true")));
+            notif.setPaymentSuccess(Boolean.parseBoolean(configMap.getOrDefault("NOTIF_PAYMENT_SUCCESS_ENABLED", "true")));
+            notif.setPartialPayment(Boolean.parseBoolean(configMap.getOrDefault("NOTIF_PARTIAL_PAYMENT_ENABLED", "false")));
+            notif.setRefundStatus(Boolean.parseBoolean(configMap.getOrDefault("NOTIF_REFUND_UPDATE_ENABLED", "true")));
+            response.setNotifications(notif);
+
+            // 4. Map LATE FEE Settings
+            com.graphy.lms.dto.MasterSettingsRequest.LateFeeSettings lateFee = new com.graphy.lms.dto.MasterSettingsRequest.LateFeeSettings();
+            
+            lateFee.setEnabled(Boolean.parseBoolean(configMap.getOrDefault("ENABLE_LATE_FEES", "false")));
+            
+            // Safe Repository Access
+            List<LateFeeConfig> activeRules = lateFeeConfigRepository.findByIsActive(true);
+            if (activeRules != null && !activeRules.isEmpty()) {
+                LateFeeConfig rule = activeRules.get(0); 
+                lateFee.setAmount(rule.getPenaltyAmount());
+                lateFee.setMaxCap(new BigDecimal("2000")); 
+                lateFee.setSendEmail(true); 
+                lateFee.setType("fixed");
+
+                if (rule.getPaymentSchedule() == LateFeeConfig.PaymentSchedule.WEEKLY) {
+                    lateFee.setFrequency("weekly");
+                } else if (rule.getPaymentSchedule() == LateFeeConfig.PaymentSchedule.MONTHLY) {
+                    lateFee.setFrequency("monthly");
+                } else {
+                    lateFee.setFrequency("fixed"); 
+                }
+            } else {
+                lateFee.setAmount(BigDecimal.ZERO);
+                lateFee.setFrequency("weekly");
+                lateFee.setType("fixed");
+            }
+            response.setLateFee(lateFee);
+
+            return response;
+
+        } catch (Exception e) {
+            // 🔴 THIS PRINTS THE REAL ERROR TO YOUR BACKEND CONSOLE
+            e.printStackTrace(); 
+            throw e; 
+        }
     }
 }

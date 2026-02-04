@@ -58,7 +58,7 @@ import jakarta.validation.Valid;
 
 @RestController
 @RequestMapping("/api/fee-management")
-@CrossOrigin(origins = "http://localhost:3000") // <--- ADD THIS LINE
+@CrossOrigin(origins = "*")
 public class FeeController {
 
     @Autowired
@@ -1609,5 +1609,26 @@ public class FeeController {
         response.put("data", data);
 
         return ResponseEntity.ok(response);
+    }
+ // Inside FeeController.java
+
+    @PostMapping("/master-settings")
+    @PreAuthorize("hasRole('ADMIN')")
+    public ResponseEntity<Map<String, String>> updateMasterSettings(@RequestBody com.graphy.lms.dto.MasterSettingsRequest settings) {
+        
+        feeManagementService.saveMasterSettings(settings);
+        
+        Map<String, String> response = new HashMap<>();
+        response.put("status", "success");
+        response.put("message", "All settings updated successfully");
+        return ResponseEntity.ok(response);
+    }
+ // Inside FeeController.java
+
+    @GetMapping({"/master-settings", "/settings"}) // Maps to BOTH URLs to be safe
+    @PreAuthorize("hasRole('ADMIN')")
+    public ResponseEntity<com.graphy.lms.dto.MasterSettingsRequest> getMasterSettings() {
+        com.graphy.lms.dto.MasterSettingsRequest settings = feeManagementService.getMasterSettings();
+        return ResponseEntity.ok(settings);
     }
 }
