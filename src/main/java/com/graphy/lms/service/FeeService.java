@@ -55,15 +55,7 @@ public interface FeeService {
     // Calculate payable amount after discounts
     BigDecimal calculatePayableAmount(Long userId, Long feeStructureId);
     
-    // ============================================
-    // 5. PAYMENT ALTERNATIVES CRUD
-    // ============================================
-    PaymentAlternative createPaymentAlternative(PaymentAlternative alternative);
-    PaymentAlternative getPaymentAlternativeById(Long id);
-    List<PaymentAlternative> getAllPaymentAlternatives();
-    List<PaymentAlternative> getActivePaymentAlternatives();
-    PaymentAlternative updatePaymentAlternative(Long id, PaymentAlternative alternative);
-    void deletePaymentAlternative(Long id);
+   
     
     // ============================================
     // 6. STUDENT INSTALLMENT PLANS CRUD + BUSINESS LOGIC

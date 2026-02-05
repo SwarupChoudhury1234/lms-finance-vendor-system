@@ -64,19 +64,6 @@ CREATE TABLE student_fee_allocations (
     FOREIGN KEY (fee_structure_id) REFERENCES fee_structures(id)
 );
 
--- ============================================
--- 5. PAYMENT ALTERNATIVES (Admin Config)
--- ============================================
-CREATE TABLE payment_alternatives (
-    id BIGINT PRIMARY KEY AUTO_INCREMENT,
-    alternative_name VARCHAR(100) NOT NULL,
-    number_of_installments INT NOT NULL,
-    description VARCHAR(255),
-    is_active BOOLEAN DEFAULT TRUE,
-    created_by BIGINT,
-    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-    updated_at TIMESTAMP NULL ON UPDATE CURRENT_TIMESTAMP
-);
 
 -- ============================================
 -- 6. STUDENT INSTALLMENT PLANS (Student Choice)

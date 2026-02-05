@@ -18,8 +18,6 @@ public class StudentInstallmentPlan {
     @Column(name = "student_fee_allocation_id", nullable = false)
     private Long studentFeeAllocationId;
     
-    @Column(name = "payment_alternative_id", nullable = false)
-    private Long paymentAlternativeId;
     
     @Column(name = "installment_number", nullable = false)
     private Integer installmentNumber;
@@ -76,13 +74,7 @@ public class StudentInstallmentPlan {
         this.studentFeeAllocationId = studentFeeAllocationId;
     }
     
-    public Long getPaymentAlternativeId() {
-        return paymentAlternativeId;
-    }
     
-    public void setPaymentAlternativeId(Long paymentAlternativeId) {
-        this.paymentAlternativeId = paymentAlternativeId;
-    }
     
     public Integer getInstallmentNumber() {
         return installmentNumber;

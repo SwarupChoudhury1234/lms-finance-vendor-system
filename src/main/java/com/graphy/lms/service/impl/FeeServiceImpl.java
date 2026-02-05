@@ -21,7 +21,7 @@ import org.springframework.transaction.annotation.Transactional;
 import org.springframework.web.context.request.RequestContextHolder;
 import org.springframework.web.context.request.ServletRequestAttributes;
 import jakarta.servlet.http.HttpServletRequest;
-
+import com.graphy.lms.repository.UserRepository;
 import java.math.BigDecimal;
 import java.math.RoundingMode;
 import java.time.LocalDate;
@@ -43,7 +43,6 @@ public class FeeServiceImpl implements FeeService {
     @Autowired private FeeStructureRepository feeStructureRepository;
     @Autowired private FeeDiscountRepository feeDiscountRepository;
     @Autowired private StudentFeeAllocationRepository studentFeeAllocationRepository;
-    @Autowired private PaymentAlternativeRepository paymentAlternativeRepository;
     @Autowired private StudentInstallmentPlanRepository studentInstallmentPlanRepository;
     @Autowired private StudentFeePaymentRepository studentFeePaymentRepository;
     @Autowired private LateFeeConfigRepository lateFeeConfigRepository;
@@ -59,6 +58,7 @@ public class FeeServiceImpl implements FeeService {
     @Autowired private CertificateBlockListRepository certificateBlockListRepository;
     @Autowired private GlobalConfigRepository globalConfigRepository;
     @Autowired private UserContext userContext;
+    @Autowired private UserRepository userRepository; // You need this to find the email!
     
     
     
@@ -384,13 +384,34 @@ public class FeeServiceImpl implements FeeService {
     }
     @Override
     public StudentFeeAllocation getFeeAllocationById(Long id) {
-        return studentFeeAllocationRepository.findById(id)
+        StudentFeeAllocation allocation = studentFeeAllocationRepository.findById(id)
                 .orElseThrow(() -> new RuntimeException("StudentFeeAllocation not found with id: " + id));
+                
+        // Fill Email
+        if (allocation.getUserId() != null) {
+            userRepository.findById(allocation.getUserId()).ifPresent(user -> {
+                allocation.setStudentEmail(user.getEmail());
+            });
+        }
+        
+        return allocation;
     }
 
     @Override
     public List<StudentFeeAllocation> getAllFeeAllocations() {
-        return studentFeeAllocationRepository.findAll();
+        List<StudentFeeAllocation> allocations = studentFeeAllocationRepository.findAll();
+        
+        // LOOP through all allocations and fill the missing email
+        for (StudentFeeAllocation allocation : allocations) {
+            if (allocation.getUserId() != null) {
+                // Fetch User from DB (Handle safely if User Repo is missing)
+                userRepository.findById(allocation.getUserId()).ifPresent(user -> {
+                    allocation.setStudentEmail(user.getEmail()); // <--- THIS FILLS THE NULL
+                });
+            }
+        }
+        
+        return allocations;
     }
 
     @Override
@@ -460,59 +481,7 @@ public class FeeServiceImpl implements FeeService {
         return payableAmount.compareTo(BigDecimal.ZERO) < 0 ? BigDecimal.ZERO : payableAmount;
     }
  
-    // ============================================
-    // 5. PAYMENT ALTERNATIVES CRUD
-    // ============================================
     
-    @Override
-    public PaymentAlternative createPaymentAlternative(PaymentAlternative alternative) {
-        PaymentAlternative saved = paymentAlternativeRepository.save(alternative);
-        createAuditLog("FEE_MANAGEMENT", "PaymentAlternative", saved.getId(), 
-                      AuditLog.Action.CREATE, null, alternative.toString(), null);
-        return saved;
-    }
-
-    @Override
-    public PaymentAlternative getPaymentAlternativeById(Long id) {
-        return paymentAlternativeRepository.findById(id)
-                .orElseThrow(() -> new RuntimeException("PaymentAlternative not found with id: " + id));
-    }
-
-    @Override
-    public List<PaymentAlternative> getAllPaymentAlternatives() {
-        return paymentAlternativeRepository.findAll();
-    }
-
-    @Override
-    public List<PaymentAlternative> getActivePaymentAlternatives() {
-        return paymentAlternativeRepository.findByIsActive(true);
-    }
-
-    @Override
-    public PaymentAlternative updatePaymentAlternative(Long id, PaymentAlternative alternative) {
-        PaymentAlternative existing = getPaymentAlternativeById(id);
-        String oldValue = existing.toString();
-        
-        if (alternative.getAlternativeName() != null) existing.setAlternativeName(alternative.getAlternativeName());
-        if (alternative.getNumberOfInstallments() != null) existing.setNumberOfInstallments(alternative.getNumberOfInstallments());
-        if (alternative.getDescription() != null) existing.setDescription(alternative.getDescription());
-        if (alternative.getIsActive() != null) existing.setIsActive(alternative.getIsActive());
-        if (alternative.getCreatedBy() != null) existing.setCreatedBy(alternative.getCreatedBy());
-        
-        PaymentAlternative updated = paymentAlternativeRepository.save(existing);
-        createAuditLog("FEE_MANAGEMENT", "PaymentAlternative", id, 
-                      AuditLog.Action.UPDATE, oldValue, updated.toString(), null);
-        return updated;
-    }
-
-    @Override
-    public void deletePaymentAlternative(Long id) {
-        PaymentAlternative existing = getPaymentAlternativeById(id);
-        paymentAlternativeRepository.deleteById(id);
-        createAuditLog("FEE_MANAGEMENT", "PaymentAlternative", id, 
-                      AuditLog.Action.DELETE, existing.toString(), null, null);
-    }
-
     // ============================================
     // 6. STUDENT INSTALLMENT PLANS CRUD + BUSINESS LOGIC
     // ============================================
@@ -547,7 +516,7 @@ public class FeeServiceImpl implements FeeService {
         String oldValue = existing.toString();
         
         if (plan.getStudentFeeAllocationId() != null) existing.setStudentFeeAllocationId(plan.getStudentFeeAllocationId());
-        if (plan.getPaymentAlternativeId() != null) existing.setPaymentAlternativeId(plan.getPaymentAlternativeId());
+        
         if (plan.getInstallmentNumber() != null) existing.setInstallmentNumber(plan.getInstallmentNumber());
         if (plan.getInstallmentAmount() != null) existing.setInstallmentAmount(plan.getInstallmentAmount());
         if (plan.getDueDate() != null) existing.setDueDate(plan.getDueDate());
@@ -612,13 +581,7 @@ public class FeeServiceImpl implements FeeService {
     public List<StudentInstallmentPlan> resetInstallments(Long allocationId, Long alternativeId, 
                                                         List<Map<String, Object>> newInstallmentDetails) {
         
-        // 1. Template Validation
-        if (alternativeId != null) {
-            PaymentAlternative alternative = getPaymentAlternativeById(alternativeId);
-            if (newInstallmentDetails.size() != alternative.getNumberOfInstallments()) {
-                 throw new RuntimeException("Mismatch: Template requires " + alternative.getNumberOfInstallments() + " installments.");
-            }
-        }
+        
 
         List<StudentInstallmentPlan> existingInstallments = getInstallmentPlansByAllocationId(allocationId);
         List<StudentInstallmentPlan> keptInstallments = new ArrayList<>();
@@ -674,7 +637,7 @@ public class FeeServiceImpl implements FeeService {
         for (Map<String, Object> detail : newInstallmentDetails) {
             StudentInstallmentPlan plan = new StudentInstallmentPlan();
             plan.setStudentFeeAllocationId(allocationId);
-            plan.setPaymentAlternativeId(alternativeId);
+            
             
             plan.setInstallmentNumber((Integer) detail.get("installmentNumber"));
             plan.setDueDate(LocalDate.parse(detail.get("dueDate").toString())); 
@@ -3117,33 +3080,54 @@ public class FeeServiceImpl implements FeeService {
         BATCH,
         COURSE
     }
+ // In FeeServiceImpl.java
+
     @Override
     @Transactional
     public void createStudentInstallmentPlan(Long userId, com.graphy.lms.dto.InstallmentPlanRequest request) {
         
-        // 1. Find the Active Allocation (Unique logic of this method)
+        // 1. Fetch ALL allocations for this student (e.g., Tuition: 5000, Course: 9500, Exam: 1000)
         List<StudentFeeAllocation> allocations = studentFeeAllocationRepository.findByUserId(userId);
-        StudentFeeAllocation activeAllocation = allocations.stream()
-            .filter(a -> a.getRemainingAmount().compareTo(BigDecimal.ZERO) > 0)
-            .findFirst()
-            .orElseThrow(() -> new RuntimeException("No active fee allocation found for Student ID: " + userId));
 
-        // 2. Convert DTO to Entity List
+        // 2. Identify the Target Amount from the Frontend Token (e.g., 9500)
+        BigDecimal targetAmount = request.getTotalFee(); 
+
+        // 3. 🔴 SMART FIND: Lock onto the specific fee that matches the amount
+        StudentFeeAllocation activeAllocation = allocations.stream()
+            // A. Filter out fully paid fees
+            .filter(a -> a.getRemainingAmount().compareTo(BigDecimal.ZERO) > 0)
+            // B. CRITICAL FIX: Only pick the fee where Payable Amount == 9500
+            .filter(a -> a.getPayableAmount().compareTo(targetAmount) == 0)
+            .findFirst()
+            .orElseThrow(() -> new RuntimeException(
+                "Mismatch Error: No active fee found for Student " + userId + 
+                " with an exact payable amount of " + targetAmount));
+
+        // 4. (Optional) Strict Safety Check: Ensure it is actually a "Course Fee"
+        // You can uncomment this if you want to be 100% sure it's not a Tuition Fee of the same amount.
+        /*
+        FeeStructure fs = feeStructureRepository.findById(activeAllocation.getFeeStructureId()).orElseThrow();
+        FeeType ft = feeTypeRepository.findById(fs.getFeeTypeId()).orElseThrow();
+        if (!ft.getName().toLowerCase().contains("course")) {
+            throw new RuntimeException("Security Block: This installment plan is only allowed for Course Fees.");
+        }
+        */
+
+        // 5. Create the Installment Entities
         List<StudentInstallmentPlan> plansToSave = new ArrayList<>();
         
         for (com.graphy.lms.dto.InstallmentPlanRequest.InstallmentItem item : request.getInstallments()) {
             StudentInstallmentPlan plan = new StudentInstallmentPlan();
             plan.setInstallmentAmount(item.getAmount());
             plan.setDueDate(item.getDueDate());
-            // Map other fields...
             plansToSave.add(plan);
         }
 
-        // 3. REUSE THE EXISTING METHOD (Removes duplication!)
-        // This handles Total Validation and Saving for you.
+        // 6. Save using your existing helper method
         createInstallmentsForStudent(activeAllocation.getId(), plansToSave);
         
-        logger.info("Created installment plan via reuse for Student ID {}", userId);
+        logger.info("✅ Successfully linked Installments (Total: {}) to Fee Allocation ID: {}", 
+                    targetAmount, activeAllocation.getId());
     }
     @Override
 

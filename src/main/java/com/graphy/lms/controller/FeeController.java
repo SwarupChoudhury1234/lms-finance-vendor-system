@@ -41,7 +41,6 @@ import com.graphy.lms.entity.FeeStructure;
 import com.graphy.lms.entity.FeeType;
 import com.graphy.lms.entity.LateFeeConfig;
 import com.graphy.lms.entity.LateFeePenalty;
-import com.graphy.lms.entity.PaymentAlternative;
 import com.graphy.lms.entity.PaymentNotification;
 import com.graphy.lms.entity.StudentFeeAllocation;
 import com.graphy.lms.entity.StudentFeePayment;
@@ -307,52 +306,7 @@ public class FeeController {
         return ResponseEntity.ok(payable);
     }
 
-    // ============================================
-    // 5. PAYMENT ALTERNATIVES ENDPOINTS
-    // ============================================
     
-    @PostMapping("/payment-alternatives")
-    @PreAuthorize("hasRole('ADMIN')")
-    public ResponseEntity<PaymentAlternative> createPaymentAlternative(@RequestBody PaymentAlternative alternative) {
-        PaymentAlternative created = feeManagementService.createPaymentAlternative(alternative);
-        return new ResponseEntity<>(created, HttpStatus.CREATED);
-    }
-    
-    @GetMapping("/payment-alternatives/{id}")
-    @PreAuthorize("hasAnyRole('ADMIN', 'FACULTY', 'STUDENT', 'PARENT')")
-    public ResponseEntity<PaymentAlternative> getPaymentAlternativeById(@PathVariable Long id) {
-        PaymentAlternative alternative = feeManagementService.getPaymentAlternativeById(id);
-        return ResponseEntity.ok(alternative);
-    }
-    
-    @GetMapping("/payment-alternatives")
-    @PreAuthorize("hasAnyRole('ADMIN', 'FACULTY', 'STUDENT', 'PARENT')")
-    public ResponseEntity<List<PaymentAlternative>> getAllPaymentAlternatives() {
-        List<PaymentAlternative> alternatives = feeManagementService.getAllPaymentAlternatives();
-        return ResponseEntity.ok(alternatives);
-    }
-    
-    @GetMapping("/payment-alternatives/active")
-    @PreAuthorize("hasAnyRole('ADMIN', 'FACULTY', 'STUDENT', 'PARENT')")
-    public ResponseEntity<List<PaymentAlternative>> getActivePaymentAlternatives() {
-        List<PaymentAlternative> alternatives = feeManagementService.getActivePaymentAlternatives();
-        return ResponseEntity.ok(alternatives);
-    }
-    
-    @PutMapping("/payment-alternatives/{id}")
-    @PreAuthorize("hasRole('ADMIN')")
-    public ResponseEntity<PaymentAlternative> updatePaymentAlternative(@PathVariable Long id, @RequestBody PaymentAlternative alternative) {
-        PaymentAlternative updated = feeManagementService.updatePaymentAlternative(id, alternative);
-        return ResponseEntity.ok(updated);
-    }
-    
-    @DeleteMapping("/payment-alternatives/{id}")
-    @PreAuthorize("hasRole('ADMIN')")
-    public ResponseEntity<String> deletePaymentAlternative(@PathVariable Long id) {
-        feeManagementService.deletePaymentAlternative(id);
-        return ResponseEntity.ok("PaymentAlternative deleted successfully");
-    }
-
     // ============================================
     // 6. STUDENT INSTALLMENT PLANS ENDPOINTS
     // ============================================
